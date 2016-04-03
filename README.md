@@ -1,5 +1,5 @@
-
 PLEASE READ FIRST.
+==
 
 This library should be updated again soon.  For now it is a work in progress.
 I will try to keep a running list of working, up-to-date programs below,
@@ -41,6 +41,7 @@ which are which, and over the next few months bring all of them up-to-date, or
 remove incomplete, dead programs.
 
 LICENSE:
+==
 
 This library of tools is released under a license similar to the GPL or MPL, it
 has been slightly modified. In summary, you must give the original author
