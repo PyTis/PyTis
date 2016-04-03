@@ -34,3 +34,21 @@ years, I haven't kept many of the older scripts up-to-date, so a few of them,
 though they may have worked fine in the past, will not run until I bring them
 up-to-date with the new version of the central library.
 
+Again, some of these programs work now, perfectly, and are up-to-date with the
+current pytis/pytis3 modules, however a few need brought up to date with
+changes made in that module.  In the next week or two, I hope to begin listing
+which are which, and over the next few months bring all of them up-to-date, or
+remove incomplete, dead programs.
+
+LICENSE:
+
+This library of tools is released under a license similar to the GPL or MPL, it
+has been slightly modified. In summary, you must give the original author
+credit, and leave a copy of the logo in the directory.  To view the license in
+its entirety, go here: http://pytis.com/License/
+
+* Feel free to download and share this library of tools,
+* Feel free to make fixes or even add-ons;
+  however I retain the right to control what gets added in, or not.
+
+
