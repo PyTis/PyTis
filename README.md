@@ -1,6 +1,23 @@
-
 PyTis toolbox Readme
 ==
+
+This library was originally maintained on SourceForge (sf.net).  I will
+probably try to maintain this project at both locations simultaneously, within
+.git on
+
+Eventually to be staged via GIT on GitHub, and SVN (Subversion) on SourceForge,
+the overall structure is about to get a major overhaul, as I begin to allow
+this to have examples, man pages, an installer, builds, distributions, misc.,
+src, testsuite, etc.
+
+Until I finish getting much of this code migrated into GitHub, though some of
+them may be outdated, you may be able to find what you are looking for in the
+original repository at sf.net.
+
+	SourceForge Project: https://sourceforge.net/projects/pytis/
+
+	SourceForge Repository: https://sourceforge.net/p/pytis/code/HEAD/tree/trunk/
+
 
 PLEASE READ FIRST.
 --
@@ -56,4 +73,8 @@ its entirety, go here: http://pytis.com/License/
 * Feel free to make fixes or even add-ons;
   however I retain the right to control what gets added in, or not.
 
+VERSION(s):
+--
+
+May vary, I will get this all under control soon though.
 
