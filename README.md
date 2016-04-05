@@ -61,6 +61,55 @@ changes made in that module.  In the next week or two, I hope to begin listing
 which are which, and over the next few months bring all of them up-to-date, or
 remove incomplete, dead programs.
 
+
+USAGE/HOWTO
+--
+
+Howto use import from this module.
+
+To allow me to easily move from Python2.x to Python3, I treat PyTis (pytis.py)
+as a module, however in order to import a local module, path manipulation is
+required.  Below is an example of howto do it command line, then below that is
+an actual example from a program that actually does it.
+
+  (~/gitlab/aws-tools/aws-tools/bin)-> python3
+  Python 3.4.3 (default, Oct 14 2015, 20:28:29)
+  [GCC 4.8.4] on linux
+  Type "help", "copyright", "credits" or "license" for more information.
+  >>> import os, sys
+  >>> sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.curdir),'..')))
+  >>> from bin import PyTis
+  >>> from pylib3 import awslib
+  >>>
+
+  # This program needs to import PyTis v3, which imports stuff from the
+  # sub-package pylib3, this program also needs to import from the sub-package
+  # awslib, pylib3.awslib itself, has to import from the parent, pytis3, which it
+  # can only do if the parent directory is a package, turning the parent (bin)
+  # into a package breaks importing pytis3 for this program in the first place
+  # and caused severe circular import errors.  To fix this, we have to adjust the
+  # path.
+  import os, sys
+  sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+
+  # Internal
+  #
+  try:
+    #import pytis as PyTis # Shared GPL/PPL License
+    from bin import PyTis # Shared GPL/PPL License
+    from pylib3 import awslib
+    from pylib3 import configobj as COBJ
+  except ImportError as e:
+    # We cannot go any further than this, we can't use the Parser or Logging tool
+    # to display these errors because those very tools are loaded from PyTis.
+    # Therefore, display errors now and exit with an errored exit code.
+    print("This program requires the PyTis python library to run.")
+    print("You may download the PyTis library, or do an SVN checkout from:")
+    print("<https://sourceforge.net/projects/pytis/>")
+    print("This program should be installed in the bin directory of the PyTis library.")
+    print(str(e))
+    sys.exit(1)
+
 LICENSE:
 --
 
