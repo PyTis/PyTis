@@ -1,0 +1,139 @@
+#!/usr/bin/env python
+"""zombie_hunter
+=============
+Doc Here"""
+
+import optparse
+import glob
+import os
+import sys
+import logging; log=logging.getLogger('zombie_hunter')
+
+__author__ = 'Josh Lee'
+__created__ = '07:58am 09 Sep, 2009'
+__copyright__ = 'PyTis'
+__version__ = '1.0'
+__configdir__ = ''
+
+def version():
+    print  __version__
+
+def removeConfigDir(opath):
+    for f in glob.glob(os.path.join('opath','*.zhf')):
+        print 'removing:', f
+    print 'removing:', opath
+
+def addConfigDir(d):
+    if raw_input('Create directory %s [y/N]: ' % d).lower().strip() == 'y':
+        try:
+            os.mkdir(d)
+        except OSError, e:
+            if 'File exists' in str(e):
+                if raw_input('Directory already exists, use anyway? [y/N]: ').lower().strip() == 'y':
+                    return True
+                else:
+                    return False
+            elif 'Permission denied' in str(e):
+                print 'ERROR: You do not have permission to create this directory.'
+                return False
+            else:
+                print e
+                return False
+    else:
+        return False
+
+def getConfig():
+    print
+    oldpath = os.path.abspath(__configdir__)
+    if __configdir__.strip()  and \
+    os.path.isdir(os.path.abspath(__configdir__)) and \
+    os.path.exists(os.path.abspath(__configdir__)):
+        print 'CONFIG DIR was already set to:', oldpath
+        if raw_input('Remove old CONFIG DIR? [y/N]').lower().strip() == 'y':
+            removeConfigDir(oldpath)
+
+    
+    newpath = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]),
+                                           '.zombie_hunter_files'))
+    print 'DEFAULT: %s' % newpath
+    configdir = raw_input("Path to data dir (leave blank to use default): ")
+    if not configdir.strip():
+        configdir = newpath
+
+    if not addConfigDir(configdir):
+        print "\nPlease try again."
+        return getConfig()
+    else:
+        setConfig(configdir)
+def setConfig(d):
+    mpath = os.path.abspath(sys.argv[0])
+    handle = open(mpath, 'r')
+    lines = handle.readlines(-1)
+    handle.close()
+    nfile_lines = []
+    for line in lines:
+        if line.startswith('__configdir__'):
+            line = "__configdir__ = '%s'\n" % d
+        nfile_lines.append(line)
+    handle = open(mpath,'w')
+    handle.writelines(lines)
+    handle.close()
+
+def testConfig():
+    if not __configdir__.strip() or \
+    not os.path.exists(os.path.abspath(__configdir__)) or \
+    not os.path.isdir(os.path.abspath(__configdir__)):
+        return False
+    return True
+
+def config():
+    print 'INSTALLING'
+    print '='*80
+    return getConfig()
+
+def main():
+    """USAGE: zombie_hunter """
+    parser = optparse.OptionParser(description=__doc__)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-s", "--setup", action="store_true",
+                      default=False, 
+                      help="Runs setup to install this script")
+
+    parser.add_option("-v", "--version", action="store_true",
+                      default=False, 
+                      help="Display Version")
+
+    (opts, cmd) = parser.parse_args()
+
+    # Logging Configuration
+    log.setLevel(0) 
+    formatter = '%(levelname)-8s %(message)s'
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG, format=formatter)
+    else:
+        logging.basicConfig(level=logging.INFO, format=formatter)
+    
+    if opts.version:
+        return version()
+    try:
+        if opts.setup:
+            return config()
+        if not testConfig():
+            print "This tool is not configured properly, running setup."
+            return config()
+    except KeyboardInterrupt, e:
+        print "\nbye!"
+        return
+    else:
+        return
+    parser.print_help()
+
+if __name__ == '__main__':
+    main()

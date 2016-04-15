@@ -1,0 +1,268 @@
+#!/usr/bin/env python
+"""NewScript
+===============================================================================
+Creates a skeleton of a python script.
+
+Example:
+		newscript myscript -a'Josh Lee' -cKCG -v1.2"""
+
+import datetime
+import re
+import optparse
+import os
+import sys
+from pprint import pprint
+
+import logging; log=logging.getLogger(' ')
+
+__author__ = 'Josh Lee'
+__created__ = '05:01pm 2 Sep, 2007'
+__copyright__ = 'PyTis.com'
+__version__ = 4.1
+
+def generate(opts, script):
+	data = {}
+	data['name'] = opts.name
+	data['='] = '='*len(opts.name)
+
+	buf = []
+	if opts.author:
+		buf.append("__author__ = '%s'" % opts.author)
+
+	buf.append("__created__ = '%s'" % datetime.datetime.now().strftime("%I:%M%%s %m %b, %Y") % datetime.datetime.now().strftime("%p").lower()) 
+	# datetime.datetime.now())
+	
+	if opts.copyright:
+		buf.append("__copyright__ = '%s'" % opts.copyright)
+	if not opts.version:
+		opts.version = 1.0
+	
+	buf.append("__version__ = '%s'" % opts.version)
+
+	data['extra'] = "\n".join(buf)
+	if opts.logging:
+		data['log_option'] = """
+		parser.add_option("-l", "--logging", action="store_true",
+											default=False, help="Enable Logging")
+"""
+		data['log_section'] = 	'log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))'
+		data['global_log'] = 'global log'
+	else:
+		data['log_option'] = ''
+		data['log_section'] = ''
+		data['global_log'] = ''
+
+#	#print(script)
+#	pprint(data)
+#	return
+	return script % data
+
+_script = '''#!/usr/bin/env python
+"""%(name)s
+%(=)s
+"""
+
+import optparse
+import os
+import sys
+import pytis as PyTis
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+%(extra)s
+
+def run(opts,args):
+	"""%(name)s run doc help"""
+	pass
+
+def main():
+	"""usage: %(name)s"""
+	%(global_log)s
+
+	filename = os.path.abspath(os.path.join(PyTis.__configdir__, '%%s.ini' %% os.path.basename(os.path.abspath(sys.argv[0]))))
+	main.__doc__ = "%%s\\n\\n	CONFIG FILE: %%s" %% (main.__doc__,os.path.abspath(filename))
+
+
+	errors=[]
+	PyTis.__option_always__ = [True]
+	help_dict = dict(version=__version__,
+						 author=__author__,
+						 created=__created__,
+						 copyright=__copyright__)
+	parser = PyTis.MyParser()
+
+	parser.extra_txt = "\\n\\n%%s\\n" %% run.__doc__ + """
+
+examples:	
+	xxx
+
+SEE ALSO:
+	xxx
+
+COPYRIGHT:
+	%%(copyright)s
+
+AUTHOR:
+	%%(author)s
+
+HISTORY:
+	Original Author
+
+VERSION:
+	%%(version)s
+""" %% help_dict
+
+	parser.formatter.format_description = lambda s:s
+	parser.set_description(__doc__)
+	parser.set_usage(main.__doc__)
+
+	runtime = optparse.OptionGroup(parser, "-- RUNTIME ARGUMENTS")
+	parser.add_option_group(runtime)
+	# -------------------------------------------------------------------------
+	# variable setting
+	vars = optparse.OptionGroup(parser, "-- CONFIGURATION SETTINGS")
+	parser.add_option_group(vars)
+	# ----------------------------
+	dbgroup = optparse.OptionGroup(parser, "-- DEBUG")
+	dbgroup.add_option("-D", "--debug", action="store_true",
+					 default=False, dest='debug',
+					 help="Enable debugging")
+	helpishere=False
+	for a in sys.argv:
+		if a == '--help':
+			helpishere=True
+			dbgroup.add_option("-V", "--verbose", action="store_true",
+							 default=True, dest='verbose',
+							 help="Be more Verbose (make lots of noise)")
+	if not helpishere:
+		dbgroup.add_option("-V", "--verbose", action="store_true",
+						 default=True, dest='verbose',
+						 help=optparse.SUPPRESS_HELP)
+
+	%(log_option)s
+
+	dbgroup.add_option("-q", "--quiet", action="store_true",
+					 default=False, dest='quiet',
+					 help="be vewwy quiet (I'm hunting wabbits)")
+
+	dbgroup.add_option("-v", "--version", action="store_true",
+					 default=False, dest='version',
+					 help="Display Version")
+
+	parser.add_option_group(dbgroup)
+	# ----------------------------
+
+	(opts, args) = parser.parse_args()
+	if opts.quiet: opts.verbose = False
+
+	#if opts.action is None and len(args) and args[0] in ('start','stop','restart','status'):
+	#	opts.action = args[0]
+	#	del args[0]
+
+	old_version = opts.version
+	opts.version = True
+	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
+	%(log_section)s
+	opts.version = old_version
+
+	if opts.version:
+		return PyTis.version(__version__)
+
+	#if opts.action and len(args) == 1 and args[0] in 'start stop restart status'.split() and opts.action != args[0]:
+	#	errors.append("Silly human, you provided an action via a flag (%%s) and an option on STDIN (%%s) and they are different.	Please only provide one action." %% (opts.action, args[0]))
+
+	#if len(args) == 1 and args[0] in 'start stop restart status'.split() and opts.action is None:
+	#	opts.action = args[0]
+	#	del args[0]
+
+	if len(args) == 0 and not errors:
+		return parser.print_usage()
+	elif not errors:
+		try:
+			run(opts, args)
+		except KeyboardInterrupt,e:
+			log.debug("Keyboard-Interrupt, bye!")
+			if not opts.quiet:
+				log.info("\\nbye!")
+			return
+		else:
+			log.info("Done.")
+			return
+	else:
+		parser.print_usage()
+		if errors:
+			log.error(str("\\n".join(errors)))
+		return parser.print_help(errors)
+
+	parser.print_help("ERROR: Unknown, but invalid input.")
+	sys.exit(0)
+
+if __name__ == '__main__':
+		main()
+
+'''
+
+
+def main():
+		"""usage: newscript [options] {NAME} """
+		parser = optparse.OptionParser(description=__doc__)
+		parser.set_usage(main.__doc__)
+		parser.formatter.format_description = lambda s:s
+
+		parser.add_option("-D", "--debug", action="store_true",
+											default=False, help="Enable debugging")
+
+		parser.add_option("-k", "--kcg_copyright", action="store_true",
+											default=False, help="Apply the KCG Copyright")
+
+		parser.add_option("-l", "--logging", action="store_true",
+											default=False, help="Enable Logging")
+
+		parser.add_option("-a", "--author", default=None, 
+											help="Set the Author")
+		parser.add_option("-c", "--copyright", default=None, 
+											help="Set the Copyright")
+		parser.add_option("-v", "--version", default=None, 
+											help="Set the Version")
+
+		(opts, cmd) = parser.parse_args()
+
+		if opts.debug:
+				logging.basicConfig(level=logging.DEBUG)
+		else:
+				logging.basicConfig(level=logging.INFO)
+		try:
+				name = cmd[0]
+		except IndexError:
+				log.warn("A script name is required.")
+				return parser.print_help()
+		valid_name = re.compile("^[\w_-]+$")
+		valid_name = valid_name.match(name)
+
+		if not valid_name:
+				log.warn("Invalid script name, names may only contain: Az09-_")
+				return
+		
+		fname = valid_name.group()
+		if os.path.isfile(fname):
+				log.warn("File already exists.")
+				return
+
+		opts.name = fname
+		script = generate(opts, _script)
+		handle = open(fname,'w')
+		handle.write(script)
+		handle.close()
+		os.chmod(fname, 0755)
+
+		if opts.kcg_copyright:
+				os.system('kcg_copyright %s' % fname)
+		if raw_input('Edit Now [y/N]: ') in 'yY':
+				ed = os.environ.get('EDITOR', os.environ.get('VISUAL')) 
+				if ed:
+						os.system("%s %s" % (ed, fname))
+				else:
+						print 'You may edit "%s" at any time.' % fname
+
+if __name__ == '__main__':
+		main()
+

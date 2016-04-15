@@ -1,0 +1,108 @@
+#!/usr/bin/env python
+"""colorize
+========
+Doc Here"""
+
+import optparse
+import os
+import sys
+import pytis as PyTis
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__created__ = '11:13pm 07 Jul, 2010'
+__copyright__ = 'v'
+__version__ = '1.0'
+
+def version():
+    print  __version__
+
+def run(fi):
+    print """<html>
+<head>
+    <style type='text/css'>
+        .alpha {
+            color: #C00;
+        }
+        .bravo {
+            color: #00C;
+        }
+    </style>
+</head>
+<body>
+
+"""
+    for line in fi.readlines(-1):
+        if 'bill' in line.lower():
+            print "<div class='alpha'>%s</div" % line
+        else:
+            print "<div class='bravo'>%s</div" % line
+            
+    print """
+</body>
+</html>"""
+
+def main():
+    """usage: colorize """
+    global log
+    parser = PyTis.MyParser()
+    hlp = __doc__
+    parser.extra_txt = """
+examples:    
+
+    """ 
+    parser.set_description(hlp)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-v", "--version", action="store_true",
+                      default=False, 
+                      help="Display Version")
+
+    parser.add_option("-V", "--verbose", action="store_true",
+                      default=False, 
+                      help="Be more Verbose")
+
+    (opts, args) = parser.parse_args()
+
+    log = PyTis.set_logging(opts, 'findrep')
+    # Logging Configuration
+    log.setLevel(0) 
+    formatter = '%(levelname)-8s %(message)s'
+
+
+    log.debug("  === GENERIC PARAMETERS ===  ")
+    log.debug('COMMAND: %s' % ' '.join(sys.argv[0:]))
+    log.debug("OPTS version: %s" % opts.version)
+    log.debug("OPTS verbose: %s" % opts.verbose)
+    log.debug("OPTS debug: %s" % opts.debug)
+
+
+    if opts.version:
+        return version()
+
+    if sys.stdin.isatty():
+        try:
+            in_file_name = args[0]
+            in_file = open(in_file_name)
+        except IndexError:
+            log.warn("No input file found.")
+            return parser.print_help()
+    else:
+        try:
+            in_file = sys.stdin
+        except:
+            log.warn("No input file found.")
+            return parser.print_help()
+
+    if in_file:
+        return run(in_file)
+    parser.print_help()
+
+if __name__ == '__main__':
+    main()

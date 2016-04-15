@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+""" Format a file by displaying columns in a fixed width based on
+some delimiter.
+"""
+import optparse
+import sys
+
+parser = optparse.OptionParser()
+parser.add_option('-d', dest='delim', default=' ',
+                  help='delimiter to separate fields by')
+parser.add_option('-p', dest='pad', default=5, type='int',
+                  help='number of spaces to pad columns')
+parser.add_option('-i', dest='info', action="store_true", default=False,
+                  help='show a comment information header as the '\
+                       'first line of output containing the widths '\
+                       'of each column. Useful for sending '\
+                       'output to other scripts')
+
+if __name__ == '__main__':
+    (options, args) = parser.parse_args()
+
+    buf = list(sys.stdin)
+    widths = []
+    for line in buf:
+        cols = line.split(options.delim)
+        for i, c in enumerate(cols):
+            if i == len(widths):
+                widths.append(0)
+            if len(c) > widths[i]:
+                widths[i] = len(c)
+
+    if options.info:
+        print '%%%s' % ':'.join([str(s) for s in widths])
+    for line in buf:
+        line = line.rstrip('\n')
+        print (" "*options.pad).join([
+           d.ljust(i) for d, i in zip(line.split(options.delim), widths) 
+        ])

@@ -1,0 +1,95 @@
+#!/usr/bin/env python
+"""wordbuilder
+====
+Doc Here"""
+
+import optparse
+import os
+import sys
+import logging; log=logging.getLogger('wordbuilder')
+
+__created__ = '09:50pm 09 Sep, 2009'
+__version__ = '1.0'
+
+def version():
+    print  __version__
+
+
+def unique(data):
+    ret = []
+    for x in data:
+        x = x.strip()
+        if not x:
+            continue
+        if x not in ret:
+            ret.append(x)
+    ret.sort()
+    return ret
+
+def run(opts):
+ 
+    fi = os.path.abspath(opts.file)
+    if not os.path.exists(fi):
+        os.system("touch %s" % fi)
+
+    handle = open(fi,'r')
+    lines = handle.readlines(-1)
+    handle.close()
+
+    ret = [line for line in lines]
+
+    words = sys.argv[1:]
+    for w in words:
+        w = w.replace(',','').replace('.','').replace("'",'').replace('"','')
+        if not w.strip().startswith('-'):
+            ret.append(w.strip().lower())
+
+    ass = unique(ret)
+
+    handle = open(fi,'w')
+    for a in ass:
+        handle.write("%s\n" % a)
+    handle.close()
+
+def main():
+    """usage: wordbuilder """
+    parser = optparse.OptionParser(description=__doc__)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-f", "--file", action="store",
+                      default=None, 
+                      help="Word file to build")
+
+    parser.add_option("-v", "--version", action="store_true",
+                      default=False, 
+                      help="Display Version")
+
+    (opts, args) = parser.parse_args()
+
+    # Logging Configuration
+    log.setLevel(0) 
+    formatter = '%(levelname)-8s %(message)s'
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG, format=formatter)
+    else:
+        logging.basicConfig(level=logging.INFO, format=formatter)
+
+    if not opts.file:
+        print "ERROR: please supply a word file."
+
+    if opts.version:
+        return version()
+    
+    if opts.file:
+        return run(opts)
+
+    parser.print_help()
+
+if __name__ == '__main__':
+    main()

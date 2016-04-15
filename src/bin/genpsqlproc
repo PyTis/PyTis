@@ -1,0 +1,391 @@
+#!/usr/bin/env python
+"""genpsqlproc
+===========
+Generates procedures for a given table through inspection of the postgresql 
+information schema."""
+###############################################################################
+# The contents of this program are subject to the Koar Public License
+# (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.koarcg.com/license
+# 
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+# included LICENSE.txt file for more information. Copyright 2007 KCG.
+###############################################################################
+
+import optparse
+import sys
+import logging; log=logging.getLogger('genpsqlproc')
+import kg.udb
+
+__author__ = 'Josh Lee'
+__created__ = '2007-06-29 14:59:15.753250'
+__copyright__ = 'KCG'
+__version__ = '1.0'
+
+
+# Constants (Used for query index when pulling field 
+# data from the information schema)
+NAME = 0
+DEFUALT = 1
+NULL = 2
+TYPE = 3
+MAX_LEN = 4
+DOMAIN = 5
+UPDATEABLE = 6
+
+class ActionDispatch(object):
+    pos_map = []
+    def act(letter=None, p=pos_map, **kwargs):
+        """Decorator that allows us to easily create optparse options
+        """
+        def act(proc, p=p):
+            p.append((proc, letter, kwargs))
+            return proc
+        return act
+
+    def pop_parser(self, parser):
+        """This is what uses the decorator, and actually creats the options.
+        """
+        for p,let, kwargs in self.pos_map:
+            name = p.__name__.replace('_','-')
+            letter = let or name[0]
+
+            action = kwargs.get('action') or 'store'
+            metavar = kwargs.get('metavar')
+            default = kwargs.get('default') or None
+            dest = kwargs.get('dest') or None
+            nargs = kwargs.get('nargs')
+            help = p.__doc__ or 'No help for %s' % name
+            # I don't know how to do this the right way, however this allows
+            # you to have an option that must use the full word, instead
+            # of a letter
+            if let is None:
+                parser.add_option("--%s" % name,
+                                  action=action,
+                                  default=default,
+                                  dest=dest,
+                                  metavar=metavar,
+                                  nargs=nargs,
+                                  help=help)
+            else:
+                parser.add_option("-%s" % letter, "--%s" % name,
+                                  action=action,
+                                  default=default,
+                                  dest=dest,
+                                  metavar=metavar,
+                                  help=help)
+
+
+    def dispatch(self, opts):
+        """This will execute the proper method once the file runs
+        """
+        self.opts = opts
+        pos_map = [p[0].__name__ for p in self.pos_map]
+        v = [getattr(opts, p) for p in pos_map]
+
+        if len([i for i in v if i]) < 1:
+            return -1
+        elif len([i for i in v if i]) <> 1:
+            log.warn('One and only one action must be given')
+            return
+
+        f = [i for i, x in zip(pos_map, v) if x][0]
+        return getattr(self, f)()
+
+    @property
+    def conn(self):
+        # Helper that gives us our db connecton
+        uri = kg.udb.DB(self.opts.URI)
+        if not uri:
+            log.warn("Invalid dbURI")
+            sys.exit(1)
+        return uri.conn
+
+    def keys(self, relation_name):
+        """Helper that returns all keys for a relation.  Make sure you remember
+        to specify your primary keys on your table definitions.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("""SELECT column_name 
+                          FROM information_schema.key_column_usage 
+                          WHERE table_schema = 'public' and
+                          table_name=%s""", (relation_name,))
+        return list([k[0] for k in cursor.fetchall()])
+
+    def relation_fields(self, rel_name):
+        """Helper that returns a list of fields for a relation.  These fields
+        are returned in a list as tuples.  See the top of the file to see the
+        CONSTANTS that map the different positions of the tuple.
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT
+                column_name AS name,
+                column_default AS default_value,
+                is_nullable AS is_required,
+                CASE WHEN
+                    domain_name IS NOT NULL
+                THEN domain_name
+                ELSE udt_name END AS type,
+                character_maximum_length,
+                udt_schema || '.' || udt_name AS schema_path,
+                is_updatable
+            FROM information_schema.columns
+            WHERE table_name=%s AND table_schema='public'
+        """, (rel_name,))
+
+        res = list(cursor)
+        if res:
+            return res
+
+        # Wasn't found on a table or view, try a composite type
+        cursor.execute("""
+            SELECT
+                attribute_name AS name,
+                attribute_default AS default_value,
+                is_nullable AS is_required,
+                'postgres.' || data_type AS type,
+                character_maximum_length,
+                udt_schema || '.' || udt_name AS schema_path,
+                TRUE as is_updatable
+            FROM information_schema.attributes
+            WHERE udt_name=%s AND udt_schema='public'
+        """, (rel_name,))
+        
+        return list(cursor)
+
+    def filter(self, fields):
+        """Filter out ones that are auto-incrementing
+        return the field names
+        """
+        for field in fields:
+            if field[DEFUALT] and 'nextval' in field[DEFUALT]:
+                continue
+            else:
+                yield field
+
+    def function(self, name, fields, body, returns, declares=None):
+        """PostgreSQL function creator.  
+        :name: name of function
+        :fields: arguments expected in the funciton
+        :returns: what the postgresql function returns
+        :body: the meat and tators
+        :declares: any variables that must be declared
+        """
+        if declares:
+            declare = """
+    DECLARE
+        %s;
+ """ % declares
+        else:
+            declare = ''
+
+        return """
+CREATE OR REPLACE FUNCTION "public"."%(name)s" (%(fields)s) RETURNS %(returns)s AS
+$body$
+%(declare)s
+    BEGIN
+        %(body)s
+    END;
+$body$
+LANGUAGE 'plpgsql' VOLATILE CALLED ON NULL INPUT SECURITY INVOKER;
+        """ % dict(name=name, fields=fields, body=body, returns=returns,
+                   declare=declare)
+    
+
+    @act(nargs=3, metavar='FU')
+    def delete(self):
+        """Create delete sql procedure for this relation.
+        """
+        relation_name = self.opts.delete
+        # This function must be a little smarter, it will create a procedure to
+        # delete the record, unless the relation has a field called deleted.
+        # in which case it will make a procedure to update the record and set
+        # deleted to true
+        fields = self.relation_fields(relation_name)
+        name = 'delete_%s' % relation_name
+        returns = '"pg_catalog"."void"'
+        keys = self.keys(relation_name)
+        key_fields = [f for f in fields if f[NAME] in keys]
+
+        v_fields = ', '.join(['v_%s "pg_catalog".%s' % (f[NAME], f[TYPE]) \
+            for f in key_fields])
+
+        keys = ' AND '.join(['%s=v_%s' % (k, k) for k in keys])
+        
+        if len([f for f in fields if f[NAME] == 'deleted']) == 1:
+            # There is a deleted field, so the function will just set it to true
+            body = """
+            UPDATE %(name)s 
+            SET deleted=TRUE
+            WHERE %(keys)s;""" % dict(name=name, keys=keys)
+        else:
+            # we will perminatnly delete it from the database
+            body = """
+            DELETE FROM %(name)s 
+            WHERE %(keys)s;""" % dict(name=name, keys=keys)
+            
+        print self.function(name, v_fields, body, returns)
+
+    @act('r')
+    def record(self):
+        """Create get sql type for the get call to select into for this
+        relation.
+        """
+        relation_name = self.opts.record
+        fields = self.relation_fields(relation_name)
+        fields = ',\n  '.join(['"%s" %s' % (f[NAME], f[TYPE]) for f in fields])
+        print """
+DROP TYPE IF EXISTS "public"."%s_record" CASCADE;
+CREATE TYPE "public"."%s_record" AS (
+  %s
+);
+""" % (relation_name, relation_name, fields)
+
+    @act('g')
+    def get(self):
+        """Create get sql procedure for this relation.
+        """
+        relation_name = self.opts.get
+        fields = self.relation_fields(relation_name)
+        name = 'get_%s' % relation_name
+        returns = '"public"."%s_record"' % relation_name
+
+        keys = self.keys(relation_name)
+        key_fields = [f for f in fields if f[NAME] in keys]
+
+        v_fields = ', '.join(['v_%s "pg_catalog".%s' % (f[NAME], f[TYPE]) \
+            for f in key_fields])
+
+        declares = 'v_record "public".%s_record' % relation_name
+
+        if not keys:
+            keys = 1
+        else:
+            keys = ' AND '.join(['%s=v_%s' % (k, k) for k in keys])
+        body = """
+        SELECT * 
+        FROM %(name)s 
+        WHERE %(keys)s
+        INTO v_record;
+
+        RETURN v_record;
+""" %  dict(name=relation_name, keys=keys)
+        
+        print self.function(name, v_fields, body, returns, declares)
+
+    @act('i')
+    def insert(self):
+        """Create insert sql procedure for this relation.
+        """
+        relation_name = self.opts.insert
+        fields = list(self.filter(self.relation_fields(relation_name)))
+        # function name
+        name = 'create_%s' % relation_name
+        func_v_fields = ', '.join(['v_%s "pg_catalog".%s' % (f[NAME], f[TYPE]) \
+            for f in fields])
+        v_fields = ', '.join(['v_%s' % f[NAME] for f in fields])
+        fields = ', '.join([f[NAME] for f in fields])
+        returns = '"pg_catalog"."void"'
+
+        body = """
+        INSERT INTO %(relation_name)s 
+            (%(fields)s) 
+            VALUES
+            (%(v_fields)s);
+    """ % dict(relation_name=relation_name, fields=fields, 
+                   v_fields=v_fields)
+
+        print self.function(name, func_v_fields, body, returns)
+
+    @act('u')
+    def update(self):
+        """Create update sql procedure for this relation.
+        """
+        relation_name = self.opts.update
+        fields = self.relation_fields(relation_name)
+
+        name = 'update_%s' % relation_name
+        keys = self.keys(relation_name)
+        func_v_fields = ', '.join(['v_%s "pg_catalog".%s' % (f[NAME], f[TYPE]) \
+            for f in fields])
+        v_fields = ['v_%s' % f[NAME] for f in fields]
+
+        set_fields = list([f[NAME] for f in self.filter(fields)])
+        set_v_fields = ['v_%s' % f for f in set_fields]
+        sets = ',\n            '.join(['%s=%s' % (r[0], r[1]) for r in \
+            zip(set_fields, set_v_fields)])
+            
+        keys = ' AND '.join(['%s=v_%s' % (k, k) for k in keys])
+        returns = '"pg_catalog"."void"'
+
+        body = """
+        UPDATE %(relation_name)s 
+        SET
+            %(sets)s
+        WHERE
+            %(keys)s;
+""" % dict(relation_name=relation_name, sets=sets, keys=keys)
+
+        print self.function(name, func_v_fields, body, returns)
+
+    @act('v')
+    def view(self):
+        """Create view sql for this relation.
+        """
+        relation_name = self.opts.view
+        fields = self.relation_fields(relation_name)
+        fields = ',\n    '.join([f[NAME] for f in fields])
+        print """
+CREATE OR REPLACE VIEW "public"."%(name)s_view" (
+    %(fields)s
+) AS 
+SELECT 
+    %(fields)s
+FROM 
+    %(name)s;
+""" % dict(name=relation_name, fields=fields)
+
+
+def main():
+    """genpsqlproc -HdbURI TABLE"""
+    ad = ActionDispatch()
+    parser = optparse.OptionParser(description=__doc__,
+                                   usage=main.__doc__,
+                                   version=str(__version__))
+    parser.formatter.format_description = lambda s:s
+    ad.pop_parser(parser)
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-H", "--URI", action='store', type='string',
+                      help="Host URI")
+
+
+    (opts, cmd) = parser.parse_args()
+
+    # Logging Configuration
+    log.setLevel(0) 
+    formatter = '%(levelname)-8s %(message)s'
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG, format=formatter)
+    else:
+        logging.basicConfig(level=logging.INFO, format=formatter)
+
+    if not opts.URI:
+        parser.print_help()
+        log.warn('the dbURI is required, please use the -H flag')
+        return
+
+    if ad.dispatch(opts) == -1:
+        parser.print_help()
+
+if __name__ == '__main__':
+    main()

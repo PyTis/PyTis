@@ -1,0 +1,150 @@
+#!/usr/bin/env python
+""" Generates a SQL script from a list of SQL queries, sepearated by
+--SP: name
+
+and --END blocks
+"""
+import sys
+import re
+import cStringIO
+import mako.template as MT
+
+SP = re.compile('^--SP:\s*([a-zA-Z_]+)')
+RC = re.compile('^--RC:\s*([a-zA-Z_]+)')
+ERRCTRL = re.compile('^--ERRCTRL:\s*([a-zA-Z_]+)')
+
+tmpl = MT.Template("""
+    def ${sp_name}(${", ".join(['self'] + args)}):
+% if args:
+        lookup = dict(
+    % for arg in args:
+            ${arg} = ${arg},
+    % endfor
+        )
+        self.escape_dict(lookup)
+        cursor = self.conn.cursor()
+    % for query in [s for s in sql.strip().split(';') if s.strip()]:
+        query = '''
+            ${query.strip()}'''
+        log.debug("Executing %s" % (query % lookup))
+        % if errctrl == 'N':
+        cursor.execute(query % lookup)
+        % elif errctrl == 'Y':
+        try:
+            cursor.execute(query % lookup)
+        except Exception, e:
+            log.error("Error in query: %s" % e)
+        % endif
+    % endfor
+% else:
+        cursor = self.conn.cursor()
+    % for query in [s for s in sql.strip().split(';') if s.strip()]:
+        query = '''
+            ${query.strip()}'''
+        log.debug("Executing %s" % query)
+        % if errctrl == 'N':
+        cursor.execute(query)
+        % elif errctrl == 'Y':
+        try:
+            cursor.execute(query)
+        except Exception, e:
+            log.error("Error in query: %s" % e)
+        % endif
+    % endfor
+% endif
+% if rc == 'ONE':
+        return cursor.fetchone()[0]
+% elif rc == 'ONEROW':
+        return cursor.fetchone()
+% elif rc == 'ALL':
+        return list(cursor)
+% elif rc == 'COL':
+        return [c[0] for c in cursor]
+% else:
+        return cursor
+% endif
+    ${sp_name}.rc = '${rc or ''}'
+""")
+
+def unindent(string, WS_START=re.compile('^(\s*)'),
+                     WS_LINE=re.compile('^\s*$')):
+    """Cuts off all available whitespace from the beginning of lines
+    in the provided string. """
+    lines = [s for s in string.split("\n") if not WS_LINE.match(s)]
+    ws = [WS_START.match(s) for s in lines]
+    rm  = min([len(w.groups()[0]) for w in ws if w])
+    return "\n".join([s[rm:] for s in lines])
+
+def indent(string, number):
+    return "\n".join("%s%s" % (" "*(4*number), s) for s in string.split("\n"))
+
+class collector(dict):
+    def __init__(self):
+        self.hits = []
+    def __getitem__(self, key):
+        if key not in self:
+            self[key] = None
+            self.hits.append(key)
+        return dict.__getitem__(self, key)
+
+def write_proc(sp_name, sql, rc, errctrl):
+    col = collector()
+    try:
+        sql % col
+    except ValueError:
+        print >>sys.stderr, 'Invalid query %s' % sql
+        return ''
+    return tmpl.render(sp_name=sp_name,
+                       sql=indent(unindent(sql), 3),
+                       args=col.hits,
+                       rc=rc,
+                       errctrl=errctrl)
+
+
+def main():
+    print """\
+import logging; log=logging.getLogger("DBSP")
+
+class sp(object):
+    def __init__(self, conn):
+        self.conn = conn
+    
+    def escape_dict(self, lookup):
+        for key, value in lookup.items():
+            if value:
+                lookup[key] = "'%s'" % value.replace("'", "''")
+            else:
+                lookup[key] = ''
+        return lookup"""
+
+
+    sp_name = None
+    rc = None
+    errctrl = 'N'
+    query = cStringIO.StringIO()
+
+    for line in sys.stdin:
+        if sp_name:
+            if RC.match(line):
+                rc = RC.match(line).groups()[0].upper()
+            elif ERRCTRL.match(line):
+                errctrl = ERRCTRL.match(line).groups()[0].strip().upper()
+            elif SP.match(line): #line.startswith('--END'):
+                sys.stdout.write(write_proc(sp_name, query.getvalue(), rc,
+                                            errctrl))
+                sp_name = SP.match(line).groups()[0]
+                rc = None
+                errctrl = 'N'
+                query = cStringIO.StringIO()
+            else:
+                query.write(line)
+        else:
+            match = SP.match(line)
+            if match:
+                sp_name = match.groups()[0]
+
+    if sp_name:
+        sys.stdout.write(write_proc(sp_name, query.getvalue(), rc, errctrl))
+
+if __name__ == '__main__':
+    main()

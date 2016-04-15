@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+""" Spellcheck the files in a given directory.
+
+spellcheck_dir [/dir/to/search]
+               [glob pattern for each directory]
+               [skip regular expressions for lines]
+
+For example:
+
+spellcheck_dir src *.py
+"""
+import re
+import sys
+import os
+import glob
+from subprocess import *
+
+def grep_pipe(head_pipe, patterns):
+    for pattern in patterns:
+        head_pipe = Popen(["grep", "-v", "-E", pattern],
+                          stdin=head_pipe.stdout,
+                          stdout=PIPE)
+    return head_pipe
+
+if __name__ == '__main__':
+    directory = sys.argv[1]
+    pattern = sys.argv[2]
+    skip_patterns = sys.argv[3:]
+
+    for root, dirs, files in os.walk(directory):
+        for tmpl in glob.glob("%s/%s" % (root, pattern)):
+            p1 = Popen(["cat", tmpl], stdout=PIPE)
+            p2 = Popen(["sed", "s/^/^/"], stdin=p1.stdout, stdout=PIPE)
+            p3 = Popen(["aspell", "-H", "-a"], stdin=p2.stdout, stdout=PIPE)
+            output = p3.communicate()[0]
+            
+            fhandle = open(tmpl, 'r')
+            fdata = [''] + list(fhandle)
+            fhandle.close()
+
+            line_no = 1
+            shown_file_name = False
+            for line in output.split("\n"):
+                if not line:
+                    line_no = line_no + 1
+                if not line or line == '*' or line.startswith('@'):
+                    continue
+
+                # See if the line matches any of our skip patterns
+                ignore = False
+                for pat in skip_patterns:
+                    if re.match(pat, fdata[line_no].strip()):
+                        ignore = True
+                        break
+                if ignore:
+                    continue
+                if not shown_file_name:
+                    print tmpl
+                    shown_file_name = True
+                if line.startswith('&'):
+                    original, count, offset, misses = \
+                        re.match("^& (\S+) (\d+) (\d+):(.*)$", line).groups()
+                    suggestions = misses.split(", ")
+                    print '  ', original, [line_no], ", ".join(suggestions[:5])
+                elif line.startswith('#'):
+                    orig, offset = re.match("^# (\S+) (\S+)$", line).groups()
+                    print '  ', orig, [line_no]

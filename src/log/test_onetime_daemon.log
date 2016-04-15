@@ -1,0 +1,728 @@
+02.15.2016 03:35:55 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:35:55 test_onetime_daemon DEBUG    OPTIONS verbose: True
+02.15.2016 03:35:55 test_onetime_daemon DEBUG    OPTIONS niceness: 10
+02.15.2016 03:35:55 test_onetime_daemon DEBUG    OPTIONS quiet: False
+02.15.2016 03:35:55 test_onetime_daemon DEBUG    OPTIONS debug: True
+02.15.2016 03:35:55 test_onetime_daemon DEBUG    OPTIONS frequency: 0
+02.15.2016 03:35:55 test_onetime_daemon DEBUG    OPTIONS version: True
+02.15.2016 03:35:55 test_onetime_daemon DEBUG    OPTIONS action: None
+02.15.2016 03:35:55 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTIONS verbose: True
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTIONS niceness: 10
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTIONS quiet: False
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTIONS debug: True
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTIONS frequency: 0
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTIONS version: True
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTIONS action: None
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 03:36:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTIONS verbose: True
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTIONS niceness: 10
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTIONS quiet: False
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTIONS debug: True
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTIONS frequency: 0
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTIONS version: True
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTIONS action: None
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 03:38:07 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTIONS verbose: True
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTIONS niceness: 10
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTIONS quiet: False
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTIONS debug: True
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTIONS frequency: 0
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTIONS version: True
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTIONS action: None
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 03:40:09 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTIONS verbose: True
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTIONS niceness: 10
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTIONS quiet: False
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTIONS debug: True
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTIONS frequency: 0
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTIONS version: True
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTIONS action: None
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 03:41:03 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:41:03 test_onetime_daemon INFO     starting the test_onetime_daemon service now
+02.15.2016 03:41:03 test_onetime_daemon WARNING  FREQUENCY: 0
+02.15.2016 03:41:03 test_onetime_daemon INFO     print here
+02.15.2016 03:41:03 test_onetime_daemon INFO     test_onetime_daemon service started
+02.15.2016 03:41:08 test_onetime_daemon INFO     done?.
+02.15.2016 03:41:08 test_onetime_daemon WARNING  FREQUENCY: 0
+02.15.2016 03:41:08 test_onetime_daemon WARNING  FREQUENCY: 0
+02.15.2016 03:41:08 test_onetime_daemon INFO     the task completed, service was stopped
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTIONS verbose: True
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTIONS niceness: 10
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTIONS quiet: False
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTIONS debug: True
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTIONS frequency: 0
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTIONS version: True
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTIONS action: None
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 03:41:40 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:41:40 test_onetime_daemon INFO     starting the test_onetime_daemon service now
+02.15.2016 03:41:40 test_onetime_daemon INFO     print here
+02.15.2016 03:41:40 test_onetime_daemon INFO     test_onetime_daemon service started
+02.15.2016 03:41:45 test_onetime_daemon INFO     done?.
+02.15.2016 03:41:45 test_onetime_daemon INFO     the task completed, service was stopped
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 03:43:21 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:43:21 test_onetime_daemon INFO     starting the test_onetime_daemon service now
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTIONS verbose: True
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTIONS niceness: 10
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTIONS quiet: False
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTIONS debug: True
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTIONS frequency: 0
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTIONS version: True
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTIONS action: None
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 03:46:56 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:46:56 test_onetime_daemon INFO     starting the test_onetime_daemon service now
+02.15.2016 03:46:56 test_onetime_daemon INFO     print here
+02.15.2016 03:46:56 test_onetime_daemon INFO     test_onetime_daemon service started
+02.15.2016 03:47:01 test_onetime_daemon INFO     done?.
+02.15.2016 03:47:01 test_onetime_daemon INFO     the task completed, service was stopped
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 03:51:34 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:51:34 test_onetime_daemon INFO     starting the test_onetime_daemon service now
+02.15.2016 03:51:34 test_onetime_daemon INFO     print here
+02.15.2016 03:51:34 test_onetime_daemon INFO     test_onetime_daemon service started
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION frequency: 0
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 03:51:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 03:51:59 test_onetime_daemon INFO     starting the test_onetime_daemon service now
+02.15.2016 03:51:59 test_onetime_daemon INFO     print here
+02.15.2016 03:51:59 test_onetime_daemon INFO     test_onetime_daemon service started
+02.15.2016 03:52:04 test_onetime_daemon INFO     done?.
+02.15.2016 03:52:04 test_onetime_daemon INFO     the task completed, service was stopped
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 16:29:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:29:59 test_onetime_daemon INFO     starting the test_onetime_daemon service now
+02.15.2016 16:29:59 test_onetime_daemon INFO     print run 1
+02.15.2016 16:29:59 test_onetime_daemon INFO     test_onetime_daemon service started
+02.15.2016 16:30:01 test_onetime_daemon INFO     print run 2
+02.15.2016 16:30:06 test_onetime_daemon INFO     print run 3
+02.15.2016 16:30:08 test_onetime_daemon INFO     done?.
+02.15.2016 16:30:09 test_onetime_daemon INFO     print run 1
+02.15.2016 16:30:11 test_onetime_daemon INFO     print run 2
+02.15.2016 16:30:16 test_onetime_daemon INFO     print run 3
+02.15.2016 16:30:18 test_onetime_daemon INFO     done?.
+02.15.2016 16:30:19 test_onetime_daemon INFO     print run 1
+02.15.2016 16:30:21 test_onetime_daemon INFO     print run 2
+02.15.2016 16:30:26 test_onetime_daemon INFO     print run 3
+02.15.2016 16:30:28 test_onetime_daemon INFO     done?.
+02.15.2016 16:30:29 test_onetime_daemon INFO     the task completed, service was stopped
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 16:31:21 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:31:21 test_onetime_daemon INFO     starting the test_onetime_daemon service now
+02.15.2016 16:31:21 test_onetime_daemon INFO     print run 1
+02.15.2016 16:31:21 test_onetime_daemon INFO     test_onetime_daemon service started
+02.15.2016 16:31:23 test_onetime_daemon INFO     print run 2
+02.15.2016 16:31:28 test_onetime_daemon INFO     print run 3
+02.15.2016 16:31:30 test_onetime_daemon INFO     done?.
+02.15.2016 16:31:31 test_onetime_daemon INFO     print run 1
+02.15.2016 16:31:33 test_onetime_daemon INFO     print run 2
+02.15.2016 16:31:38 test_onetime_daemon INFO     print run 3
+02.15.2016 16:31:40 test_onetime_daemon INFO     done?.
+02.15.2016 16:31:41 test_onetime_daemon INFO     print run 1
+02.15.2016 16:31:43 test_onetime_daemon INFO     print run 2
+02.15.2016 16:31:48 test_onetime_daemon INFO     print run 3
+02.15.2016 16:31:50 test_onetime_daemon INFO     done?.
+02.15.2016 16:31:51 test_onetime_daemon INFO     the task completed, service was stopped
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 16:33:27 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:33:27 test_onetime_daemon ERROR    Error during service start:
+ Already running on PID 23985 (or pid file '/run/test_onetime_daemon.pid' is stale)
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 16:33:31 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:33:32 test_onetime_daemon ERROR    Error during service start:
+ Already running on PID 23985 (or pid file '/run/test_onetime_daemon.pid' is stale)
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 16:33:41 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION action: stop
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:34:19 test_onetime_daemon INFO     stopping test_onetime_daemon [23985] service.
+02.15.2016 16:34:19 test_onetime_daemon DEBUG    service [23985] was stopped by SIGTERM signal
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 16:35:36 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 16:35:36 test_onetime_daemon ERROR    Error during service start:
+ Already running on PID 24084 (or pid file '/run/test_onetime_daemon.pid' is stale)
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 17:27:04 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 17:27:14 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 17:27:18 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 17:27:39 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION action: start
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 17:27:59 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 17:27:59 test_onetime_daemon INFO     starting the test_onetime_daemon service now
+02.15.2016 17:27:59 test_onetime_daemon INFO     print run 1
+02.15.2016 17:27:59 test_onetime_daemon INFO     print run 2
+02.15.2016 17:27:59 test_onetime_daemon INFO     print run 3
+02.15.2016 17:27:59 test_onetime_daemon INFO     done?.
+02.15.2016 17:27:59 test_onetime_daemon INFO     test_onetime_daemon service started
+02.15.2016 17:28:00 test_onetime_daemon INFO     print run 1
+02.15.2016 17:28:00 test_onetime_daemon INFO     print run 2
+02.15.2016 17:28:00 test_onetime_daemon INFO     print run 3
+02.15.2016 17:28:00 test_onetime_daemon INFO     done?.
+02.15.2016 17:28:01 test_onetime_daemon INFO     print run 1
+02.15.2016 17:28:01 test_onetime_daemon INFO     print run 2
+02.15.2016 17:28:01 test_onetime_daemon INFO     print run 3
+02.15.2016 17:28:01 test_onetime_daemon INFO     done?.
+02.15.2016 17:28:02 test_onetime_daemon INFO     the task completed, service was stopped
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 18:42:28 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 18:43:18 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:43:18 test_onetime_daemon INFO     starting the test_onetime_daemon service now
+02.15.2016 18:43:18 test_onetime_daemon INFO     print run 1
+02.15.2016 18:43:18 test_onetime_daemon INFO     test_onetime_daemon service started
+02.15.2016 18:43:18 test_onetime_daemon INFO     print run 2
+02.15.2016 18:43:18 test_onetime_daemon INFO     print run 3
+02.15.2016 18:43:18 test_onetime_daemon INFO     done?.
+02.15.2016 18:43:19 test_onetime_daemon INFO     print run 1
+02.15.2016 18:43:19 test_onetime_daemon INFO     print run 2
+02.15.2016 18:43:19 test_onetime_daemon INFO     print run 3
+02.15.2016 18:43:19 test_onetime_daemon INFO     done?.
+02.15.2016 18:43:20 test_onetime_daemon INFO     print run 1
+02.15.2016 18:43:20 test_onetime_daemon INFO     print run 2
+02.15.2016 18:43:20 test_onetime_daemon INFO     print run 3
+02.15.2016 18:43:20 test_onetime_daemon INFO     done?.
+02.15.2016 18:43:21 test_onetime_daemon INFO     the task completed, service was stopped
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 18:46:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 18:50:13 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 18:50:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 18:51:02 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 18:51:35 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 18:52:33 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:52:33 test_onetime_daemon INFO     print run 1
+02.15.2016 18:52:33 test_onetime_daemon INFO     print run 2
+02.15.2016 18:52:33 test_onetime_daemon INFO     print run 3
+02.15.2016 18:52:33 test_onetime_daemon INFO     done?.
+02.15.2016 18:52:34 test_onetime_daemon INFO     print run 1
+02.15.2016 18:52:34 test_onetime_daemon INFO     print run 2
+02.15.2016 18:52:34 test_onetime_daemon INFO     print run 3
+02.15.2016 18:52:34 test_onetime_daemon INFO     done?.
+02.15.2016 18:52:35 test_onetime_daemon INFO     print run 1
+02.15.2016 18:52:35 test_onetime_daemon INFO     print run 2
+02.15.2016 18:52:35 test_onetime_daemon INFO     print run 3
+02.15.2016 18:52:35 test_onetime_daemon INFO     done?.
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 18:52:46 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:52:46 test_onetime_daemon INFO     print run 1
+02.15.2016 18:52:46 test_onetime_daemon INFO     print run 2
+02.15.2016 18:52:46 test_onetime_daemon INFO     print run 3
+02.15.2016 18:52:46 test_onetime_daemon INFO     done?.
+02.15.2016 18:52:47 test_onetime_daemon INFO     print run 1
+02.15.2016 18:52:47 test_onetime_daemon INFO     print run 2
+02.15.2016 18:52:47 test_onetime_daemon INFO     print run 3
+02.15.2016 18:52:47 test_onetime_daemon INFO     done?.
+02.15.2016 18:52:48 test_onetime_daemon INFO     print run 1
+02.15.2016 18:52:48 test_onetime_daemon INFO     print run 2
+02.15.2016 18:52:48 test_onetime_daemon INFO     print run 3
+02.15.2016 18:52:48 test_onetime_daemon INFO     done?.
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 18:54:32 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:54:32 test_onetime_daemon INFO     print run 1
+02.15.2016 18:54:32 test_onetime_daemon INFO     print run 2
+02.15.2016 18:54:32 test_onetime_daemon INFO     print run 3
+02.15.2016 18:54:32 test_onetime_daemon INFO     done?.
+02.15.2016 18:54:33 test_onetime_daemon INFO     print run 1
+02.15.2016 18:54:33 test_onetime_daemon INFO     print run 2
+02.15.2016 18:54:33 test_onetime_daemon INFO     print run 3
+02.15.2016 18:54:33 test_onetime_daemon INFO     done?.
+02.15.2016 18:54:34 test_onetime_daemon INFO     print run 1
+02.15.2016 18:54:34 test_onetime_daemon INFO     print run 2
+02.15.2016 18:54:34 test_onetime_daemon INFO     print run 3
+02.15.2016 18:54:34 test_onetime_daemon INFO     done?.
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION action: None
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION version: True
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION action: status
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION debug: True
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION frequency: 1
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION niceness: 10
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION quiet: False
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION verbose: True
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    OPTION version: False
+02.15.2016 18:54:54 test_onetime_daemon DEBUG    --------------------------------------------------------------------------------
+02.15.2016 18:54:54 test_onetime_daemon INFO     print run 1
+02.15.2016 18:54:54 test_onetime_daemon INFO     print run 2
+02.15.2016 18:54:54 test_onetime_daemon INFO     print run 3
+02.15.2016 18:54:54 test_onetime_daemon INFO     done?.
+02.15.2016 18:54:55 test_onetime_daemon INFO     print run 1
+02.15.2016 18:54:55 test_onetime_daemon INFO     print run 2
+02.15.2016 18:54:55 test_onetime_daemon INFO     print run 3
+02.15.2016 18:54:55 test_onetime_daemon INFO     done?.
+02.15.2016 18:54:56 test_onetime_daemon INFO     print run 1
+02.15.2016 18:54:56 test_onetime_daemon INFO     print run 2
+02.15.2016 18:54:56 test_onetime_daemon INFO     print run 3
+02.15.2016 18:54:56 test_onetime_daemon INFO     done?.

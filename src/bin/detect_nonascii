@@ -1,0 +1,19 @@
+#!/usr/bin/env python
+""" Scans a stream for non-ascii characters. Provide the data to be scanned
+to STDIN.
+"""
+
+import sys
+
+if __name__ == '__main__':
+    inc = sys.stdin.read(-1)
+
+    line = 1
+    pos = 1
+    print len(inc)
+    for c in inc:
+        if ord(c) > 128:
+            print "found non-ascii %r on line %s at col %s" % (c, line, pos)
+        if c == '\n':
+            line = line + 1
+            pos = 0

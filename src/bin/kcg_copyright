@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+""" Inserts a license and copyright notice at the top of a Python file. """
+
+#The contents of this file are subject to the Koar Public License. See the
+#included LICENSE.txt file for more information. Copyright 2007 KCG.
+
+
+import sys
+import datetime
+import shutil
+import tempfile
+
+license = """###############################################################################
+# The contents of this program are subject to the Koar Public License
+# (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.koarcg.com/license
+#
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+# included LICENSE.txt file for more information. Copyright %s KCG.
+###############################################################################
+""" % datetime.datetime.now().year
+
+def main():
+    for path in sys.argv[1:]:
+        replace(path)
+
+def replace(path):
+    h = open(path)
+    inserted = False
+    t = tempfile.TemporaryFile()
+    s_tok = None
+    for line in h:
+        if inserted:
+            t.write(line)
+        elif s_tok:
+            if s_tok in line:
+                s_tok = None
+            t.write(line)
+            continue
+        elif line.startswith('#'):
+            t.write(line)
+        elif line.startswith('"""') and not line.endswith('"""\n'):
+            s_tok = '"""'
+            t.write(line)
+        elif line.startswith("'''") and not line.endswith("'''\n"):
+            s_tok = "'''"
+            t.write(line)
+        elif line.startswith('"') or line.startswith("'"):
+            t.write(line)
+        else:
+            t.write(license)
+            t.write(line)
+            inserted = True
+
+    t.seek(0)
+
+    h.close()
+    h = open(path, 'w')
+    for block in t:
+        h.write(block)
+    h.close()
+    t.close()
+
+if __name__ == '__main__':
+    main()

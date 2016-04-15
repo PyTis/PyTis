@@ -1,0 +1,107 @@
+
+class IPopen(subprocess.Popen):
+
+	POLL_INTERVAL = 0.1
+	def __init__(self, *args, **kwargs):
+		"""Construct interactive Popen."""
+		keyword_args = {
+			'stdin': subprocess.PIPE,
+			'stdout': subprocess.PIPE,
+			'stderr': subprocess.PIPE,
+			'prompt': '> ',
+		}
+		keyword_args.update(kwargs)
+		self.prompt = keyword_args.get('prompt')
+		del keyword_args['prompt']
+		subprocess.Popen.__init__(self, *args, **keyword_args)
+		# Make stderr and stdout non-blocking.
+		for outfile in (self.stdout, self.stderr):
+			if outfile is not None:
+				fd = outfile.fileno()
+				fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+				fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+
+	def correspond_old(self, text, sleep=0.1):
+		"""Communicate with the child process without closing stdin."""
+		self.stdin.write(text)
+		self.stdin.flush()
+		str_buffer = ''
+		while not str_buffer.endswith(self.prompt):
+			try:
+				str_buffer += self.stdout.read()
+			except IOError:
+				time.sleep(sleep)
+		return str_buffer
+
+	def correspond(self, text, sleep=0.1):
+		"""Communicate with the child process without closing stdin."""
+		self.stdin.write(text)
+		self.stdin.flush()
+		str_buffer = ''
+		while not str_buffer.endswith(self.prompt):
+			try:
+				print self.stdout.read()
+			except IOError:
+				time.sleep(sleep)
+		return
+
+
+p = IPopen(['aws','configure'], prompt=': ')
+#print p.correspond('\n')
+print p.correspond(raw_input())
+sys.exit(1)
+
+
+def run_python_program2(cmd):
+	global log
+	cmd = cmd.split(' ')
+	def _():
+		grab_traceback = False
+		traceback = []
+		was_KeyboardInterrupt = False
+
+		p = IPopen(cmd)
+
+		return
+		print 'cmd: ', cmd
+		p = subprocess.Popen(["aws", "configure"]) #, stderr=subprocess.PIPE)
+		print 'here'
+		#stdout,stderr = p.communicate()
+		#print 'stdout', stdout
+		#print 'stderr', stderr
+
+		while True:
+			#retcode = p.poll()
+			#print 'retcode: ', retcode
+			#line = p.stdout.readline()
+			print 'line: ', line
+			if line:
+				if grab_traceback:
+
+					if line.strip():
+						if line.strip().startswith('KeyboardInterrupt'):
+							was_KeyboardInterrupt = True
+						traceback.append(line.strip())
+					else:
+						if was_KeyboardInterrupt:
+							raise KeyboardInterrupt('Bye!')
+						else:
+							raise Exception("\n".join(traceback))
+							sys.exit(1)
+
+				if line.strip().startswith('Traceback'):
+					grab_traceback = True
+					traceback.append(line.strip())
+
+				if line.strip():
+					print 'Should be logging: ', line
+					log.info(line.strip())
+				#elif line.strip() == '1':
+				#	return True
+				else:
+					log.warn('Unknown error.')
+					log.debug('line: %s' % line.strip())
+					sys.exit(1)
+			if retcode is not None:
+				break
+	return _

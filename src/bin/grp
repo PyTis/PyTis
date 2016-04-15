@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+"""grp
+===
+"""
+
+import os
+import sys
+
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__created__ = '11:41pm 10 Oct, 2009'
+__copyright__ = 'Pytis.com'
+__version__ = '1.0'
+ignores = ['.swp', '.pyc', 'CVS', '.svn', 'Binary', '.#']
+
+def version():
+    print  __version__
+
+def run(unique=False, debug=False):
+    global ignores
+    cmd = "grep -r %s . | egrep -v '%s' " % (' '.join(sys.argv[1:]), '|'.join(ignores))
+    if unique:
+        cmd = "%s | cut -f1 -d: | sort -u" % cmd
+    if(debug):
+        print cmd
+    else:
+      os.system(cmd)
+      print
+    return  
+
+def help():
+    print __doc__
+    print main.__doc__
+
+def main():
+    """usage: grp [options] search
+
+options:
+    --h --help   Displays this help.
+    --V          Displays the version.
+    
+    Use the same way you would use grep, however it automatically ignores swap
+files and pyc files.  You may edit this tool and add other text patterns to
+ignore to the ignores list
+
+grp -r foo
+    SAME AS
+grep -r foo . | egrep -v '.swp|.pyc'
+
+*you can customize the ignores in the top of this file
+"""
+
+    
+
+    if len(sys.argv) < 2:
+        return help()
+    debug = False
+    unique = False
+    for i in iter(sys.argv):
+        if i == '--v':
+            return version()
+        if i in ['-h','--help','?']:
+            return help()
+        if i in ['--d']:
+            debug = True
+        if i in ['--u']:
+            unique = True
+
+    return run(unique, debug)
+
+if __name__ == '__main__':
+    main()

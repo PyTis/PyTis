@@ -1,0 +1,658 @@
+#!/usr/bin/env python
+"""kcctrl
+=====
+KCore Crud Watch Daemon
+
+[register ,
+validate (follow instructions),
+refresh] = [build]
+
+"""
+import glob
+import cStringIO
+import optparse
+import os
+import sys
+import logging; log=logging.getLogger('')
+import kg.configobj as COBJ
+import kg.udb
+
+__created__ = '2007-06-29 02:34:44.841643'
+__version__ = 1.0
+__copyright__ = 'KCG'
+__author__ = 'Josh Lee'
+
+# Config Procedures
+config = None
+config_file = None
+def make_dat(fpath, app_dir):
+    """ start a config file.
+    """
+    global config, config_file
+    config_file = fpath
+    config = COBJ.load(fpath)
+    config['global'] = {}
+    config['global']['app_dir'] = app_dir
+    cfile = os.path.join(app_dir,'components.py')
+    config['global']['component'] = cfile
+    config.write()
+
+def read_dat(fpath):
+    """ Read in the config file (ini format) and process it into a dictionary
+    """
+    global config, config_file
+    config_file = fpath
+    config = COBJ.load(fpath)
+
+# Helpers
+def db_uri():
+    if not config:
+        log.critical("Config file not found: %s" % config_file)
+        sys.exit(1)
+    d = config.get('global', {}).get('db_uri')
+    if not d:
+        log.critical('No dburi specified, please fix this in the config.')
+        log.critical("Config file: %s" % config_file)
+        sys.exit(1)
+    return d
+
+def components():
+    if not config:
+        log.critical("Config file not found: %s" % config_file)
+        sys.exit(1)
+    a = config.get('global', {}).get('component')
+    if not a:
+        log.warn('No component file specified, please fix this in the config.')
+    return a
+
+def app_dir():
+    if not config:
+        log.critical("Config file not found: %s" % config_file)
+        sys.exit(1)
+    a = config.get('global', {}).get('app_dir')
+    if not a:
+        log.warn('No dburi specified, please fix this in the config.')
+    return a
+    
+def get_relation(rel):
+    if not config:
+        log.critical("Config file not found: %s" % config_file)
+        sys.exit(1)
+    relation = config.get('relations',{}).get(rel)
+    return relation
+
+
+    
+class ActionDispatch(object):
+    pos_map = []
+    def act(letter=None, p=pos_map, **kwargs):
+        def act(proc, p=p):
+            p.append((proc, letter, kwargs))
+            return proc
+        return act
+
+    def pop_parser(self, parser):
+        for p,let, kwargs in self.pos_map:
+            name = p.__name__.replace('_','-')
+            letter = let or name[0]
+
+            action = kwargs.get('action') or 'store'
+            metavar = kwargs.get('metavar')
+            default = kwargs.get('default') or None
+            dest = kwargs.get('dest') or None
+            nargs = kwargs.get('nargs', 1)
+            help = p.__doc__ or 'No help for %s' % name
+            if let is None:
+                parser.add_option("--%s" % name,
+                                  action=action,
+                                  default=default,
+                                  dest=dest,
+                                  metavar=metavar,
+                                  nargs=nargs,
+                                  help=help)
+            else:
+                parser.add_option("-%s" % letter, "--%s" % name,
+                                  action=action,
+                                  default=default,
+                                  dest=dest,
+                                  metavar=metavar,
+                                  help=help)
+
+    def dispatch(self, opts):
+        self.opts = opts
+        pos_map = [p[0].__name__ for p in self.pos_map]
+        v = [getattr(opts, p) for p in pos_map]
+
+        if len([i for i in v if i]) < 1:
+            return -1
+        elif len([i for i in v if i]) <> 1:
+            raise ValueError, 'One and only one action must be given'
+
+        f = [i for i, x in zip(pos_map, v) if x][0]
+        return getattr(self, f)()
+
+    @act(metavar='RELATION')
+    def css(self):
+        """Create a css skeleton from the rdef file.
+        """
+        if self.validate_relation(self.opts.css):
+            self.make_css(self.opts.css)
+
+    @act(nargs=2, metavar='RELATION CRUDFILE')
+    def js(self):
+        """Creates js to append to the js file from a crud file. """
+        relation_name, crud = self.opts.js
+        if not os.path.isfile(crud):
+            log.warn('file not found: %s' % crud)
+            return
+        
+        if self.validate_relation(relation_name):
+            self.make_js(relation_name, crud)
+
+    @act(metavar='RELATION')
+    def js_all(self):
+        """Creates js to append to the js file from all cruds. """
+        relation_name = self.opts.js_all
+        if self.validate_relation(relation_name):
+            self.make_all_js(relation_name)
+
+    # Actions
+    @act('H', metavar='URL')
+    def dbURI():
+        """Register the URL for the application with the config
+        """
+        self.register_dburi(self.opts.dburi)
+
+
+    @act('a', metavar='RELATION')
+    def register(self):
+        """Adds a REALATION to the config, if this REALATION has not yet """ \
+        """been registered in our application.  Returns nothing if the """ \
+        """REALATION has already been registered. """ 
+        self.register_relation(self.opts.register)
+
+    @act(metavar='RELATION')
+    def crud(self):
+        """Re-Generate all crud files."""
+        if self.validate_relation(self.opts.crud):
+            self.rdef2crud(self.opts.crud)
+
+    @act('m', metavar='RELATION')
+    def make(self):
+        """Creates directory structure for new module. Same as """ \
+        """`start-module RELATION` """
+        self.start_module(self.opts.make)
+
+    @act('v', metavar='RELATION')
+    def validate(self, no_build=False):
+        """Validate a Relation, build only what is neccesary in the config"""
+        relation_name = self.opts.validate
+        r_def = get_relation(relation_name)
+
+        if r_def is None:
+            log.warn("Validate called, relation '%s' not found in %s " \
+                     "Try calling register first." % (relation_name,
+                                                      config_file))
+        else:
+            self.validate_relation(relation_name)
+        
+    @act('r', metavar='RELATION')
+    def refresh(self):
+        """Refresh a relation, starting from the rdef."""
+        relation_name = self.opts.refresh
+        r_def = get_relation(relation_name)
+        if r_def is None:
+            log.warn("Refresh called for relation '%s', relation not found " \
+                     "in config %s" % (relation_name, config_file))
+        else:
+            if self.validate_relation(relation_name):
+                self.rdef2config(relation_name)
+                self.rdef2crud(relation_name)
+                self.make_all_js(relation_name)
+                self.make_css(relation_name)
+                self.create_all_sql_procs(relation_name)
+                self.create_all_templates(relation_name)
+            else:
+                log.debug('follow the above steps in order')
+
+    @act('s', metavar='RELATION')
+    def sql(self):
+        """Creates the sql file for the relation by running pg_dump."""
+        relation_name = self.opts.sql
+        if self.validate_relation(relation_name):
+            self.create_sql_file(relation_name)
+
+    @act('c', metavar='RELATION')
+    def create_rdef(self):
+        relation_name = self.opts.create_rdef
+        if self.validate_relation(relation_name):
+            self.psql2rdef(relation_name)
+
+    @act(nargs=2, metavar='RELATION PROC')
+    def gen_psql_proc(self):
+
+        relation_name, proc = self.opts.gen_psql_proc
+        valid_procs = [
+            'RECORD',
+            'DELETE',
+            'GET',   
+            'INSERT',
+            'UPDATE',
+            'VIEW',
+        ]
+        if proc.upper() not in valid_procs:
+            log.warn('%s is an invalid proc type, valid procs are:\n %s' % \
+                (proc, '|'.join(valid_procs)))
+
+        if self.validate_relation(relation_name):
+            self.create_sql_proc(relation_name, proc)
+
+    @act(nargs=2, metavar='RELATION INHERIT-FILE')
+    def all_templates(self):
+        """Creates all templates from the data/*.crud files
+        Takes in a relation and the inherit file (usually theme.tmpl)
+        Example: kcctrl --template doctor theme.tmpl
+        """
+        relation_name, inherit = self.opts.all_templates
+        if self.validate_relation(relation_name):
+            self.create_all_templates(relation_name, inherit)
+    
+    @act(nargs=3, metavar='RELATION CRUD-FILE INHERIT-FILE')
+    def template(self):
+        """Creates a template from the specified .crud file
+        Takes in a relation, the crud file and a theme to
+        inherit from (usually theme.tmpl)
+        Example: kcctrl --template doctor doctor/data/add.crud theme.tmpl
+        """
+        relation_name, crudfile, inherit = self.opts.template
+        if self.validate_relation(relation_name):
+            self.create_template(relation_name, crudfile, inherit)
+
+    @act(metavar='RELATION')
+    def gen_all_psql_procs(self):
+        relation_name = self.opts.gen_all_psql_procs
+        if self.validate_relation(relation_name):
+            self.create_all_sql_procs(relation_name)
+
+    @act('b', metavar='RELATION')
+    def build(self):
+        """Help Build relation starting from host db"""
+        relation_name = self.opts.build
+        r_def = get_relation(relation_name)
+        if r_def is None:
+            self.register_relation(relation_name)
+            self.ensure_relation_directory(relation_name)
+            self.start_module(relation_name)
+            self.ensure_sql_data(relation_name)
+            self.create_sql_file(relation_name)
+            self.validate_relation(relation_name, build=True)
+
+            # RERESH will have the same calls after this point
+            self.psql2rdef(relation_name)
+            self.rdef2config(relation_name)
+            self.rdef2crud(relation_name)
+            self.make_all_js(relation_name)
+            self.make_css(relation_name)
+            self.create_all_sql_procs(relation_name)
+            self.create_all_templates(relation_name)
+        else:
+            log.debug("build called for relation '%s', relation has already " \
+                     "been build. try using refresh" % relation_name)
+
+    def create_all_templates(self, relation_name, inherit='theme.tmpl'):
+        log.debug('building mako templates')
+        r_def = get_relation(relation_name)
+        for crudfile in glob.glob(os.path.join(r_def['data_dir'], '*.crud')):
+            if 'delete' not in crudfile:
+                self.create_template(relation_name, crudfile, inherit)
+
+    def create_template(self, relation_name, crudfile, inherit):
+        r_def = get_relation(relation_name)
+        action = os.path.splitext(os.path.basename(crudfile))[0]
+        log.debug('building %s mako template' % '%s.tmpl' % action)
+        fname = os.path.join(r_def['relation_dir'],'t',
+            '%s_%s.tmpl' % (action, relation_name))
+        cmd = "yaml_merge %s %s | yaml2mako -i%s > %s" % \
+            (r_def['rdef_file'], crudfile, inherit, fname)
+        if os.path.isfile(fname):
+            if raw_input("Overwrite %s? [Y/n]:" % fname) not in ['Y','y']:
+                return
+        os.system(cmd)
+        if not crudfile.endswith('list.crud'):
+            os.system("mako2tmplres %s" % fname)
+            os.system("tmplres2mako %s.res" % fname)
+
+    def create_all_sql_procs(self, relation_name):
+        """Creates all sql files in the correct order droping with cascade to
+        remove depenencies.
+        for more information type 'genpsqlproc -h'
+        """
+        procs = [
+            'record',
+            'delete',
+            'get',   
+            'insert',
+            'update',
+            'view',
+        ]
+        log.debug('creating sql procs')
+        for proc in procs:
+            self.create_sql_proc(relation_name, proc)
+            
+    def create_sql_proc(self, relation_name, proc):
+        """Creates the sql file for a given proc, then executes it back on the
+        postgresql host
+        for more debugrmation type 'genpsqlproc -h'
+        """
+        r_def = get_relation(relation_name)
+        fname = os.path.join(r_def['sql_dir'], '%s_%s.sql' % \
+            (proc, relation_name))
+        if os.path.isfile(fname):
+            if raw_input("Overwrite %s? [Y/n]:" % fname) not in ['Y','y']:
+                return
+        log.debug('creating %s' % fname)
+        os.system("genpsqlproc -H%s --%s %s > %s" % \
+            (db_uri(), proc, relation_name, fname))
+        os.system("psql < %s" % fname)
+
+    def register_relation(self, relation_name):
+        """Registers the relation with the config file.
+        """
+        config.setdefault('relations', {})
+        config['relations'].setdefault(relation_name, {})
+        config.write()
+        self.register_import(components(), relation_name)
+        
+    def register_import(self, file, package):
+        handle = open(file)
+        impline = "import %s" % package
+        new = cStringIO.StringIO()
+        for line in handle.read(-1):
+            if impline in line:
+                handle.close()
+                return
+            new.write(line)
+        new.write("\n%s\n" % impline)
+        handle.close()
+
+        handle2 = open(file, 'w')
+        handle2.write(new.getvalue())
+        handle2.close()
+    
+    def psql2rdef(self, relation_name):
+        """Creates the relation definition file from the postgresql schema.
+        """
+        r_def = get_relation(relation_name)
+        uri = kg.udb.URL(db_uri())
+        if os.path.isfile(r_def['rdef_file']):
+            if raw_input("Overwrite %s? [Y/n]:" % r_def['rdef_file']) \
+                not in ['Y','y']:
+                return
+        os.system('psql2rdef -H%s %s > %s' % 
+            (uri, relation_name, r_def['rdef_file']))
+
+    def ensure_dir(self, directory):
+        # ensures the directory exists, creates it if need be
+        if not os.path.isdir(directory):
+            os.mkdir(directory)
+
+    def ensure_res(self, relation_name):
+        # ensures the res directory exists, creates it if need be
+        r_def = get_relation(relation_name)
+        self.ensure_dir(os.path.join(r_def['relation_dir'], 'res'))
+
+    def ensure_css(self, relation_name):
+        # ensures the js directory exists, creates it if need be
+        r_def = get_relation(relation_name)
+        self.ensure_dir(os.path.join(r_def['relation_dir'], 'res', 'css'))
+
+    def ensure_js(self, relation_name):
+        # ensures the js directory exists, creates it if need be
+        r_def = get_relation(relation_name)
+        self.ensure_dir(os.path.join(r_def['relation_dir'], 'res', 'js'))
+
+    def make_css(self, relation_name):
+        r_def = get_relation(relation_name)
+        self.ensure_res(relation_name)
+        self.ensure_css(relation_name)
+        css_file = os.path.join(r_def['relation_dir'], 'res', 'css',
+            '%s.css' % relation_name)
+        if os.path.isfile(css_file):
+            if raw_input("Overwrite %s? [Y/n]:" % css_file) not in ['Y','y']:
+                return
+        os.system("rdef2css %s > %s" % (r_def['rdef_file'], css_file))
+
+    def make_js(self, relation_name, crud_file):
+        r_def = get_relation(relation_name)
+        self.ensure_res(relation_name)
+        self.ensure_js(relation_name)
+        js_file = os.path.join(r_def['relation_dir'], 'res', 'js',
+            '%s.js' % relation_name)
+        if os.path.isfile(js_file):
+            if raw_input("Overwrite %s? [Y/n]:" % js_file) not in ['Y','y']:
+                return
+        buf = cStringIO.StringIO()
+        buf.write(os.popen("crud2js %s" % crud_file).read(-1))
+        handle = open(js_file,'w')
+        handle.write(buf.getvalue())
+        handle.close()
+
+    def make_all_js(self, relation_name):
+        r_def = get_relation(relation_name)
+        self.ensure_res(relation_name)
+        self.ensure_js(relation_name)
+        js_file = os.path.join(r_def['relation_dir'], 'res', 'js',
+            '%s.js' % relation_name)
+        if os.path.isfile(js_file):
+            if raw_input("Overwrite %s? [Y/n]:" % js_file) not in ['Y','y']:
+                return
+        buf = cStringIO.StringIO()
+        for file in glob.glob(os.path.join(r_def['data_dir'], '*.crud')):
+            buf.write(os.popen("crud2js %s" % file).read(-1))
+        handle = open(js_file,'w')
+        handle.write(buf.getvalue())
+        handle.close()
+
+
+    def create_sql_file(self, relation_name):
+        r_def = get_relation(relation_name)
+        uri = kg.udb.URL(db_uri())
+        if uri.username:
+            username = '-U%s' % uri.username
+        else:
+            username = ''
+
+        if uri.host:
+            host = '-h%s' % uri.host
+        else:
+            host = ''
+
+        if uri.port:
+            port = '-p%s' % uri.port
+        else:
+            port = ''
+
+        database = uri.database or ''
+          
+        extras = [username, port, host]
+        fname = r_def['sql_file']
+        if os.path.isfile(fname):
+            if raw_input("Overwrite %s? [Y/n]:" % fname) not in ['Y','y']:
+                return
+        os.system('pg_dump %s --table %s --schema-only %s > %s' % 
+            (database, relation_name, ' '.join(extras), fname))
+
+    def rdef2config(self, relation_name):
+        r_def = get_relation(relation_name)
+        actions = ['add', 'delete', 'edit', 'list', 'print', 'view']
+        for action in actions:
+            r_def[action] = raw_input('%s Crud(Y/n):' % \
+                                             action.title()) in ['Y','y']
+        config.write()
+
+    def rdef2crud(self, relation_name):
+        r_def = get_relation(relation_name)
+        actions = ['add', 'delete', 'edit', 'list', 'print', 'view']
+        for action in actions:
+            if r_def[action]:
+                action_file = os.path.join(r_def['data_dir'], 
+                                           '%s.crud' % action)
+
+                if os.path.isfile(action_file):
+                    if raw_input("Overwrite %s? [Y/n]:" % action_file) \
+                        not in ['Y','y']:
+                        continue
+
+                os.system('cat %s | rdef2crud -%s > %s' % \
+                    (r_def['rdef_file'], action[0], action_file))
+
+    def start_module(self, relation_name):
+        r_def = get_relation(relation_name)
+        os.system('cd %s' % os.path.dirname(r_def['relation_dir']))
+        os.system('start-module %s' % relation_name)
+
+    def register_dburi(self, uri):
+        config['global']['db_uri'] = uri
+        config.write()
+
+    def validate_relation(self, relation_name, build=False):
+        r_def = get_relation(relation_name)
+
+        # First ensure the global dburi is set in the config
+        OK = True
+        if not self.ensure_dburi():
+            OK = False
+
+        if not build:
+            # ensure the directory structure is correct.
+            if not self.ensure_relation_directory(relation_name):
+                OK = False
+
+        # data files and paths
+        if not self.ensure_relation_data(relation_name):
+            OK = False
+
+        if not build:
+            # Now lets make sure that the rdef exists.
+            if not self.ensure_rdef(relation_name):
+                OK = False
+
+        # Now we will ensure the sql file and paths are there
+        if not self.ensure_sql_data(relation_name):
+            OK = False
+
+        # Now lets check that the sql file exists.
+        if not self.ensure_sql_file(relation_name):
+            OK = False
+
+        return OK
+
+    def ensure_relation_directory(self, relation_name):
+        OK = True
+        r_def = get_relation(relation_name)
+        if not r_def.get('relation_dir'):
+            log.debug('relation_dir not found in config, adding it')
+            r_def['relation_dir'] = os.path.join(app_dir(), relation_name)
+            OK = False
+        if not os.path.isdir(r_def['relation_dir']):
+            log.info('module directory does not exist, try using make')
+            OK = False
+        config.write()
+        return OK
+
+    def ensure_relation_data(self, relation_name):
+        OK = True
+        r_def = get_relation(relation_name)
+        if not r_def.get('rdef_file'):
+            r_def['rdef_file'] = os.path.join(r_def['relation_dir'], 'data',
+                                              '%s.rdef' % relation_name)
+            OK = False
+        if not r_def.get('data_dir'):
+            r_def['data_dir'] = os.path.dirname(r_def['rdef_file'])
+            OK = False
+        return OK
+
+    def ensure_rdef(self, relation_name):
+        OK = True
+        r_def = get_relation(relation_name)
+        if not os.path.isfile(r_def['rdef_file']):
+            log.warn('rdef_file not found, try running create-rdef')
+            OK = False
+        return OK
+
+    def ensure_dburi(self):
+        OK = True
+        if not db_uri():
+            log.warn("dbURI not found, set the dbURI first.")
+            OK = False
+        return OK
+
+    def ensure_sql_data(self, relation_name):
+        OK = True
+        r_def = get_relation(relation_name)
+        if not r_def.get('sql_file'):
+            log.debug('sql_file not found in config, adding it')
+            r_def['sql_file'] = os.path.join(r_def['relation_dir'], 'sql', 
+                                             '%s.sql' % relation_name)
+            OK = False
+        if not r_def.get('sql_dir'):
+            log.debug('sql_dir not found in config, adding it')
+            r_def['sql_dir'] = os.path.dirname(r_def['sql_file'])
+            OK = False
+        config.write()
+        return OK
+
+    def ensure_sql_file(self, relation_name):
+        OK = True
+        r_def = get_relation(relation_name)
+        if not os.path.isfile(r_def['sql_file']):
+            log.warn("SQL file for relation %s not found: %s\n Try running "\
+                     "sql." % (relation_name,
+                r_def['sql_file']))
+            OK = False
+        return OK
+
+def main():
+    """kcctrl [option] RELATION"""
+    global config, log
+    ad = ActionDispatch()
+    parser = optparse.OptionParser(description=__doc__,
+                                   usage=main.__doc__,
+                                   version=str(__version__))
+    parser.formatter.format_description = lambda s:s
+#    parser.set_usage(main.__doc__)
+    ad.pop_parser(parser)
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-C", "--config", help="Config File")
+
+    (opts, cmds) = parser.parse_args()
+
+    # Logging Configuration
+    log.setLevel(0) 
+    formatter = '%(levelname)-8s %(message)s'
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG, format=formatter)
+    else:
+        logging.basicConfig(level=logging.INFO, format=formatter)
+
+    app_dir = os.path.abspath(os.curdir)
+    for cmd in cmds:
+        if cmd not in ['flush','refresh']:
+            app_dir = cmd
+    dat_file = os.path.join(app_dir, 'kcctrl.dat')
+    dat_file = opts.config or dat_file
+    if not os.path.isfile(dat_file):
+        make_dat(dat_file, app_dir)
+
+    read_dat(dat_file)
+    if ad.dispatch(opts) == -1:
+        parser.print_help()
+
+
+if __name__ == '__main__':
+    main()

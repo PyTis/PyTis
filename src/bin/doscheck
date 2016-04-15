@@ -1,0 +1,128 @@
+#!/usr/bin/env python
+"""doscheck
+================================================================================
+Tool so I don't have to remember the commands for find replace with perl.
+Yes, all of this can be done by piping commands together and that is why I am
+printing those commands to the screen, so I can see them and memorize them.
+
+Also has some nice options and can additinally do file names or portions 
+of file names.
+"""
+
+import optparse
+import os
+import sys
+import pytis as PyTis
+from pprint import pprint
+
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__copyright__ = 'PyTis.com'
+__created__ = '03:19am 10 Oct, 2011'
+__version__ = '1.0'
+
+def run(files):
+	pprint(files)
+
+def main():
+	"""usage: doscheck (options) [file or pattern]"""
+	global log
+	hlp = __doc__ % dict(version=__version__,
+						 author=__author__,
+						 copyright=__copyright__)
+	parser = PyTis.MyParser()
+	if '?' in sys.argv[1:] or '-h' in sys.argv[1:] or '--help' in sys.argv[1:]:
+		hlp = "%s\n%s" % (hlp,
+"""
+example:	
+
+	jlee on	bin $ importnanny -rV pg_*
+	CHECKING: /home/jlee/bin/pg_diff
+	CHECKING: /home/jlee/bin/pg_diff.rb
+	Syntax Error in '/home/jlee/bin/pg_diff.rb'
+	Traceback (most recent call last):
+	File "<string>", line 18
+		 require 'postgres'
+						^
+	 SyntaxError: invalid syntax
+
+	CHECKING: /home/jlee/bin/pg_func_diff
+	CHECKING: /home/jlee/bin/pg_import
+	Results for '/home/jlee/bin/pg_import'
+	Missing reference 'cStringIO' (line 74)
+	 import cStringIO
+	Missing reference 'math' (line 75)
+	 import math
+	Missing reference 'pydoc' (line 78)
+	 import pydoc
+
+	CHECKING: /home/jlee/bin/pg_strip
+
+""" )
+
+	parser.set_description(hlp)
+	parser.set_usage(main.__doc__)
+	parser.formatter.format_description = lambda s:s
+	parser.add_option("-D", "--debug", action="store_true",
+			default=False, 
+			help="Enable debugging")
+
+	parser.add_option("-r", "--recursive", action="store_true", 
+			default=False,
+			help="Recursively apply copyright to all files.")
+
+	parser.add_option("-b", "--backup", action="store_true",
+			 default=False,
+			 help="Creates backups with .bak as the extension")
+
+	parser.add_option("-F", "--fix", action="store_true",
+			 default=False,
+			 help="Dissable prompts. Commonly used when called by other programs, this will force "
+			 "the program to run without asking for user input, attempting to run with "
+			 "whatever input is given. Only errors are output.")
+
+	parser.add_option("-f", "--force", action="store_true",
+			 default=False,
+			 help="Dissable prompts. Commonly used when called by other programs, this will force "
+			 "the program to run without asking for user input, attempting to run with "
+			 "whatever input is given. Only errors are output.")
+
+	parser.add_option("-v", "--version", action="store_true",
+			default=False, 
+			help="Display Version")
+
+	parser.add_option("-V", "--verbose", action="store_true",
+			 default=False, 
+			 help="Be more Verbose")
+		
+	(opts, args) = parser.parse_args()
+	pprint(sys.argv)
+	exit(1)
+	
+	log = PyTis.set_logging(opts, 'doscheck')
+
+	log.debug("OPTS version: %s" % opts.version)
+	log.debug("OPTS backup: %s" % opts.backup)
+	log.debug("OPTS recursive: %s" % opts.recursive)
+	log.debug("OPTS fix: %s" % opts.fix)
+	log.debug("OPTS force: %s" % opts.force)
+
+
+	if opts.version:
+		return PyTis.version(__version__)
+
+	if sys.stdin.isatty():
+		files = PyTis.filesFromArgs(opts,args)
+	else:
+		files = [x.strip() for x in sys.stdin]
+
+
+	if not files:
+		return parser.print_help()
+	else:
+		return run(files)
+
+if __name__ == '__main__':
+	main()
+

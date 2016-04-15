@@ -1,0 +1,13 @@
+<img src="test_report.png" width="420" height="256" border="0" usemap="#map" />
+
+<map name="map">
+<!-- #$-:Image Map file created by GIMP Imagemap Plugin -->
+<!-- #$-:GIMP Imagemap Plugin by Maurits Rijk -->
+<!-- #$-:Please do not edit lines starting with "#$" -->
+<!-- #$VERSION:2.0 -->
+<!-- #$AUTHOR:jlee -->
+<area shape="rect" coords="30,46,150,64" alt="alt2" target="Helvetica,10" onmouseover="alt3" onmouseout="alt4" onfocus="alt5" onblur="alt6" href="client_name" />
+<area shape="rect" coords="30,82,135,100" target="Times-BoldItalic,20" href="medicaide_no" />
+<area shape="rect" coords="255,64,270,82" href="service" />
+<area shape="rect" coords="285,64,300,82" href="area" />
+</map>

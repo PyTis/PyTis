@@ -1,0 +1,264 @@
+#!/usr/bin/env python
+""""""
+
+import os
+import sys
+import shutil
+import pytis as PyTis
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__created__ = '08:56pm 10 Oct, 2009'
+__copyright__ = 'PyTis.com'
+__version__ = '3.0'
+
+
+def replace_insensitive(string, target, replacement):
+  no_case = string.lower()
+  index = no_case.find(target.lower())
+  if index >= 0:
+    result = string[:index] + replacement + string[index + len(target):]
+    return result
+  else: # no results so return the original string
+    return string
+
+def _jog(re, force, ingorecase, ftype, backups, fstring, rstring):
+
+  if ingorecase:
+    cmd = "find . %s -type f -iname '%s'"
+  else:
+    cmd = "find . %s -type f -name '%s'"
+  command = cmd % (re,
+          ftype)
+  cmd_out = os.popen(command).readlines(-1)
+  #files = [line.strip() for line in cmd_out if line.strip()]
+  files = []
+  for line in cmd_out:
+    line = line.strip()
+    if line:
+      if ingorecase:
+        if line.lower().find(fstring.lower()) > -1:
+          if line not in files:
+            files.append(line)
+      else:
+        if line.find(fstring) > -1:
+          if line not in files:
+            files.append(line)
+
+  if not files:
+    return False
+
+  for file in files:
+    old = file
+    bak = "%s.bak" % file
+    if not ingorecase:
+      new = file.replace(fstring, rstring)
+    else:
+      new = replace_insensitive(file, fstring, rstring)
+    command = "mv %s %s" % (old, new)
+    bcommand = "cp %s %s" % (new, bak)
+
+    if not force:
+      print '-'*80
+      res = raw_input("VERIFY: Run this command?\n%s\n[Y/n (q to quit)]:" % command)
+      if res == 'q':
+        raise PyTis.QuitNow, 'q to quit was pressed'
+      elif res not in ['Y','y']:
+        print 'skipped...'
+      else:
+        shutil.move(old,new)
+        if backups:
+          shutil.copy(new,bak)
+    else:
+      shutil.move(old,new)
+      if backups:
+        shutil.copy(new,bak)
+
+
+def jog(opts, fstring, rstring, ftype):
+  re = ''
+  if opts.iterate:
+    re = '-maxdepth 1'
+
+  try:
+    if not ftype:
+      if not opts.force:
+        if raw_input("Search all file types [Y/n]:") not in ['Y','y']:
+          print '='*80
+          print 'Please specify a file type (example *.txt)'
+          return False
+      ftype = '*'
+
+      _jog(re, opts.force, opts.case, ftype, opts.backup, fstring, rstring)
+
+    else: 
+      if len(ftype) == 1:
+        ftype = ftype[0]
+        _jog(re, opts.force, opts.case, ftype, opts.backup, fstring, rstring)
+      else:
+        files = list(ftype)
+        for ftype in files:
+          _jog(re, opts.force, opts.case, ftype, opts.backup, fstring, rstring)
+  except PyTis.QuitNow, e:
+    print 'aborted...', str(e)
+    return False
+  else:
+    return True
+
+def _run(re, force, ingorecase, ftype, backups, fstring, rstring):
+  """ just simplifying code
+  """
+  if ingorecase:
+    cmd = "find . %s -type f -iname '%s' |xargs perl %s -i -pe 's/%s/%s/gi'"
+  else:
+    cmd = "find . %s -type f -name '%s' |xargs perl %s -i -pe 's/%s/%s/g'"
+  command = cmd % (re,
+          ftype,
+          backups,
+          fstring,
+          rstring)
+
+  if not force:
+    print '-'*80
+    res = raw_input("VERIFY: Run this command?\n%s\n[Y/n (q to quit)]:" % command)
+    if res == 'q':
+      raise PyTis.QuitNow, 'q to quit was pressed'
+    elif res not in ['Y','y']:
+      print 'skipped...'
+    else:
+      os.system(command)
+  else:
+    os.system(command)
+
+def run(opts, fstring, rstring, *ftype):
+  re = ''
+  if opts.iterate:
+    re = '-maxdepth 1'
+  backups = ''
+  if opts.backup:
+    backups = '-i.bak'
+
+  try:
+    if not ftype:
+      if not opts.force:
+        if raw_input("Search all file types [Y/n]:") not in ['Y','y']:
+          print '='*80
+          print 'Please specify a file type (example *.txt)'
+          return
+      ftype = '*'
+
+      _run(re, opts.force, opts.case, ftype, backups, fstring, rstring)
+
+    else: 
+      if len(ftype) == 1:
+        ftype = ftype[0]
+        _run(re, opts.force, opts.case, ftype, backups, fstring, rstring)
+      else:
+        files = list(ftype)
+        for ftype in files:
+          _run(re, opts.force, opts.case, ftype, backups, fstring, rstring)
+
+  except PyTis.QuitNow, e:
+    print 'aborted...', str(e)
+    return False
+  else:
+    return True
+
+
+def main():
+  """usage: findrep [FIND] [REPLACE] [optional[file or pattern]]
+================================================================================
+Tool so I don't have to remember the commands for find replace with perl.
+Yes, all of this can be done by piping commands together and that is why I am
+printing those commands to the screen, so I can see them and memorize them.
+
+Also has some nice options and can additinally do file names or portions 
+of file names.
+  """
+  global log
+  parser = PyTis.MyParser()
+  parser.extra_txt = """
+examples:  
+ findrep [FIND] [REPLACE] *.txt  >> prompts each file   [y/N]
+ findrep [FIND] [REPLACE] '*.txt' >> prompts only once   [y/N]
+ findrep [FIND] [REPLACE]     >> prompts for global *.* [y/N]
+
+ findrep [FIND] [REPLACE] -f FORCES global *.* >> no prompts
+
+ findrep [FIND] [REPLACE] *.txt -f  >> no prompts FOCRES ALL *.txt
+  same as
+ findrep [FIND] [REPLACE] '*.txt' -f >> no prompts FORCES ALL *.txt
+"""
+  #parser.set_description(__doc__)
+  parser.set_usage(main.__doc__)
+  parser.formatter.format_description = lambda s:s
+  parser.add_option("-D", "--debug", action="store_true",
+           default=False, 
+           help="Enable debugging")
+
+  parser.add_option("-b", "--backup", action="store_true",
+           default=False,
+           help="Creates backups with .bak as the extension")
+
+  parser.add_option("-c", "--case", action="store_true",
+           default=False,
+           help="Searches case-insensative")
+
+  parser.add_option("-i", "--iterate", action="store_true",
+           default=False,
+           help="Default behavior: recursive, specify this to not traverse into sub-directories")
+
+  parser.add_option("-n", "--name", action="store_true",
+           default=False,
+           help="Default behavior: replace in files, using this turns that feature off "
+             "and tells this tool to actuall replace parts of file names.")
+             
+  parser.add_option("-f", "--force", action="store_true",
+           default=False,
+           help="Dissable prompts. Commonly used when called by other programs, this will force "
+             "the program to run without asking for user input, attempting to run with "
+             "whatever input is given. Only errors are output.")
+
+  parser.add_option("-v", "--version", action="store_true",
+           default=False, 
+           help="Display Version")
+  
+  parser.add_option("-V", "--verbose", action="store_true",
+           default=False, 
+           help="Be more Verbose")
+
+  (opts, args) = parser.parse_args()
+
+  log = PyTis.set_logging(opts, 'findrep')
+
+
+  if opts.version:
+    return PyTis.version(__version__)
+
+  if len(args) < 2:
+    if opts.force:
+      print "ERROR: invalid input %s" % ' '.join(sys.argv[1:])
+      sys.exit(1)
+    elif len(args):
+      parser.print_help("ERROR: invalid input '%s', look at the examples provided." % ' '.join(sys.argv[1:]))
+      return
+    else:
+      parser.print_help()
+      return
+
+  try:
+    if opts.name:
+      return jog(opts, *args)
+    else:
+      log.debug("OPTS: %s", opts)
+      log.debug("ARGS: %s", args)
+      return run(opts, *args)
+
+  except KeyboardInterrupt, e:
+    print 'bye!'
+    sys.exit(1)
+  else:
+    sys.exit(0)
+
+if __name__ == '__main__':
+  main()

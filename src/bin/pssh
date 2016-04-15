@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+###############################################################################
+# The contents of this program are subject to the Koar Public License
+# (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.koarcg.com/license
+# 
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+# included LICENSE.txt file for more information. Copyright 2007 KCG.
+###############################################################################
+"""
+After setting your .session direcotry path in your environment using the
+variable SESSION_DIR, create session files in your session dir.
+
+These files must follow the INI format. Example session file named koar:
+-------------------------------------------------------------------------------
+[Session]
+HostName=koarcg.com
+PortNumber=22
+UserName=me
+-------------------------------------------------------------------------------
+
+Usage: pssh [SESSION_FILE_PAT]
+The pattern searched is 'koar%', so you may simply type in the begining of the
+session file name, providing it only matches one file.  Thus in the above
+example, the following would also work: 
+    pssh k
+    pssh ko
+    pssh koa
+
+The purpose of this tool is to save time looking up the port numbers, usernames
+and exact domains of client's files.
+"""
+import ConfigParser
+import glob
+import os
+import sys
+
+kwds = ['HostName', 'PortNumber', 'UserName']
+def main():
+    base = os.environ.get('SESSION_DIR')
+    if not base:
+        print "Please set the 'SESSION_DIR' in your environment"
+        return
+    try:
+        fname = sys.argv[1]
+        if fname.upper() in ['?', '-H']:
+            print __doc__
+            return
+        if os.path.isfile(os.path.join(base,fname)):
+            fname = os.path.basename(fname)
+        else:
+            files = glob.glob(os.path.join(base, '%s*' % fname))
+            if len(files) > 1:
+                print "More than one session file matches '%s'" % fname
+                print "I don't know which one to load."
+                return
+            fname = os.path.basename(files[0])
+    except IndexError:
+        print "No session file provided."
+        return
+
+    fpath = os.path.join(base, fname)
+    cp = ConfigParser.ConfigParser()
+    try:
+        cp.read([fpath])
+        host = cp.get('Session', 'HostName')
+        port = cp.get('Session', 'PortNumber')
+        user = cp.get('Session', 'UserName')
+    except:
+        print "Invalid Config File: %s" % fpath
+        return
+    cmd = "ssh -p%s %s@%s" % (port, user, host)
+    print 'attempting to connect...'
+    os.system(cmd)
+
+if __name__ == '__main__':
+    main()

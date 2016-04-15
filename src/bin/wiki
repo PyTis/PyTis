@@ -1,0 +1,280 @@
+#!/usr/bin/env python
+"""wiki
+====
+Doc Here"""
+import xml.sax.saxutils as saxutils
+from docutils.core import publish_parts
+import optparse
+import tempfile
+import os
+import re
+import sys
+
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__created__ = '01:06pm 12 Dec, 2009'
+__copyright__ = 'PyTs.com'
+__version__ = '1.5'
+
+def version():
+    print  __version__
+
+
+def rip_scripts():
+    """
+    Removes anything that could be javascript to prevent malishish 
+    postings.
+    """
+    jscript = re.compile("(<script.*?\/script\>)", re.IGNORECASE|re.DOTALL)
+    def proc(contents):
+        if not contents:
+            return ""
+        return jscript.sub(r'', contents)
+    return proc
+
+def bbc_encoder():
+    uline = re.compile("\[u\](.*?)\[\/u\]", re.IGNORECASE|re.DOTALL)
+    bold = re.compile("\[b\](.*?)\[\/b\]", re.IGNORECASE|re.DOTALL)
+    italic = re.compile("\[i\](.*?)\[\/i\]", re.IGNORECASE|re.DOTALL)
+    image = re.compile("\[img\](.*?)\[\/img\]", re.IGNORECASE|re.DOTALL)
+    ccLinks = re.compile(r"\b([A-Z][a-z]+\w+[A-Z][a-z]+\w+)")
+    fixcode = re.compile("\<blockquote\>(.*?)\<table class\=\'codebox\'", re.IGNORECASE|re.DOTALL)
+
+    def proc(value):
+        """
+        CaSe iN-SeNsiTive
+        BBC's are codes that are basically short-cut HTML.
+        [u]UNDERLINED TEXT[/u]
+        [i]ITALIC TEXT[/i]
+        [b]BOLD TEXT[/b]
+        """
+        value = uline.sub(r'<u>\1</u>', value)
+        value = bold.sub(r'<b>\1</b>', value)
+        value = italic.sub(r'<i>\1</i>', value)
+        value = image.sub(r'<img src="\1" />', value)
+        value = ccLinks.sub(r'<a href="?page=\1">\1</a>', value)
+        value = fixcode.sub(r"\<blockquote class='code' \><table class='codebox'",  value)
+
+        return value
+    return proc
+
+def rest_encode():
+    """
+    Will be used by encoders and also by a parent encoder (that
+    knows that this is is a closure).
+    """
+    def proc(value):
+        return publish_parts(value,writer_name='html')["html_body"] 
+    return proc
+
+
+
+def wiki_encode():
+    """
+    The need being satisfied:
+        Rest doesn't like HTML code, or BBC.  But I want both rest
+        HTML.
+        To get around this problem I am first adding a BBC called
+        'dohtml'.  
+        
+    First go through the value and replace matches with tokens
+    creating a list of each dohtml instance to be replaced later.
+
+            r = str(r).replace("<td class='code syntax'><pre>\r\n","<td class='code syntax'><pre>")
+            r = str(r).replace("<td class='code syntax'><pre>\n","<td class='code syntax'><pre>")
+            r = str(r).replace("<td class='code syntax'><pre>","<td class='code syntax'><pre>proff")
+    """
+
+    def code_ripper(value):
+        """
+        pygmentize -f html -l python bin/importnanny.old
+        """
+
+        code = re.compile("\[code(.*?)\](.*?)\[\/code\]", re.IGNORECASE|re.DOTALL)
+        # I WANT THIS TO MATCH [code ] or [code (python)] or [code] and always store the 
+        # language if any in \1 and actual content in \2 
+        ret_list = code.findall(value)
+        value = code.sub(r'\2', value)
+        
+
+        i = 0
+        #ret_list = [x[1] for x in ret_list]
+        for a in ret_list:
+            value = value.replace(a[1], "{_code_%s_}" % i)
+            i+=1
+
+        new_list = []
+        for tup in ret_list:
+            tmp = tempfile.NamedTemporaryFile()
+
+            tmp.write(tup[1])
+            tmp.seek(0)
+            lang = tup[0]
+            if 'python' in lang.lower():
+                r = os.popen('pygmentize -f html -l python %s' % tmp.name).read(-1)
+            elif 'php' in lang.lower():
+                r = os.popen('pygmentize -f html -l php %s' % tmp.name).read(-1)
+            elif 'html' in lang.lower():
+                r = os.popen('pygmentize -f html -l html %s' % tmp.name).read(-1)
+            elif 'bash' in lang.lower():
+                r = os.popen('pygmentize -f html -l bash %s' % tmp.name).read(-1)
+            else:
+                r = '<pre>%s</pre>' % saxutils.escape(tup[1])
+                
+            tmp.close()
+            new_list.append(str(r))
+
+        ret_list = new_list
+
+        return value, ret_list
+
+    def html_ripper(value):
+        """
+        [dohtml]HTML STUFF[/dohtml]
+        first of a 2 step process that allows pure html to be displayed.
+        step 2 is located below in while statments using variable 
+        """
+        help = re.compile("\[help\](.*?)\[\/help\]", re.IGNORECASE|re.DOTALL)
+
+        value = help.sub(r'[dohtml]<div class="help"><pre>\1</pre></div>[/dohtml]', value)
+
+
+        html = re.compile("\[dohtml\](.*?)\[\/dohtml\]", re.IGNORECASE|re.DOTALL)
+        ret_list = html.findall(value)
+        value = html.sub(r'\1', value)
+        #print ret_list
+        i = 0
+        for a in ret_list:
+            value = value.replace(a, "{_dohtml_%s_}" % i)
+            i+=1
+
+        return value, ret_list
+
+    def codebox(val):
+        """ Wraps code in a codebox, and makes it "pretty", could
+        be named code to pretty
+        """
+        x = [i for i in range(1, len(val.split("\n")))]
+        if not val.endswith("\n"):
+            x.append(len(x)+1)
+        x.append('')
+        x = ". <br />".join(str(i) for i in x)
+        return """<div class='codebox'>
+        <table width='100%%' class='codebox' cellspacing='0' cellpadding='0' >
+            </tr>
+                <td class='numbers' align='right'>
+                    <div class='numbers' align='right'>%s</div>
+                </td>
+                <td width='100%%' class='code syntax'>%s</td>
+            </tr>
+            </table>
+            </div>
+        """ % (x,val.replace("<pre>\n","<pre>").replace("\n</pre>","</pre>"))
+
+
+
+    def proc(value):
+        if not value:
+            return ""
+        scripts = re.compile("\[script file=(.*?)\]", re.IGNORECASE|re.DOTALL)
+        ret_list = scripts.findall(value)
+        for script in ret_list:
+            fpath = script.replace("'",'').replace('"','')
+            fpath = os.path.abspath(fpath)
+
+            if not os.path.exists(fpath) or not os.path.isfile(fpath):
+                auto_code = "FILE NOT FOUND: %s" % fpath 
+            else:
+                body = open(fpath,'r').read(-1)
+                lang = ""
+                if len(body.split("\n")) > 1:
+                    if 'php' in body.split("\n")[0].lower():
+                        lang = " php"
+                    elif 'python' in body.split("\n")[0].lower():
+                        lang = " python"
+                    elif 'bash' in body.split("\n")[0].lower():
+                        lang = " bash"
+                    elif 'html' in body.split("\n")[0].lower():
+                        lang = " html"
+                    # The next few lines are broken up really silly, 
+                    # that is so that this can parse itself without getting
+                    # too confused.
+                    auto_code = "[dohtml]<div class='autoname'>FILENAME: " \
+                    "%s</div>[/dohtml] [c" \
+                    "ode %s]%s[/co" \
+                    "de]" % (fpath, lang, body)
+
+            a = "[script file=%s]" % script
+            b = "[script file='%s']" % script
+            c = '[script file="%s"]' % script
+
+            value = value.replace(a, auto_code)
+            value = value.replace(b, auto_code)
+            value = value.replace(c, auto_code)
+
+        page_content_a, page_results_a = code_ripper(value)
+
+        page_content_b, page_results_b = html_ripper(page_content_a)
+        #rest_input = saxutils.escape(page_content_b)
+        rest_input = page_content_b
+        rest_results = rest_encode()(rest_input)
+        bbc_results = bbc_encoder()(rest_results)
+
+        i=0
+        while i < len(page_results_a):
+            bbc_results = bbc_results.replace("{_code_%s_}" % i, codebox(page_results_a[i]))
+            i+=1
+
+        i=0
+        while i < len(page_results_b):
+            bbc_results = bbc_results.replace("{_dohtml_%s_}" % i, page_results_b[i])
+            i+=1
+        return bbc_results
+        
+    return proc
+
+
+
+def run(opts, val):
+    if not val.strip(): return ''
+    #val = saxutils.escape(val)
+    if opts.debug:
+        print """<!-- RST generated to HTML via PyTis tool. 
+        Author: Josh Lee
+        Copyright: PyTis.com
+        Original Text:
+        %s
+        -->
+        """ % saxutils.escape(val)
+    return wiki_encode()(rip_scripts()(val))
+
+def main():
+    """usage: wiki """
+    parser = optparse.OptionParser(description=__doc__)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-v", "--version", action="store_true",
+                      default=False, 
+                      help="Display Version")
+
+    parser.add_option("-V", "--verbose", action="store_true",
+                      default=False, 
+                      help="Be more Verbose")
+    (opts, args) = parser.parse_args()
+
+    
+
+    if opts.version:
+        return version()
+
+    input = str(sys.stdin.read(-1))
+    print run(opts, input)
+
+if __name__ == '__main__':
+    main()

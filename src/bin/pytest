@@ -1,0 +1,232 @@
+#!/usr/bin/env python
+###############################################################################
+# The contents of this program are subject to the Koar Public License
+# (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.koarcg.com/license
+# 
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+# included LICENSE.txt file for more information. Copyright 2007 KCG.
+###############################################################################
+"""
+Usage: pytest [OPTIONS] PATHS AND OR FILES
+You may pass an arbitrary number of directoies and files.
+
+Directories passed in will be scanned, all files starting with test_ and ending 
+with a .py extention will be inspeced for classes that inherit from
+unittest.TestCase, and added to the runner.
+
+Examples:
+    Normal Mode:
+    pytest Controls/test_Label.py Controls/test_TimePicker.py 
+    pytest Controls/
+    pytest Controls/ util/utiltest.py
+    
+    Email Only Mode (good for cron jobs):
+    pytest Controls/ -e jlee@test.com -e jlowery@test.com -q
+
+"""
+import cStringIO
+import datetime
+import optparse
+import os
+import sys
+import unittest
+import logging; log=logging.getLogger(' ')
+import smtplib
+
+def mail(to='', text=''):
+    """
+    Usage:
+    mail(to='me@example.com', text='This is a test')
+    mail(to=['me@example.com','friend@example.com'], text='This is a test')
+    """
+    sender='unittest@koarcg.com'
+    subject = "unittest test results for %s" % datetime.datetime.now()
+    serverURL = 'localhost'
+    headers = "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n" % \
+              (sender, to, subject)
+
+    message = headers + text
+    mailServer = smtplib.SMTP(serverURL)
+    mailServer.sendmail(sender, to, message)
+    mailServer.quit()
+
+class MyStream(object):
+    """
+        stereotype: Proxy 
+    Used to decorate file-like objects with a handy 'writeln' method"""
+    def __init__(self,stream=cStringIO.StringIO()):
+        self.stream = stream
+
+    def __getattr__(self, attr):
+        return getattr(self.stream, attr)
+
+    def writeln(self, arg=None):
+        if arg: self.write(arg)
+        self.write('\n') # text-mode streams translate to \r\n if needed
+
+class MyTestResult(unittest.TestResult):
+    """ Overriding the built in test resulter to be able to email failures, or
+    hide results based on the options passed into this program.
+    """
+    quiet=False
+    emails=[]
+    separator1 = '=' * 80
+    separator2 = '-' * 80
+
+    def __init__(self, quiet=False, emails=[]):
+        self.quiet = quiet
+        self.emails = emails
+        self.stream = MyStream()
+        unittest.TestResult.__init__(self)
+
+    @property
+    def results(self):
+        if not self.quiet:
+            head = "Tests Ran: %i\nSuccess:%i\nErrors:%i\nFailures:%i" % \
+                   (self.testsRun, 
+                    self.testsRun-len(self.failures),
+                    len(self.errors),
+                    len(self.failures))
+            return "%s\n%s" % (head, self.getEF())
+        else:
+            return ''
+
+    def getDescription(self, test):
+        return test.shortDescription() or str(test)
+
+    def printErrorList(self, flavour, errors):
+        for test, error in errors:
+            self.printError(flavour, test, error)
+
+    def printError(self, flavour, test, error):
+        self.stream.writeln(self.separator1)
+        self.stream.writeln("%s: %s" % (flavour, self.getDescription(test)))
+        self.stream.writeln(self.separator2)
+        self.stream.writeln("%s" % error)
+
+    def sendEmails(self):
+        if (self.failures or self.errors) and self.emails:
+            head = "Tests Ran: %i\nSuccesses:%i\nErrors:%i\nFailures:%i" % \
+                   (self.testsRun, 
+                    self.testsRun-len(self.failures),
+                    len(self.errors),
+                    len(self.failures))
+            body = "%s\n%s" % (head, self.getEF())
+            mail(to=self.emails, text=body)
+    
+    def getEF(self):
+        """ Returns errors and failures as a string
+        """
+        self.printErrorList('FAILURE', self.failures)
+        self.printErrorList('ERROR', self.errors)
+        return self.stream.getvalue()
+
+def email_accumulator():
+    """Return an optParser callback and a getter to grab final results.
+    The callback is an accumulator that will continuesly add new email
+    addresses, as many times it is called.
+    """
+    emails = []
+    def get_emails():
+        return emails
+    def my_callback(option, opt, value, parser):
+        if value not in emails:
+            emails.append(value)
+    return my_callback, get_emails
+email_accumulator, get_emails = email_accumulator()
+
+def get_cases_from_file(file):
+    test_cases = []
+    d = {'__file__' : file}
+    execfile(file, d, d)
+    for v in d.values():
+        if isinstance(v, type) and issubclass(v, unittest.TestCase):
+            test_cases.append(v)
+    return test_cases
+
+def get_cases_from_dir(scan_dir, test_cases=[]):
+    base_dir = os.path.abspath(scan_dir)
+    dirname = os.path.dirname(base_dir)
+    for d, n, f in os.walk(base_dir):
+        for file in f:
+            if file.endswith('.py') and file.startswith('test_'):
+                test_cases.extend(get_cases_from_file(os.path.join(d, file)))
+    return test_cases
+
+def main():
+    parser = optparse.OptionParser(description=__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true", default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-q", "--quiet", action="store_true", default=False, 
+                      help="Verbose by default, this will hide all output")
+
+    parser.add_option("-l", "--list", default=False, action='store_true',
+                      help="Useful for listing the test methods in a "\
+                            "TestCase to then be used with the TEST flag.")
+
+    parser.add_option("-t", "--test", default=None, 
+                      help="Specify a particular test name to run.",
+                      type='string')
+
+    parser.add_option("-e", "--email", dest='email', type='string',
+                      action='callback', callback=email_accumulator,
+                      help="Add emails to be notified of the results.")
+    (opts, cmd) = parser.parse_args()
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.WARN)
+ 
+    if not cmd:
+        parser.print_help()
+        log.warn("No Scan directory provided")
+        sys.exit(1)
+
+    cases = []
+    for d_or_f in cmd:
+        if os.path.isdir(d_or_f):
+            cases.extend(get_cases_from_dir(d_or_f))
+        else:
+            cases.extend(get_cases_from_file(d_or_f))
+
+    if opts.list:
+        for case_obj in cases:
+            for item in dir(case_obj):
+                if item.startswith('test_'):
+                    print '%s.%s' % (case_obj.__name__, 
+                                     item.replace('test_',''))
+
+    elif opts.test:
+        opts.test = "test_%s" % opts.test
+        resulter = MyTestResult(opts.quiet, get_emails())
+        for case_obj in cases:
+            tmethod = getattr(case_obj, opts.test, None)
+            if tmethod:
+                test_case = case_obj(opts.test)
+                test_case.run(resulter)
+        resulter.sendEmails()
+        print resulter.results
+
+    else:
+        suite = unittest.TestSuite()
+        loader = unittest.TestLoader()
+        resulter = MyTestResult(opts.quiet, get_emails())
+        for tcase in cases:
+            suite.addTests(loader.loadTestsFromTestCase(tcase)._tests)
+        sys.stdout = cStringIO.StringIO()
+        suite.run(resulter)
+        sys.stdout = sys.__stdout__
+        resulter.sendEmails()
+        print resulter.results
+
+if __name__ == '__main__':
+    main()

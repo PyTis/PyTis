@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+"""
+Append <%include file='add_contact.tmpl.res' /> to the top of add_contact.tmpl
+"""
+
+import os
+import sys
+import re
+import tempfile
+import shutil
+
+def run(file_name):
+        
+    if not os.path.exists(file_name):
+        print >> sys.stderr, 'File not found:', file_name
+        return
+    try:
+        tmpl_file_name = os.path.splitext(file_name)[0]
+    except IndexError:
+        print >> sys.stderr, 'Invalid resource file:', file_name
+        return
+    if not os.path.exists(tmpl_file_name):
+        print >> sys.stderr, 'matching template not found:', tmpl_file_name
+        return
+
+    tmpl_file = open(tmpl_file_name)
+    has_def = False
+    state = 'START'
+    out_file = tempfile.NamedTemporaryFile()
+    DEF_EXP = re.compile(r'\s*<%def name=[\'"]resources\(\)[\'"]>\s*')
+    INCLUDE_EXP = re.compile(r'.*?<%%include file=[\'"]%s[\'"] />.*' %
+        file_name)
+    UNDEF_EXP = re.compile(r'\s*</%def>\s*')
+    INHERIT_LINE = re.compile(r'\s*<%inherit')
+    IMPORT_LINE = re.compile(r'\s*<%import')
+
+    for line in tmpl_file:
+        if state == 'START':
+            if DEF_EXP.match(line):
+                has_def = True
+                state = 'RESOURCE'
+        elif state == 'RESOURCE':
+            if INCLUDE_EXP.match(line):
+               return
+            elif UNDEF_EXP.match(line):
+                out_file.write('<%%include file="%s" />\n' %
+                    os.path.basename(file_name))
+                state == 'START'
+        else:
+            raise ValueError, "Invalid FSM state: %s" % state
+        out_file.write(line)
+
+    if state <> 'START':
+        print >> sys.stderr, 'Invalid syntax in %s, end of file with no ' \
+            '</%def>' % tmpl_file_name
+
+    # We would have returned if it was found
+    if not has_def:
+        out_file.seek(0)
+        tmpl_file.seek(0)
+        inh_line = False
+        for line in tmpl_file:
+            if not inh_line:
+                if not INHERIT_LINE.match(line) and not IMPORT_LINE.match(line):
+                    out_file.write("""\
+<%def name="resources()">
+    <%include file='""" + os.path.basename(file_name) + """' />
+    % if hasattr(next, 'resources'):
+       ${next.resources()}
+    % endif
+</%def>
+""")
+                    inh_line = True
+
+            out_file.write(line) 
+    out_file.flush()
+#    shutil.copy(tmpl_file_name, '%s.%s.bak' % (os.path.dirname(tmpl_file_name),
+#                                              os.path.basename(tmpl_file_name)))
+    shutil.copy(out_file.name, tmpl_file_name)
+    os.system('chmod 0644 %s' % tmpl_file_name)
+def main():
+    for file_name in sys.argv[1:]:
+        run(file_name)
+
+
+if __name__ == '__main__':
+    main()
+

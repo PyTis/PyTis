@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+"""Filters out columns in a CSV file. Provide a list of numeric indexes as
+arguments. The CSV file is read from STDIN and the filtered CSV is sent to
+STDOUT. """
+import sys
+import csv
+
+if __name__ == '__main__':
+    reader = csv.reader(sys.stdin)
+    indexes = [int(c) for c in sys.argv[1:]]
+
+    for line in reader:
+        try:
+            print ",".join(line[i] for i in indexes)
+        except IndexError:
+            print >>sys.stderr, "SKIPPING:", line
+            continue

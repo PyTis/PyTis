@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+""" Sets the contents of all .svnignore files to svn:ignore properties
+recursively in the current directory. Also attemps to add the
+.svnignore file to subversion.
+"""
+import os
+import optparse
+
+
+def run(args,options):
+    for root, dirs, files in os.walk(os.curdir):
+        if '.svnignore' not in files:
+            continue
+        path = os.path.join(root, '.svnignore')
+        os.system('svn propset svn:ignore -F "%s" "%s"' % (path, root))
+        os.system('svn add "%s"' % path)
+
+        if args.delete:
+            h = open(path, 'r')
+            for file in h:
+               os.system('svn rm --force "%s"' % os.path.join(root, file.strip()))
+            h.close()
+
+    
+def main():
+    parser = optparse.OptionParser()
+    parser.add_option("-d", "--delete", action="store_true", default=False,
+                      dest="delete", help="Remove ignored files.")
+    args, options = parser.parse_args()
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,150 @@
+#!/usr/bin/env python
+
+import optparse
+import os
+import sys
+import logging; log=logging.getLogger('cnt')
+import locale
+
+
+import re
+
+
+re_digits_nondigits = re.compile(r'\d+|\D+')
+
+__created__ = '01:07pm 09 Sep, 2009'
+__version__ = '1.0'
+
+def version():
+    print  __version__
+
+
+def _commafy(s):
+    r = []
+    for i, c in enumerate(reversed(str(s))):
+        if i and (not (i % 3)):
+            r.insert(0, ',')
+        r.insert(0, c)
+    return ''.join(r)
+
+def run(opts):
+    c = 0
+    if opts.file:
+        if os.path.isfile(os.path.abspath(opts.file)) and \
+        os.path.exists(os.path.abspath(opts.file)):
+
+            handle = open(opts.file,'r')
+            lines = handle.readlines(-1)
+            handle.close()
+
+            for line in lines:
+                if opts.linebreaks:
+                    line = line.replace("\n",'')
+                if opts.spaces:
+                    line = line.strip(" ")
+                c = c + len(line)
+            return c
+
+        else:
+            print "ERROR: file not found: ", opts.file
+            sys.exit(1)
+
+    if opts.string:
+        if opts.linebreaks:
+            opts.string = opts.string.replace("\n",'')
+        if opts.spaces:
+            opts.string = opts.string.strip(" ")
+        return len(opts.string)
+
+    # shouldn't reach this
+    print "Bad file or string"
+    sys.exit(1)
+
+def main():
+    """
+cnt TEXT OR cnt foo.txt OR cnt -ffoo.txt
+    cnt foo.txt >> 7  (counts length of string "foo.txt")
+    cnt -sfoo.txt >> 7
+    cnt --string=foo.txt >> 7
+
+    "cnt -S foo.txt " >> 8
+    cnt --file=foo.txt >> 32,111 (counts charectors in "foo.txt")
+    cnt -ffoo.txt -B 36,922 (counted line break charectors)
+===============================================================================
+    
+    """
+    parser = optparse.OptionParser(description=__doc__)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+    parser.add_option("-f", "--file", action="store",
+                      default=None, 
+                      help="Filename to open and count")
+
+    parser.add_option("-S", "--spaces", action="store_true",
+                      default=False, 
+                      help="Specifying this flag will result in the counting of trailing spaces.")
+
+    parser.add_option("-B", "--linebreaks", action="store_true",
+                      default=False, 
+                      help="Specifying this flag will result in the counting of line return charecters.")
+
+
+    parser.add_option("-p", "--pretty", action="store_true",
+                      default=False, 
+                      help="Pretty numbers returned '1,002,103' instead of 1002103")
+
+    parser.add_option("-s", "--string", action="store",
+                      default=None, 
+                      help='alias: "cnt --string=foo" Same as "cnt foo"')
+
+    parser.add_option("-v", "--version", action="store_true",
+                      default=False, 
+                      help="Display Version")
+    
+    (opts, cmd) = parser.parse_args()
+
+    # Logging Configuration
+    log.setLevel(0) 
+    formatter = '%(levelname)-8s %(message)s'
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG, format=formatter)
+    else:
+        logging.basicConfig(level=logging.INFO, format=formatter)
+
+    if not opts.file and not opts.string and not len(sys.argv) > 1:
+        parser.print_help()
+        print 'NO file or string specified - no input, no output.'
+        return 
+
+
+    if opts.file and opts.string:
+        parser.print_help()
+        print "Specified file to read, and string, please only specify one."
+        return
+
+    if not opts.file and not opts.string:
+        for arg in sys.argv[1:]:
+            if not arg.startswith('-'):
+                opts.string=arg
+
+
+    if opts.version:
+        return version()
+
+    if opts.file or opts.string:
+        cnt = run(opts)
+        if opts.pretty:
+            locale.setlocale(locale.LC_ALL, "")
+            print _commafy(cnt)
+        else:
+            print cnt
+        return
+    parser.print_help()
+
+if __name__ == '__main__':
+    main()

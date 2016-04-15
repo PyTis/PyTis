@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+""" tars a directory and rotates the backup files, deleting the oldest. The
+BACKUP_LIMIT variable defines how many tar files files to keep.
+"""
+import sys
+import os
+import stat
+import glob
+import datetime
+
+BACKUP_LIMIT = 5
+target_dir = os.path.abspath(sys.argv[1])
+backup_dir = os.path.abspath(sys.argv[2])
+
+base_name = os.path.basename(target_dir)
+
+# Purge old backups
+cur_backups = glob.glob(os.path.join(backup_dir, '%s*' % base_name))
+cur_backups.sort(lambda x, y: cmp(os.stat(x)[stat.ST_ATIME], os.stat(y)[stat.ST_ATIME]))
+while len(cur_backups) >= BACKUP_LIMIT:
+    old = cur_backups.pop(0)
+    os.remove(old)
+
+# Calculate destination directory
+today = datetime.datetime.today().strftime("%Y%m%d")
+target_backup_file = os.path.join(backup_dir, "%s-%s.tar.gz" % (base_name, today))
+if os.path.exists(target_backup_file):
+    counter = 1
+    while os.path.exists(os.path.join(backup_dir, "%s-%s-%s.tar.gz" % (base_name, today, counter))):
+        counter = counter + 1
+    target_backup_file = os.path.join(backup_dir, "%s-%s-%s.tar.gz" % (base_name, today, counter))
+
+# Perform backup
+os.system("tar czf %s %s" % (target_backup_file, target_dir))

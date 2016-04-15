@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+""" Adds all python files in directories named t except
+for __init__.py to the .svnignore files in those
+directories recursively from the current directory.
+"""
+import os
+import glob
+
+for root, dirs, files in os.walk(os.curdir):
+    if os.path.basename(root) <> 't':
+        continue
+    files = glob.glob("%s/*.py" % root)
+    files = [os.path.basename(f) for f in files]
+    files = [f for f in files if f <> '__init__.py']
+    ignore_path = os.path.join(root, '.svnignore')
+    if os.path.exists(ignore_path):
+        igh = open(ignore_path)
+        ignores = dict([(f.strip(), True) for f in igh])
+        igh.close()
+    else:
+        ignores = {}
+    ignores.update(dict([(f, True) for f in files]))
+
+    igh = open(ignore_path, 'w')
+    for ignore in ignores.keys():
+        igh.write("%s\n" % ignore)
+    igh.close()

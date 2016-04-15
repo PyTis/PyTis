@@ -1,0 +1,138 @@
+#!/usr/bin/env python
+"""yaml2mako
+=========
+Doc Here"""
+
+import copy
+import optparse
+import cStringIO
+import os
+import sys
+import logging; log=logging.getLogger('yaml2mako')
+import yaml
+import tempfile
+
+__created__ = '2007-06-30 20:01:42.093684'
+__version__ = 1.0
+__copyright__ = 'KCG'
+__author__ = 'Josh Lee'
+
+def main():
+    """USAGE: yaml2mako """
+    parser = optparse.OptionParser(description=__doc__)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-i", "--inherit", 
+                      default=None, 
+                      help="Template to inherit from")
+
+    (opts, cmd) = parser.parse_args()
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    if sys.stdin.isatty():
+        try:
+            infile = open(cmd[0])
+        except IndexError:
+            return parser.print_help()
+    else:
+        infile = sys.stdin
+
+    definition=yaml.load(infile)
+
+    if not definition:
+        return parser.print_help()
+
+    out = cStringIO.StringIO()
+    if opts.inherit is not None:
+        out.write('<%%inherit file="%s" />\n' % opts.inherit)
+
+    out.write("<%import kcontrol %>\n")
+
+    if definition.get('action','').upper() <> 'ADD':
+        out.write("<% kcontrol.store.update(ctx) %>\n")
+
+    rows = []
+    mode = None
+    parts = []
+    # Parse the table layout
+    for line in definition.get('layout','').split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        if 'BEGIN TABLE' in line.upper():
+            if rows:
+                parts.append((mode, rows))
+            rows = []
+            mode = 'TABLE'
+            continue
+
+        if 'BEGIN PAGER' in line.upper():
+            if rows:
+                parts.append((mode, rows))
+            rows = []
+            mode = 'PAGER'
+            continue
+
+        if 'BEGIN FORM' in line.upper():
+            if rows:
+                parts.append((mode, rows))
+            rows = []
+            mode = 'FORM'
+            continue
+        
+        if line.startswith('*'):
+            rows.append([line[1:]])
+        else:
+            rows.append(line)
+    map = {
+        'FORM' : 'makoform',
+        'TABLE' : 'makotable',
+        'PAGER' : 'makopager',
+    }
+    parts.append((mode, rows))
+
+    for mode, rows in parts:
+
+        newdef = copy.deepcopy(definition)
+        rows.insert(0, "BEGIN %s" % mode)
+        newdef['layout'] = '\n'.join(rows)
+
+        file = tempfile.NamedTemporaryFile()
+        temp_name = file.name
+        file.close_called = True
+        file.write(yaml.dump(newdef))
+        file.flush()
+        file.close()
+
+        pipe = cStringIO.StringIO()
+
+        deff = yaml.dump(newdef)
+        for line in os.popen('cat %s | %s' % (temp_name, 
+                                              map[mode])).readlines():
+            pipe.write('%s\n' % line.rstrip())
+        os.unlink(file.name)
+        if mode == 'FORM':
+            out.write("<% kcontrol.store['mode'] = 'HTML' %>\n")
+        elif mode == 'PAGER':
+            out.write("<% kcontrol.store['mode'] = 'VIEW' %>\n")
+        else:
+            # for print and other custom pages
+            out.write("<%% kcontrol.store['mode'] = '%s' %%>\n" % \
+                definition.get('mode','HTML'))
+
+
+        out.write(pipe.getvalue())
+
+    print out.getvalue()
+        
+if __name__ == '__main__':
+    main()

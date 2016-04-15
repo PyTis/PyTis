@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+if [ ! "$1" ]; then
+    echo 'Please pass in a path as the only argument'
+elif [ "$1" == "-h" ]; then
+    echo "Takes a dir name."
+    echo "Creates the following files and directories for the given name"
+    echo "NAME/__init__.py"
+    echo "NAME/t"
+    echo "NAME/sql"
+    echo "NAME/data"
+    echo "NAME/res"
+    echo "NAME/res/css"
+    echo "NAME/res/js"
+    echo "NAME/res/image"
+else
+    mkdir $1
+    touch $1/__init__.py
+    mkdir $1/t
+    mkdir $1/sql
+    mkdir $1/data
+    mkdir $1/res
+    mkdir $1/res/css
+    mkdir $1/res/js
+    mkdir $1/res/image
+    echo 'DONE'
+fi

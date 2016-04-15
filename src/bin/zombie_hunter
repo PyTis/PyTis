@@ -1,0 +1,533 @@
+#!/usr/bin/env python
+"""Zombie Hunter
+=============
+This program can search for a specific program or search all running programs.
+Running interactively you can view more information about possible zombie  
+programs found.
+
+This program can self install and creates a whitelist file upon installation.
+This is a list of programs that are to be ignored when scanning all programs.
+
+Zobie Hunter may also be ran non-interactive and passed arguments to kill 
+assumed zombies.  This is very dangerous and should not be used unless you know
+what you are doing.  It is suggested that you run Zombie Hunter interactivly
+first, to make sure the assumed zombies are ok to stop."""
+
+import cStringIO
+import optparse
+import glob
+import os
+import datetime
+import cPickle
+import sys
+import curses, traceback
+
+__author__ = 'Josh Lee'
+__created__ = '07:58am 09 Sep, 2009'
+__copyright__ = 'PyTis'
+__version__ = '1.0'
+__configdir__ = '/home/ut3hax/.zombie_hunter_files'
+
+def version():
+    print  __version__
+
+def fname(opts):
+    """ process file name
+    """
+    if opts.file:
+        return opts.file
+    else:
+        return "%s.zhf" % opts.command.strip().replace(' ', '_')
+
+def fpath(opts):
+    """ process file path with file name
+    """
+    if opts.all and not opts.file:
+        return apath()
+    else:
+        return os.path.abspath(os.path.join(__configdir__,fname(opts)))
+
+def apath(): 
+    """ all process file name and file path
+    """
+    return os.path.abspath(os.path.join(__configdir__,'_all_.zhf'))
+
+def wname(opts):
+    """ whitelist file name
+    """
+    if opts.all:
+        return '_all_.whl'
+    else:
+        return "%s.whl" % opts.command.strip().replace(' ', '_')
+
+def wpath(opts):
+    """ whitelist file path with whitelist file name
+    """
+    return os.path.abspath(os.path.join(__configdir__,wname(opts)))
+
+
+def createWhitelist(opts):
+    """ This was created to list processes to ignore.
+    """
+    defaults = ['apache2','init','sshd','cupsd','bash','syslogd','cron',
+                'proftpd']
+    opts.all = True
+    fi = wpath(opts)
+    handle = open(fi, 'w')
+    for d in defaults:
+        handle.write("%s\n" %d)
+    handle.close()
+
+def loadWhitelist(opts):
+    """ Loads a whitelist and interprets it into a list.
+    """
+    fi = wpath(opts)
+    try:
+        handle = open(fi, 'r')
+        return [line.strip() for line in handle.readlines(-1) if line.strip()]
+    except IOError, e:
+        return []
+
+def load(opts):
+    """ Loads the list of previously found processes and spikes the object as a
+    dictionary.  If the file was corrupt or empty and cannot be cast as a dict,
+    then an empty dict is returned.
+    """
+    fi = fpath(opts)
+
+    if not os.path.exists(fi):
+        os.popen("touch %s" % fi)
+        return {}
+    else:
+        handle = open(fi,'r')
+        pic = cPickle.Unpickler(handle)
+        ndata = pic.load()
+        handle.close()
+        try:
+            return dict(ndata)
+        except TypeError, e:
+            # corrupt file
+            return {}
+
+def save(opts, ndata):
+    """ save processes found for continued examination the next time Zombie 
+    Hunter is ran.
+    """
+
+    for k, v in ndata.items():
+        v['BIRTH'] = 0
+    fi = fpath(opts)
+    handle = open(fi,'w')
+    pic = cPickle.Pickler(handle)
+    pic.dump(ndata)
+    handle.close()
+
+def gather(opts):
+    """ Gather a list or processes and interpret it into a useable dict object.
+    """
+    if opts.all:
+        cmd = "ps ax -o pid,ppid,state,etime,comm,cmd,args" 
+    else:
+        cmd = "ps ax -o pid,ppid,state,etime,comm,cmd,args | grep %s" % opts.command
+    cmd_out = os.popen(cmd).readlines(-1)
+    PID     = 0 # process id
+    PPID    = 1 # parent process id
+    STATE   = 2 # state
+    TIME    = 3 # ELAPSED TIME
+    COMM    = 4 # short name
+    CMD     = 5 # full command
+    ARGS    = 6 # args
+    data = {}
+    whitelist = loadWhitelist(opts)
+    for line in cmd_out:
+        if not ('ax' in line and 'ps' in line or ('grep' in line and not opts.all)):
+            # avoids finding the grep line
+            x = line.split()
+            if x[COMM] in whitelist:
+                continue
+
+            try:
+                args = ','.join(x[ARGS:])
+            except IndexError, e:
+                args = ''
+            if x[PID].strip() == str(os.getpid()) or x[PID].strip() == 'PID':
+                continue
+            data[x[PID]] = {'PID'   : x[PID].strip(),
+                            'PPID'  : x[PPID].strip(),
+                            'STATE' : x[STATE].strip(),
+                            'ETIME' : x[TIME].strip(),
+                            'COMM'  : x[COMM].strip(),
+                            'CMD'   : x[CMD].strip(),
+                            'DATE'  : datetime.datetime.now(),
+                            'BIRTH' : 1,
+                            'ARGS'  : args.replace("n",'n')
+                           }
+    return data
+
+
+def clean(old_data, new_data):
+    """ Given an old dict object of precesses and a new dict object of
+    processes, merge them and return a list of processes sorted by which has
+    been running the longest.
+    """
+    
+    for k, v in old_data.items():
+        if k not in new_data: # for eavything in our old data, if it isn't in our new data
+            del old_data[k] # we can remove it
+        elif k in new_data: # it is there, but it is the same prog, or just the same PID?
+            if old_data[k]['COMM'] != new_data[k]['COMM']: # oops, just a re-used pid
+                pass
+            else:
+                new_data[k].update(v)
+
+    return new_data
+     
+def getSize():
+    import fcntl,termios,struct
+    data = fcntl.ioctl(sys.stdout.fileno(), termios.TIOCGWINSZ, '1234')
+    return struct.unpack('hh',data)
+
+def manage(opts, new):
+    """ Zombie Hunter - Manager Help
+
+Legend:
+
+    ID -  The id assigned by zombie hunter to the program to help identify a
+        w
+        process to interact with.  This id has no reflection of assigned 
+        system process id's.
+
+    PID - The PROCESS ID assigned by the operating system.
+
+    ELAPSED TIME - Elapsed time since the process was started, in the form 
+        [[dd-]hh:]mm:ss.
+
+    DATE GATHERED - The date and time Zombie Hunter first saw this process
+        running.
+
+    NEW - If the process was running the last time Zombie Hunter was ran, this
+        will say False.  If Zombie Hunter is just now seeing the process, it
+        will say True.
+
+    ZOMBIE - If the process in question was flagged a zombie by the Operating
+        system, this will say True.
+
+    NAME - The short common name of the process.
+
+"""
+    dates = []
+    items = []
+    for k,v, in new.items():
+        dates.append(v['DATE'])
+        items.append(v)
+    new = zip(dates,items)
+    new.sort()
+    ids = range(1,len(new)+1)
+    new = zip(ids,new)
+    sys.stdout = cStringIO.StringIO()
+    print "-- Zombie Hunter --"
+    print " ?:Help    q:Quit    [id]:VIEW   k {options}:Kill"
+    print " PGDOWN/ENTER: scroll-down      PGUP:scroll-up"
+    print 
+    print "ID  |  PID  | ELAPSED TIME |    DATE GATHERED    |  NEW  | ZOMBIE | NAME "
+    print '========================================================================='
+    for i, item in iter(new):
+        item = item[1]
+        print "%s | %s | %s | %s | %s | %s | %s" % (str(i).ljust(3),
+                                  item['PID'].rjust(5),
+                                  item['ETIME'].rjust(12),
+                                  item['DATE'].strftime("%Y-%d-%m %H:%M:%S").rjust(19),
+                                  str(item['BIRTH'] == True).ljust(6),
+                                  str(item['STATE'] == 'Z').ljust(5),
+                                  item['COMM'],
+                                  )
+
+    out = sys.stdout.getvalue().split('\n')
+   
+    longest = 0
+    for d in out:
+        if len(d) > longest: longest = len(d)
+
+    sys.stdout = sys.__stdout__
+    #return
+    
+   # print curses.KEY_UP
+   # print curses.KEY_DOWN
+    start_x, start_y = 0,0
+
+    try:
+        win=curses.initscr()
+        curses.noecho()
+        curses.cbreak()
+        win.keypad(1)
+        max_x, max_y = win.getmaxyx()
+        # x up and down
+        # y left and right
+        x_length = start_x + max_x -2
+        y_length = start_y + max_y -1
+        lines = out[start_x:x_length]
+        for line in lines:
+            win.addstr("%s\n" % line[start_y:y_length])
+        win.addstr(">>>")
+        win.refresh()
+        while 1:
+            c = win.getch()
+            if 0<c<256:
+                c=chr(c)
+                if c in 'Qq': break
+            # movement
+            elif c==curses.KEY_UP:
+                start_x = start_x -1
+                if start_x < 0: start_x = 0
+            elif c==curses.KEY_DOWN:
+                start_x = start_x +1
+                if start_x >= len(out): start_x = len(out) -2
+
+            elif c==curses.KEY_LEFT:
+                start_y = start_y -1
+                if start_y < 0: start_y = 0
+            elif c==curses.KEY_RIGHT:
+                start_y = start_y +1
+                if start_y >= longest: start_y = longest -2
+
+            x_length = start_x + max_x - 2
+            y_length = start_y + max_y -1
+            lines = out[start_x:x_length-2]
+            win.clear()
+            for line in lines:
+                win.addstr("%s\n" % line[start_y:y_length])
+            win.addstr(">>> ")
+            win.addstr(str(c))
+            win.refresh()
+            win.addstr("\nstart_x %s start_y %s max_x %s max_y %s x_length %s " \
+                       "y_length %s" % ( start_x, start_y, 
+                                         max_x, max_y, 
+                                        x_length, y_length))
+            win.refresh()
+
+        # Set everything back to normal
+        win.keypad(0)
+        curses.echo() ; curses.nocbreak()
+        curses.endwin()         # Terminate curses
+    except:
+        # In the event of an error, restore the terminal
+        # to a sane state.
+        win.keypad(0)
+        curses.echo() ; curses.nocbreak()
+        curses.endwin()
+        traceback.print_exc()		# Print the exception
+
+def help():
+    pass
+
+def view():
+    pass
+
+
+def exit(opts, stat=0):
+    if opts.verbose:
+        pass
+
+def run(opts):
+    old_data = load(opts)
+    new_data = gather(opts)
+    new = clean(old_data, new_data)
+    if not opts.quite:
+        manage(opts, new)
+    save(opts, new_data)
+    return
+    '''
+            print "%s %s %s %s" % (x[PID].strip(),
+                                          x[PPID].strip(),
+                                          x[TIME].strip(),
+                                          x[CMD].strip())
+            print "\t%s" % args.replace("\n",'')
+            print "%s%s%s%s%s%s  %s%s%s" % (x[PID].strip(),
+                                            ' '*(7-len(x[PID].strip())),
+
+                                            x[PPID].strip(),
+                                            ' '*(6-len(x[PPID].strip())),
+
+                                            ' '*(2-len(x[TIME].strip())),
+                                            x[TIME].strip(),
+
+                                            x[CMD].strip(),
+                                            ' '*(12-len(x[CMD].strip())),
+
+                                            args.replace("\n",'')
+                                          )
+    '''
+
+def removeConfigDir(opath):
+    for f in glob.glob(os.path.join('opath','*.zhf')):
+        os.remove(f)
+    try:
+        os.rmdir(opath)
+    except OSError, e:
+        print
+        print 'ERROR:'
+        print 'Could not remove direcotry %s, this folder contains user files.'
+        print
+
+def addConfigDir(d):
+    
+    if raw_input('Create directory %s [y/N]: ' % d).lower().strip() == 'y':
+        try:
+            os.mkdir(d)
+        except OSError, e:
+            if 'File exists' in str(e):
+                if raw_input('Directory already exists, use anyway? ' \
+                             '[y/N]: ').lower().strip() == 'y':
+                    return True
+                else:
+                    return False
+            elif 'Permission denied' in str(e):
+                print 'ERROR: You do not have permission to create this ' \
+                      'directory.'
+                return False
+            else:
+                print e
+                return 
+        else:
+            return True
+    else:
+        return False
+
+def getConfig(opts):
+    print
+    oldpath = os.path.abspath(__configdir__)
+    if __configdir__.strip()  and \
+    os.path.isdir(os.path.abspath(__configdir__)) and \
+    os.path.exists(os.path.abspath(__configdir__)):
+        print 'CONFIG DIR was already set to:', oldpath
+        if raw_input('Remove old CONFIG DIR? [y/N]').lower().strip() == 'y':
+            removeConfigDir(oldpath)
+
+    
+    newpath = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]),
+                                           '.zombie_hunter_files'))
+    print 'DEFAULT: %s' % newpath
+    print "Path to data dir (leave blank to use default) q to quit "
+    configdir = raw_input('>>>')
+    if not configdir.strip():
+        configdir = newpath
+    if configdir == 'q':
+        return sys.exit(0)
+    if not addConfigDir(configdir):
+        print "\nPlease try again."
+        return getConfig(opts)
+    else:
+        setConfig(configdir)
+    opts.all = True
+    createWhitelist(opts)
+
+def setConfig(d):
+    mpath = os.path.abspath(sys.argv[0])
+    handle = open(mpath, 'r')
+    lines = handle.readlines(-1)
+    handle.close()
+    nfile_lines = []
+    for line in lines:
+        if line.startswith('__configdir__'):
+            line = "__configdir__ = '%s'\n" % d
+        nfile_lines.append(line)
+
+    handle = open(mpath,'w')
+    handle.writelines(nfile_lines)
+    handle.close()
+
+def testConfig():
+    if not __configdir__.strip() or \
+    not os.path.exists(os.path.abspath(__configdir__)) or \
+    not os.path.isdir(os.path.abspath(__configdir__)):
+        return False
+    return True
+
+def config(opts):
+    print 'INSTALLING'
+    print '='*80
+    return getConfig(opts)
+
+def main():
+    """usage: Zombie Hunter """
+    parser = optparse.OptionParser(description=__doc__,
+                                   prog='Zombie Hunter')
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-a", "--all", action="store_true",
+                      default=False, 
+                      help="Check All Processes")
+
+    parser.add_option("-c", "--command", action="store",
+                      default=None,
+                      help="'zombie_huter --command=PROCESS, same as " \
+                           "zombie_hunter PROCESS")
+
+    parser.add_option("-f", "--file", action="store",
+                      default=None,
+                      help="'Save file,' file name to save data to (still " \
+                           "stored in configured dir).")
+
+    parser.add_option("-q", "--quite", action="store_true",
+                      default=False,
+                      help="Console Mode by default, use this to run " \
+                           "silently. i.e. cron jobs")
+
+    parser.add_option("-s", "--setup", action="store_true",
+                      default=False, 
+                      help="Runs setup to install this script")
+
+    parser.add_option("-v", "--version", action="store_true",
+                      default=False, 
+                      help="Display Version")
+    
+    '''
+    parser.add_option("-V", "--verbose", action="store_true",
+                      default=False,
+                      help="Display Verbose Human readable output")
+    '''
+    (opts, cmd) = parser.parse_args()
+
+
+    if opts.version:
+        return version()
+    if len(sys.argv) > 1:
+        if opts.command:
+            for arg in sys.argv[1:]:
+                if not arg.startswith('-'):
+                    parser.print_help()
+                    print '-'*80
+                    print 'Command specified twice, through flag and args.'
+                    print "'%s' and '%s' please only specify " \
+                          "one." % (sys.argv[1], opts.command)
+                    return
+        else:
+            for arg in sys.argv[1:]:
+                if not arg.startswith('-'):
+                    opts.command = arg.strip()
+
+    if opts.command and opts.all:
+        parser.print_help()
+        print '-'*80
+        print "A process was specified to search for (%s or -c%s), and the " \
+              "All flag was " % (opts.command, opts.command)
+        print "provided (-a --all), please only supply one or the other."
+        return
+    try:
+        if not testConfig():
+            print "This tool is not configured properly, running setup."
+            return config(opts)
+
+        if opts.setup:
+            return config(opts)
+        if opts.command or opts.all:
+            return run(opts)
+        parser.print_help()
+    except KeyboardInterrupt, e:
+        print "\nbye!"
+        return
+    else:
+        return
+
+if __name__ == '__main__':
+    main()

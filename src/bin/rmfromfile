@@ -1,0 +1,166 @@
+#!/usr/bin/env python
+"""rmfromfile
+==========
+Doc Here"""
+import cStringIO
+import pydoc
+import optparse
+import os
+import sys
+import pytis as PyTis
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__created__ = '09:47pm 10 Oct, 2009'
+__copyright__ = 'PyTis.com'
+__version__ = '1.0'
+
+
+class MyParser(optparse.OptionParser):
+    def print_help(self, errors=None):
+        buf = cStringIO.StringIO()
+        sys.stdout = buf
+        print '='*80
+
+        optparse.OptionParser.print_help(self)
+        print """
+examples:    
+ """
+        if errors:
+            print errors 
+
+        sys.stdout = sys.__stdout__
+        pager = pydoc.getpager()
+        pager(buf.getvalue())
+
+
+
+def run(opts, args):
+    files = PyTis.filesFromArgs(opts, args)
+    if len(files) > 10:
+        log.debug("ARGS: %s" % "\n\t".join(args[:10]))
+        log.debug("...")
+    else:
+        log.debug("ARGS: %s" % "\n\t".join(args))
+
+    if opts.string:
+        find = opts.string
+    else:
+        handle = open(os.path.abspath(opts.file),'r')
+        find = handle.read(-1)
+        handle.close()
+
+    if not find.strip().strip("\n"):
+        raise PyTis.EmptyString, "No search string, string or file provided was empty."
+    if not files:
+        raise Exception, "No files found to remove from."
+    
+    log.debug("SEARCH STRING: \n\n %s\n\n" % find)
+
+    for file in files:
+        msg = "Searching: %s" % os.path.abspath(file)
+        log.debug(msg)
+        if opts.verbose:
+            print msg
+        nhandle = open(os.path.abspath(file), 'r')
+        contents = nhandle.read(-1)
+        nhandle.close()
+      
+        if contents.find(find) > -1:
+            log.info("FOUND SEARCH STRING IN : %s" % os.path.abspath(file))
+
+            doit = True
+            if opts.prompt:
+                doit = False
+                answer = raw_input("Remove from file: '%s'? [y/N/q (to quit)]: ")
+                if answer in ['q','Q']:
+                    return
+                # just showing that the in statment uses less code chars as the lower
+                #elif answer in ['N','n']:
+                #elif answer.lower() == 'n':
+                elif answer in ['N','n']:
+                    continue
+                else:
+                    doit = True
+                    
+            if doit:
+                msg = "Removing from: %s" % file 
+                log.info(msg)
+                print msg
+
+                xhandle = open(os.path.abspath(file), 'wb')
+                xhandle.write(contents.replace(find,''))
+                xhandle.close()
+    return True
+
+
+
+def main():
+    """usage: rmfromfile """
+    global log
+    parser = MyParser()
+    parser.set_description(None)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-v", "--version", action="store_true",
+                      default=False, 
+                      help="Display Version")
+
+    parser.add_option("-V", "--verbose", action="store_true",
+                      default=False, 
+                      help="Be more Verbose")
+
+    parser.add_option("-p", "--prompt", action="store_true",
+                      default=False, 
+                      help="Require prompts to perform actions on each file.")
+
+    parser.add_option("-s", "--string", action="store",
+                      default=None, 
+                      help="String to strip from files.")
+
+    parser.add_option("-f", "--file", action="store",
+                      default=None, 
+                      help="File to load contents from to strip from files.")
+
+    parser.add_option("-r", "--recursive", action="store_true", default=False,
+                     help="Default behavior: non-recursive, specify this to traverse into sub-directories")
+
+    (opts, args) = parser.parse_args()
+
+    
+
+
+    log = PyTis.set_logging(opts, 'rmfromfile')
+
+    log.debug("OPTS version: %s" % opts.version)
+    log.debug("OPTS verbose: %s" % opts.verbose)
+    log.debug("OPTS prompt: %s" % opts.prompt)
+    log.debug("OPTS string: %s" % opts.string)
+    log.debug("OPTS file: %s" % opts.file)
+    log.debug("OPTS recursive: %s" % opts.recursive)
+
+
+    if opts.version:
+        return PyTis.version(__version__)
+
+    if not opts.string and not opts.file:
+        return parser.print_help("Required input, [string] or [file]")
+
+    if len(args) > 0:
+        log.info("RUNNING: %s" % ' '.join(sys.argv))
+        try:
+            return run(opts, args)
+        except (OSError, IOError, PyTis.EmptyString, PyTis.NoFiles), e:
+            print str(e)
+            return False
+
+    else:
+        return parser.print_help()
+
+if __name__ == '__main__':
+    main()

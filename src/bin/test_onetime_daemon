@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import time
+import optparse
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+
+# internal (mine/yours/ours) 
+from bin import PyTis # Shared GPL/PPL License
+#from pylib import configobj as COBJ
+from pylib3 import configobj as COBJ
+
+# import pytis as PyTis
+# from pylib import configobj as COBJ
+
+def run1(opts):
+	global log
+	log.info("print run 1")
+#	time.sleep(2)
+	return 
+
+def run2(opts):
+	global log
+	log.info("print run 2")
+#	time.sleep(5)
+	return 
+
+def run3(opts):
+	global log
+	log.info("print run 3")
+#	time.sleep(2)
+	log.info("done?.")
+	return 
+
+def main():
+	"""usage: %prog ...<options>"""
+	global log
+
+
+	filename = os.path.abspath(os.path.join(PyTis.__configdir__,
+		'%s.ini' % os.path.basename(os.path.abspath(sys.argv[0]))))
+
+	main.__doc__ = "%s\n\n  CONFIG FILE: %s" % (main.__doc__,
+		os.path.abspath(filename))
+
+
+	errors=[]
+	PyTis.__option_always__ = [True]
+	parser = PyTis.MyParser()
+
+	parser.extra_txt = """
+""" 
+
+	parser.formatter.format_description = lambda s:s
+	parser.set_description(__doc__)
+	parser.set_usage(main.__doc__)
+
+	runtime = optparse.OptionGroup(parser, "-- RUNTIME ARGUMENTS")
+
+	runtime.add_option("-a", "--action", type="choice", action='store',
+					 default=None, 
+					 dest='action',
+					 choices=['start','stop','restart','status'],
+					 metavar='[ACTION]', help="choices: <start,stop,restart,status>")
+
+	runtime.add_option("-n", "--nice", type="int", action='store',
+					 default=PyTis.MyThread.default_niceness, 
+					 dest='niceness',
+					 metavar='[INT <-20 to 19>]', help="Nicenesses range from -20 " \
+						"(most favorable scheduling) to 19 (least favorable).  Default 10")
+
+	runtime.add_option("-t", "--time", type="int", action='store',
+					 default=1, 
+					 dest='frequency',
+					 metavar='[INT]', help="Frequency of how often the loop runs, " \
+						"how long (in seconds) to sleep before re-running registered " \
+						"command (default is 1).")
+		
+	parser.add_option_group(runtime)
+	# ----------------------------
+	dbgroup = optparse.OptionGroup(parser, "-- DEBUG")
+	dbgroup.add_option("-D", "--debug", action="store_true",
+					 default=False, dest='debug',
+					 help="Enable debugging")
+	helpishere=False
+	for a in sys.argv:
+		if a == '--help':
+			helpishere=True
+			dbgroup.add_option("-V", "--verbose", action="store_true",
+							 default=True, dest='verbose',
+							 help="Be more Verbose (make lots of noise)")
+	if not helpishere:
+		dbgroup.add_option("-V", "--verbose", action="store_true",
+						 default=True, dest='verbose',
+						 help=optparse.SUPPRESS_HELP)
+
+
+	dbgroup.add_option("-q", "--quiet", action="store_true",
+					 default=False, dest='quiet',
+					 help="be vewwy quiet (I'm hunting wabbits)")
+
+	dbgroup.add_option("-v", "--version", action="store_true",
+					 default=False, dest='version',
+					 help="Display Version")
+
+	parser.add_option_group(dbgroup)
+	# ----------------------------
+
+	(opts, args) = parser.parse_args()
+	if opts.quiet: opts.verbose = False
+
+	old_version = opts.version
+	opts.version = True
+	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
+	opts.version = old_version
+
+	if opts.action is None and len(args) and args[0] in ('start','stop',
+			'restart','status'):
+		opts.action = args[0]
+		del args[0]
+
+
+	# I want the output alphabatized, so I am going to create a list of tuples,
+	# sort them, no wait, you know what would be faster? to just grab the keys,
+	# sort those, request each value by key.
+	log.debug('-'*80) 
+	opt_keys = list(opts.__dict__.keys())
+	opt_keys.sort()
+	for opt in opt_keys:
+		value = opts.__dict__[opt]
+		if type(value) == type(str('')):
+			if value.strip() == '_empty_val_trick_':
+				value = ''
+		log.debug("OPTION %s: %s" % (opt,value))
+	log.debug('-'*80) 
+
+
+
+	errors = []
+
+	if not errors:
+		if not opts.action:
+			return parser.print_usage()
+		else:
+			y = PyTis.MyThread()
+			y.setLogFile(log)
+			y.setOpts(opts)
+
+			y.register(run1,opts)
+			y.register(run2,opts)
+			y.register(run3,opts)
+			y.service(opts)
+			return
+	else:
+		if len(args) == 0 and not opts.action and not errors:
+			return parser.print_usage()
+		return parser.print_help(errors)
+
+	parser.print_help("ERROR: Unknown, but invalid input.")
+	sys.exit(0)
+
+if __name__ == '__main__':
+		main()
+

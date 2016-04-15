@@ -1,0 +1,177 @@
+#!/usr/bin/env python
+"""crud2py
+=======
+Example:
+yaml_merge doctor.rdef add.crud | crud2py -a > add.py"""
+###############################################################################
+# The contents of this program are subject to the Koar Public License
+# (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.koarcg.com/license
+# 
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+# included LICENSE.txt file for more information. Copyright 2007 KCG.
+###############################################################################
+
+import optparse
+import os
+import sys
+import logging; log=logging.getLogger('crud2py')
+import yaml
+
+__author__ = 'Josh Lee'
+__created__ = '2007-06-29 14:59:25.507244'
+__copyright__ = 'KCG'
+__version__ = '1.0'
+
+    
+class ActionDispatch(object):
+    pos_map = []
+    def act(letter=None, p=pos_map, **kwargs):
+        def act(proc, p=p):
+            p.append((proc, letter, kwargs))
+            return proc
+        return act
+
+    def pop_parser(self, parser):
+        for p,let, kwargs in self.pos_map:
+            name = p.__name__.replace('_','-')
+            letter = let or name[0]
+
+            action = kwargs.get('action') or 'store_true'
+            metavar = kwargs.get('metavar')
+            default = kwargs.get('default') or None
+            dest = kwargs.get('dest') or None
+            nargs = kwargs.get('nargs', 1)
+            help = p.__doc__ or 'No help for %s' % name
+            if let is None:
+                parser.add_option("--%s" % name,
+                                  action=action,
+                                  default=default,
+                                  dest=dest,
+                                  metavar=metavar,
+                                  nargs=nargs,
+                                  help=help)
+            else:
+                parser.add_option("-%s" % letter, "--%s" % name,
+                                  action=action,
+                                  default=default,
+                                  dest=dest,
+                                  metavar=metavar,
+                                  help=help)
+
+    @act('a')
+    def add(self):
+        """Creates the add get and add post procedures.
+        """
+        buf = """import kppo.util as UTL
+t = UTL.MakoStore('%(name)s')
+m = UTL.mount
+
+@m.get('%(path)s')
+def add_%(name)s(ctx):
+    pass
+
+@m.post('%(path)s')
+def create_%(name)s(ctx):
+    fields = []
+    %(fields)s
+    ctx.sp.create_%(name)s.run(*fields)
+        """
+        fields = []
+        for field in self.definition['fields']:
+            if field['name'] <> self.definition['key'] or \
+                str(field.get('visible','')).upper() in \
+                ['TRUE', '1', 'YES']:
+                fields.append("fields.append(ctx.params['%s'])" % field['name'])
+
+        return buf % dict(name=self.definition['name'],
+                          path=self.definition['path'],
+                          fields='\n    '.join(fields))
+
+    @act('d')
+    def delete(self):
+        """Creates the delete get and delete post procedures.
+        """
+        pass
+
+    @act('e')
+    def edit(self):
+        """Creates the edit get and edit post procedures.
+        """
+        pass
+
+    @act('l')
+    def list(self):
+        """Creates the list get and list post procedures.
+        """
+        pass
+
+    @act('p')
+    def print_page(self):
+        """Creates the print get and print post procedures.
+        """
+        pass
+
+    @act('v')
+    def view(self):
+        """Creates the view get and view post procedures.
+        """
+        pass
+
+
+
+    def dispatch(self, opts, definition):
+        self.opts = opts
+        self.definition = definition
+        pos_map = [p[0].__name__ for p in self.pos_map]
+        v = [getattr(opts, p) for p in pos_map]
+
+        if len([i for i in v if i]) < 1:
+            return -1
+        elif len([i for i in v if i]) <> 1:
+            raise ValueError, 'One and only one action must be given'
+
+        f = [i for i, x in zip(pos_map, v) if x][0]
+        return getattr(self, f)()
+
+def main():
+    """crud2py RELATION DEFINITION FILE [options]"""
+    ad = ActionDispatch()
+    parser = optparse.OptionParser(description=__doc__,
+                                   usage=main.__doc__,
+                                   version=str(__version__))
+    parser.formatter.format_description = lambda s:s
+    ad.pop_parser(parser)
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    (opts, cmd) = parser.parse_args()
+
+    # Logging Configuration
+    log.setLevel(0) 
+    formatter = '%(levelname)-8s %(message)s'
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG, format=formatter)
+    else:
+        logging.basicConfig(level=logging.INFO, format=formatter)
+
+    if sys.stdin.isatty():
+        try:
+            infile = open(cmd[0])
+        except IndexError:
+            return parser.print_help()
+    else:
+        infile = sys.stdin
+
+    definition=yaml.load(infile)
+    print ad.dispatch(opts, definition)
+
+if __name__ == '__main__':
+    main()

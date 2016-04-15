@@ -1,0 +1,17 @@
+#!/bin/sh
+# Automatically syncronize jeremy's local cps database into the res directory,
+# Syncronize the client's database into a livebackup file
+# and diff the files into VIM for syncronization.
+TARGET=/home/jlee/scratch/cps_ar/res
+pg_dump --no-owner > ${TARGET}/cps.sql
+ssh -i /home/jlowery/Documents/keys/cps_live_db -p1022 -ltech \
+    cps.koarcg.com \
+    /home/tech/bin/pg_livedb
+svn -q up ${TARGET}
+pg_diff -l ${TARGET}/live_backup-`date +%Y-%m-%d`.sql ${TARGET}/cps.sql \
+    > ${TARGET}/cps.diff
+
+vi ${TARGET}/cps.diff
+~
+~
+~

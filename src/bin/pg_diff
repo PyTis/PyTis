@@ -1,0 +1,161 @@
+#!/usr/bin/env python
+"""
+Pass in the old file first and the newer file second.
+
++ means add
+- means subtract
+
+"""
+
+import sys
+import datetime
+import re
+import optparse
+
+COM_RE = re.compile('^-- (.+)$')
+
+def chomp(line):
+    """ Parse a PGSQL dump comment line 
+    Name: claim_amount; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+    """
+    groups = {}
+    for part in line.split(';'):
+        key, value = part.split(':')
+        groups[key.strip()] = value.strip()
+    return groups
+
+def parse_sql_dump(stream, opts):
+    results = {}
+    parts = []
+    last_piece = None
+ 
+    ignores = ['SET default_with_oids = true;']
+    for line in stream:
+        line = line.rstrip()
+
+        if not line or line in ignores:
+            continue
+
+        if not COM_RE.match(line):
+            if line.strip().startswith('--'):
+                continue
+            else:
+                parts.append(line.strip())
+                continue
+        try:
+            res = chomp(COM_RE.match(line).groups()[0])
+        except ValueError:
+            if opts.verbose:
+                print >>sys.stderr, 'ignoring: %s' % line
+            continue
+        if not res or 'Data for Name' in res:
+            continue
+    
+        if last_piece is not None and parts:
+            last_piece['lines'] = parts
+            parts = []
+
+        results.setdefault(res['Schema'], {})
+        results[res['Schema']].setdefault(res['Type'], {})
+        results[res['Schema']][res['Type']].setdefault(res['Name'], {})
+        last_piece = results[res['Schema']][res['Type']][res['Name']]
+
+    if last_piece:
+        last_piece = parts
+    return results
+
+def get(schema, map_, key):
+    return set(map_.get(schema, {key : {}}).get(key, {}).keys())
+
+def get_lines(schema, map_, key, name):
+    return set(map_.get(schema, {key : {}}).get(key, {}).get(name,
+        {}).get('lines', []))
+
+
+def print_diff(key, schema, from_map, to_map, opts):
+    f_t = get(schema, from_map, key)
+    t_t = get(schema, to_map, key)
+
+    p_caught = [] # minus already caught
+    m_caught = [] # plusses already caught
+
+    results = []
+    for ob in f_t - t_t:
+        m_caught.append(ob)
+        results.append((ob, "-SCHEMA: %s; %s: %s" %
+            (schema, key.upper(), ob)))
+
+                
+    for ob in t_t - f_t:
+        p_caught.append(ob)
+        results.append((ob, "+SCHEMA: %s; %s: %s" %
+            (schema, key.upper(), ob)))
+
+    if opts.line:
+        all_names = list(f_t)
+        for n in t_t:
+            if n not in all_names:
+                all_names.append(n)
+
+        for name in all_names:
+            # get the lines for this object to compare, i.e. create table lines
+            f_parts = get_lines(schema, from_map, key, name) 
+            t_parts = get_lines(schema, to_map, key, name)
+
+            # don't show if it has already been caught above
+            if name not in m_caught:
+                for sob in f_parts - t_parts:
+                    results.append((name, "-SCHEMA: %s; %s: %s;\n    %s" %
+                        (schema, key.upper(), name, sob)))
+
+            # don't show if it has already been caught above
+            if name not in p_caught:
+                for sob in t_parts - f_parts:
+                    results.append((name, "+SCHEMA: %s; %s: %s;\n    %s" %
+                        (schema, key.upper(), name, sob)))
+
+    results.sort()
+    for t, result in results:
+        print result
+
+def main():
+    parser = optparse.OptionParser()
+    parser.add_option("-v", "--verbose", action="store_true",
+                      default=False,
+                      help="Show extra information")
+    parser.add_option("-l", "--line", action="store_true",
+                      default=False,
+                      help="Compare the lines of objects inspected")
+    (opts, cmd) = parser.parse_args()
+
+    from_map = parse_sql_dump(open(cmd[0]), opts)
+    to_map = parse_sql_dump(open(cmd[1]), opts)
+
+    print '# %s' % datetime.datetime.now()
+    print '# - : %s' % cmd[0]
+    print '# + : %s' % cmd[1]
+
+    f_s, t_s = set(from_map.keys()), set(to_map.keys())
+   
+    object_types = [
+        'TABLE',
+        'FK CONSTRAINT',
+        'CONSTRAINT',
+        'VIEW',
+        'FUNCTION',
+        'DOMAIN',
+        'RULE',
+        'TRIGGER',
+        'INDEX',
+        'SEQUENCE',
+        'TYPE',
+        'AGGREGATE',
+        'OPERATOR'
+    ]
+    for schema in f_s.union(t_s):
+        for otype in object_types:
+            print_diff(otype, schema, from_map, to_map, opts)
+
+if __name__ == '__main__':
+    main()
+

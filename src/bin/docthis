@@ -1,0 +1,160 @@
+#!/usr/bin/env python
+"""docthis
+=======
+Doc Here"""
+from cStringIO import StringIO
+import compiler
+import optparse
+import os
+import shutil
+import sys
+import traceback
+import pytis as PyTis
+
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__created__ = '07:37pm 12 Dec, 2009'
+__copyright__ = 'PyTis.com'
+__version__ = '0.1'
+
+
+def fileToDoc(opts, args):
+    pass
+    
+def filter(files):
+    nfiles = []
+    for file in files:
+        log.debug("FILE: %s" % file)
+        ext = os.path.splitext(file)[1]  
+        if ext.lower() == '.py':
+            if file not in nfiles: nfiles.append(file)
+            continue
+        log.debug('ext: %s %s' % (file, ext))
+        if ext == '':
+            handle = open(file, 'r')
+            lines = handle.readlines(-1)
+            if len(lines):
+                if lines[0].startswith('#!/') and 'python' in lines[0]:
+                    if file not in nfiles: nfiles.append(file)
+    return nfiles
+            
+def ensure_out(outpath):
+    if not os.path.exists(outpath):
+        os.mkdir(outpath)
+    else:
+        if not os.path.isdir(outpath):
+            raise OSError, "The provided output path is not a directory."
+    return os.path.abspath(outpath)
+
+def run(opts, args):
+    files = filter(PyTis.filesFromArgs(opts, args[:-1]))
+    files.sort()
+    last_param = args[-1:][0]
+    topath = ensure_out(os.path.abspath(last_param))
+
+    log.debug("last arg: '%s'" % last_param)
+    #log.debug("files: %s" % files)
+    log.info("outpath: %s" % topath)
+    success_files = []
+
+    for file in files:
+        curdir = os.path.abspath(os.path.dirname(file))
+        fname = os.path.basename(file)
+        base = os.path.splitext(fname)[0]
+        os.chdir(curdir)
+        if not file.endswith('docthis'):
+            try:
+                log.debug('attempting: %s' % file)
+                cmd = "pydoc -w %s "  %  os.path.abspath(file)
+                mod = compiler.parseFile(file)
+            except SyntaxError:
+                log.warn('Syntax Error in %r' % file)
+                if opts.verbose:
+                    traceback.print_exc(0, file=sys.stdout)
+                continue
+            else:
+                log.info("CMD: %s" % cmd)
+                cmd_out = os.popen(cmd).read(-1)
+
+
+                #un-needed cpath
+                cpath = os.path.abspath(os.path.join(os.path.dirname(file),
+                                                     "%sc" % os.path.basename(file)))
+                # html path
+                hpath = os.path.abspath(os.path.join(os.path.dirname(file),
+                                                     "%s.html" % base))
+                # to path (destination)
+                tpath = os.path.abspath(os.path.join(topath,
+                                                     "%s.html" % os.path.basename(file)))
+                log.debug('CPATH: %s' % cpath)
+                log.debug('HTML PATH: %s' % hpath)
+                log.debug('TO PATH: %s' % hpath)
+
+                os.unlink(cpath)
+                if 'ImportError' in cmd_out:
+                    print 'ImportError in: %s' % file
+                    continue
+                shutil.move(hpath, tpath)
+                success_files.append(tpath)
+    handle = open(os.path.abspath(os.path.join(topath, "OUT_LISTING.htm")), 'w')
+    handle.writelines(write_menu(opts,success_files))
+    handle.close()
+
+def write_menu(opts, success_files):
+    """ write a list of links to the files created
+    """
+
+    return " \n".join(["<a href='%s%s'>%s</a><br />" % (opts.prefix,
+        os.path.basename(line),
+        os.path.splitext(os.path.basename(line))[0]) for line in success_files if '__init__' not in line])
+
+def main():
+    """usage: docthis """
+    global log
+    parser = PyTis.MyParser()
+    parser.set_description(None)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-v", "--version", action="store_true",
+                      default=False, 
+                      help="Display Version")
+
+    parser.add_option("-V", "--verbose", action="store_true",
+                      default=False, 
+                      help="Be more Verbose")
+
+    parser.add_option("-p", "--prefix", action="store",
+                      default='', 
+                      help="A web path prefix to the links generated")
+
+    parser.add_option("-r", "--recursive", action="store_true", default=False,
+                     help="Default behavior: non-recursive, specify this to traverse into sub-directories")
+
+    (opts, args) = parser.parse_args()
+
+
+    log = PyTis.set_logging(opts, 'docthis')
+
+    if opts.version:
+        return PyTis.version(__version__)
+
+
+    log.info("RUNNING: %s" % ' '.join(sys.argv))
+    log.debug("OPTS version: %s" % opts.version)
+    log.debug("OPTS recursive: %s" % opts.recursive)
+    log.debug("ARGS: %s" % args)
+
+    if len(args) > 1:
+        return run(opts, args)
+    else:
+        return parser.print_help("Not enough arguments")
+
+if __name__ == '__main__':
+    main()
+

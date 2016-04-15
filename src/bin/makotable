@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+import sys
+import optparse
+import yaml
+from mako.template import Template
+
+tmpl = Template("""
+<table class='form'>
+% for row in layout:
+<tr>
+<%
+    if row and  isinstance(row[0], str):
+        context.write("<th colspan='%s'>%s</th>\\n</tr>\\n" % (_colspan_, row[0]))
+        continue
+%>
+% for col in row:
+    <td class='entry-caption'>
+% for field in col:
+        <label for="${fields[field]['name']}">${fields[field]['label']}</label>
+% endfor
+    </td>
+    <td class='entry-value'>
+% for field in col:
+        <%
+            context.write("${kcontrol.%s('%s')}" % (
+                fields[field]['type'], fields[field]['name']))
+        %>
+% endfor
+    </td>
+% endfor
+</tr>
+% endfor
+</table>
+
+""")
+
+def id_from_path(path):
+    return path.replace('/','_')[1:]
+
+def main():
+    parser = optparse.OptionParser()
+
+    opts, cmds = parser.parse_args()
+    
+    if sys.stdin.isatty():
+        try:
+            infile = open(cmds[0])
+        except IndexError:
+            return parser.print_help()
+    else:
+        infile = sys.stdin
+
+    definition=yaml.load(infile)
+
+    rows = []
+    mode = None
+    # Parse the table layout
+    for line in definition.get('layout', '').split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+
+        if 'BEGIN TABLE' in line.upper():
+            mode = 'TABLE'
+            continue
+
+
+        if 'BEGIN FORM' in line.upper():
+            mode = None
+            continue
+
+        if 'BEGIN PAGER' in line.upper():
+            mode = None
+            continue
+
+        if mode == 'TABLE':
+            if line.startswith('*'):
+                rows.append([line[1:]])
+            else:
+                cols = []
+                for col in line.split("|"):
+                    cols.append(col.split())
+                rows.append(cols)
+
+
+    definition['layout'] = rows
+
+    # Fill out blank columns
+    max = [len(r) for r in rows]
+    max.sort()
+    max = max[-1]
+    definition['_colspan_'] = max*2
+    rows = [r + (max - len(r))*[[]] for r in rows]
+    definition['fields'] = dict([(k['name'], k)
+        for k in definition['fields']])
+
+    print tmpl.render(**definition)
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,428 @@
+#!/usr/bin/env python2.4
+"""
+Relation Definition to Crud
+===========================
+
+Reads standard in, expecting a relation definition file.
+
+A crud option must be specified.
+    Valid Crud Options:
+        -a --add
+        -d --delete
+        -e --edit
+        -l --list
+        -p --printpage
+        -v --view
+
+Columns only are used for :
+        [add|edit|print|view]
+    A columns value will be ignored when using the crud options:
+        [delete|list]
+
+ADD:
+   rdef2crud employee.rdef -a -P/employee/create -C1 
+   -P --path    overrides the path, that would have been /employee/add
+   -C --columns overides the table output to be one column wide, instead of the
+                default of 2.
+
+DELETE:
+
+EDIT:
+    rdef2crud employee.rdef -e -i username
+    -i --ID sets the id field, if one cannot be found, to help the script 
+            generate the path.
+
+    Another way of setting the path, for when the id could not be found,
+    would be using the -P, --path flag:
+    rdef2crud employee.rdef -e -P /employee/:username/edit
+   
+LIST:
+    rdef2crud employee.rdef --list
+
+    Do you want HTML controls in each row of the pager? If you do, simply
+    override the mode:
+        rdef2crud employee.rdef --list -M HTML
+
+PRINT:
+
+VIEW:
+
+"""
+import cStringIO
+import datetime
+import optparse
+import os
+import sys
+import logging; log=logging.getLogger('')
+import yaml
+
+import _rdef2crud.errors as ERRORS
+import _rdef2crud.util as UTL
+
+
+def write_head(buf, name, label, path, mode, action):
+    """ Writes all output files headers
+    """
+    buf.write("# Auto Generated: %s\n" % datetime.datetime.now())
+    buf.write("# COMMAND:  %s %s\n" \
+        % (os.path.basename(sys.argv[0]), " ".join(sys.argv[1:])))
+    buf.write("# %s Definition File\n\n" % label)
+
+    buf.write('name: %s\n' % name) # used for the pager, etc.
+    buf.write('label: %s\n' % label) # used for HTML label (<h1>)
+    buf.write('path: %s\n' % path) # used for python to rest mount this 
+    buf.write('mode: %s\n' % mode) # used for controls, HTML, VIEW, or whatever
+    # used by next tool, to know what action is generated in python, DELTE, ADD,
+    # EDIT, etc.
+    buf.write('action: %s\n' % action) 
+    buf.write("\n")
+
+def fields2columns(out, fields,columns):
+    """ Used for add, edit, print and view.
+    Creates a table based on placing the fields into
+    the columns specified.
+    XXX-TODO: Make this algorithm smart enough to handle placement of the
+    following special cases:
+        name fields
+        address fields
+
+    JER can do this
+    """
+
+    i=0; columns=int(columns); row=[]
+    for field in fields:
+        if field['type'].upper() in ['HIDDEN']:
+            continue
+
+        if i == columns:
+            out.write("    %s\n" % " | ".join(row))
+            row=[]; i=0
+        row.append(field['name'])
+        i+=1
+    out.write("    %s\n" % " | ".join(row))
+    
+
+def write_delete(buf, label, path, name):
+    """ For the delete crud output.
+    """
+    buf.write("local_delete_link: <a href='' onclick='%s'>Delete</a>\n" % 'foo')
+    buf.write("delete_link: |")
+    
+    buf.write("""function delete_%s_local(id, name) {
+    if(confirm("Are you sure you wish to delete " + name + "?") {
+        popup('%s')
+        document.location='%s';
+    }
+}\n""" % (name, 'bar', list_path))
+
+def list_ignore(field):
+    """ returns a boolean, this is used to determine which fields show up in
+    the pager
+    """
+    if field.get('visible'):
+        ignores =('ADDRESS_1',
+                  'ADDRESS_2',
+                  'PASSWORD',
+                  'STATE',
+                  'ZIP_CODE')
+        if field['name'].endswith('_id'):
+            return True
+        if field['name'].upper() in ignores:
+            return True
+        return False
+    else:
+        return str(field['visible']).upper() not in ['YES','1','TRUE']
+
+def write_list(buf, path, sname, view_path, delete_path, list_path, name, 
+        fields, id):
+    """ Pager crud (LIST CRUD) output procedure.
+    """
+    buf.write("pager:\n")
+    buf.write("    type: Pager \n")
+    buf.write("    view_link: view_%s\n" % name)
+    buf.write("    delete_link: delete_%s\n" % name)
+    buf.write("    javascript: | \n")
+        
+    buf.write("""
+        function view_%(name)s(id) {
+            document.location='%(view_path)s';
+        }
+        function delete_%(name)s_loc(id) {
+            if(confirm('Are you sure you wish to delete this %(sname)s?')) {
+                popup('%(delete_path)s');
+                document.location='%(list_path)s';
+            }
+        }
+        function delete_%(name)s(id) {
+            if(confirm('Are you sure you wish to delete this %(sname)s?')) {
+                popup('%(delete_path)s');
+            }
+        }
+\n""" % dict(name=name, 
+             view_path=view_path.replace(":%s" % id, "'+id+'"),
+             delete_path=delete_path.replace(":%s" % id, "'+id+'"),
+             list_path=list_path,
+             sname=sname))
+
+    buf.write("layout: |\n")
+    buf.write("    BEGIN PAGER\n")
+    for field in fields:
+        if not list_ignore(field):
+            buf.write("    %s\n" %field['name'])
+
+class ActionDispatch(object):
+    pos_map = []
+    def act(proc, p=pos_map):
+        p.append(proc.__name__)
+        return proc
+
+    @act
+    def add(self):
+        out = cStringIO.StringIO()
+        write_head(out, 
+            name=self.data['name'],
+            label=self.get_label('Add'), 
+            path=self.get_path('add'), 
+            mode=self.get_mode('HTML'),
+            action=self.get_action('ADD'))
+
+        out.write("layout: | \n")
+        out.write("    BEGIN FORM\n")
+        fields2columns(out, self.fields, self.opts.columns)
+        return out.getvalue()
+
+    @act
+    def delete(self):
+        out = cStringIO.StringIO()
+        write_head(out, 
+            name=self.data['name'],
+            label=self.get_label('Delete'), 
+            path=self.get_path('delete',id=self.get_id()),
+            mode=self.get_mode('VIEW'),
+            action=self.get_action('DELETE'))
+
+        return out.getvalue()
+    @act
+    def edit(self):
+        out = cStringIO.StringIO()
+        write_head(out, 
+            name=self.data['name'],
+            label=self.get_label('Edit'), 
+            path=self.get_path('edit',id=self.get_id()),
+            mode=self.get_mode('HTML'),
+            action=self.get_action('EDIT'))
+
+        out.write("layout: | \n")
+        out.write("    BEGIN FORM\n")
+        fields2columns(out, self.fields, self.opts.columns)
+        return out.getvalue()
+    
+    @act
+    def list(self):
+        out = cStringIO.StringIO()
+        write_head(out, 
+            name=self.data['name'],
+            label=self.get_label('LIST', 'multi_name'), 
+            path=self.get_path(''),
+            mode=self.get_mode('VIEW'),
+            action=self.get_action('LIST'))
+
+        write_list(out, 
+            path=self.get_path('view', id=self.get_id()), 
+            view_path=self.get_path('view', id=self.get_id()),
+            delete_path=self.get_path('delete', id=self.get_id()),
+            list_path=self.get_path(''),
+            name=self.get_name(),
+            sname=self.data['single_name'],
+            fields=self.fields,
+            id=self.get_id())
+        return out.getvalue()
+
+    @act
+    def printpage(self):
+        out = cStringIO.StringIO()
+        write_head(out, 
+            name=self.data['name'],
+            label=self.get_label('Print'), 
+            path=self.get_path('print',id=self.get_id()),
+            mode=self.get_mode('VIEW'),
+            action=self.get_action('PRINT'))
+
+        out.write("layout: | \n")
+        out.write("    BEGIN TABLE\n")
+        fields2columns(out, self.fields, self.opts.columns)
+        return out.getvalue()
+
+    @act
+    def view(self):
+        out = cStringIO.StringIO()
+        write_head(out, 
+            name=self.data['name'],
+            label=self.get_label('View'), 
+            path=self.get_path('view',id=self.get_id()),
+            mode=self.get_mode('VIEW'),
+            action=self.get_action('VIEW'))
+
+        out.write("layout: | \n")
+        out.write("    BEGIN TABLE\n")
+        fields2columns(out, self.fields, self.opts.columns)
+        return out.getvalue()
+
+    def pop_parser(self, parser):
+        for p in self.pos_map:
+            parser.add_option("-%s" % p[0], "--%s" % p,
+                              action='store_true',
+                              default=None,
+                              help="Ouput %s.crud file" % p)
+
+
+    def dispatch(self, opts, data):
+        self.opts = opts
+        v = [getattr(opts, p) for p in self.pos_map]
+
+        if len([i for i in v if i]) <> 1:
+            raise ERRORS.FlagError, 'One and only one action must be given'
+
+        f = [i for i, x in zip(self.pos_map, v) if x][0]
+        self.data = data
+        self.fields = data.get('fields',[])
+
+        return getattr(self, f)()
+
+    # Below are all helper / getter methods
+
+    def get_label(self, prefix, mode='single_name'):
+        label = self.opts.label
+        if not label:
+            try:
+                label = "%s %s" % (prefix.title(), self.data[mode])
+            except KeyError:
+                raise ERRORS.DirectiveError, "%s UN-DEFINED on definition" \
+                    % mode
+        return label
+
+    def get_name(self):
+        try:
+            return UTL.label2name(self.data['single_name'])
+        except KeyError:
+            raise ERRORS.DirectiveError, "single_name UN-DEFINED on definition"
+
+    def get_path(self, prefix, id=None):
+        path = self.opts.path
+        if not path:
+            try:
+                if not id:
+                    path = "%s/%s" % (self.data['path'], prefix)
+                else:
+                    path = "%s/:%s/%s" % (self.data['path'], id, prefix)
+            except KeyError:
+                raise ERRORS.DirectiveError, "path UN-DEFINED on definition"
+        # Remove trailing slashes
+        if path.endswith('/'):
+            return path[0:-1]
+        else:
+            return path
+
+    def get_mode(self, default):
+        if not self.opts.mode:
+            return default.upper()
+        else:
+            return self.opts.mode.upper()
+
+    def get_action(self, default):
+        if not self.opts.action:
+            return default.upper()
+        else:
+            return self.opts.action.upper()
+
+    def get_id(self):
+        """ Try to determine the best possible id field, and raise an error if
+        we can't determine it.
+        """
+        # Over ridden
+        if self.opts.ID:
+            return self.opts.ID
+
+        # Specified in input file
+        if self.data.get('key','').strip():
+            return self.data['key'].strip()
+
+        # Try to guess it
+        posiblenames=[]
+        for field in self.fields:
+            if field['name'].endswith('_id'):
+                posiblenames.append(field['name'])
+        if len([i for i in posiblenames if i]) == 1:
+            return posiblenames[0]
+        elif len([i for i in posiblenames if i]) > 1:
+            for posiblename in posiblenames:
+                if self.get_name() in posiblename:
+                    return posiblename
+
+        raise ERRORS.PathError, "Cannot determin the entity ID." \
+            "Please manually state the path with the -P flag" \
+            "Or manually state the id field with the -I flag"
+
+
+def main():
+    ad = ActionDispatch()
+    parser = optparse.OptionParser(description=__doc__)
+    parser.formatter.format_description = lambda s:s
+    ad.pop_parser(parser)
+
+
+    parser.add_option("-A", "--action", 
+                      default=None,
+                      help="Override the default crud action")
+
+    parser.add_option("-C", "--columns", 
+                      default=2,
+                      help="How many columns should be shown")
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-I", "--ID", 
+                      default=None,
+                      help="Specify the id field for URLs")
+
+    parser.add_option("-L", "--label", 
+                      default=None,
+                      help="Overide default label")
+
+    parser.add_option("-M", "--mode", 
+                      default=None,
+                      help="Override the default Control mode")
+
+    parser.add_option("-P", "--path", 
+                      default=None,
+                      help="Default Crud path")
+
+
+    (opts, cmd) = parser.parse_args()
+
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    if sys.stdin.isatty():
+        try:
+            in_file = open(cmd[0],'r')
+        except IndexError:
+            return parser.print_help()
+    else:
+        in_file = sys.stdin   
+           
+
+    try:
+        print ad.dispatch(opts, yaml.load(in_file))
+    except ERRORS.FlagError, e:
+        parser.print_help()
+        print
+        print 'ERROR:', e
+
+if __name__ == '__main__':
+    main()

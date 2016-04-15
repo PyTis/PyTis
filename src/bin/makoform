@@ -1,0 +1,137 @@
+#!/usr/bin/env python
+import sys
+import optparse
+import yaml
+from mako.template import Template
+
+tmpl = Template("""
+<form action='${form_action}'
+      name='${form_id}' 
+      id='${form_id}'
+      method='POST'>
+<% 
+    for field in _fields:
+        if field['type'].upper() == 'HIDDEN':
+            context.write("${kcontrol.Hidden('%s')}\\n" % field['name'])
+%>
+<table class='form'>
+% for row in layout:
+<tr>
+<%
+    if row and  isinstance(row[0], str):
+        context.write("<th colspan='%s'>%s</th>\\n</tr>\\n" % (_colspan_, row[0]))
+        continue
+%>
+% for col in row:
+    <td class='entry-caption'>
+% for field in col:
+        <label for="${fields[field]['name']}">${fields[field]['label']}</label>
+% endfor
+    </td>
+    <td class='entry-value'>
+% for field in col:
+        <%
+            context.write("${kcontrol.%s('%s')}" % (
+                fields[field]['type'], fields[field]['name']))
+        %>
+% endfor
+    </td>
+% endfor
+</tr>
+% endfor
+<tr>
+    <td colspan='${_colspan_}' class='entry-caption'>
+        <input type='submit' 
+               name='${submit_id}'
+               id='${submit_id}'
+               class='button'
+               value='${submit_label}' />
+    </td>
+</tr>
+</table>
+
+</form>
+""")
+
+
+def make_id(prefix, label):
+    return "%s_%s" % (prefix.lower(), label.lower())
+
+def form_action(definition):
+    path =  definition.get('path','')
+    if not path: return
+
+    key = definition.get('key', '')
+    if key: 
+        replacement = "${ctx.%s}" % key
+    else:
+        replacement = ''
+    return path.replace(key,replacement).replace(':','')
+
+def main():
+    parser = optparse.OptionParser()
+    parser.add_option("-i", "--inherit", 
+                      default=None, 
+                      help="Template to inherit from")
+
+    opts, cmds = parser.parse_args()
+    
+    if sys.stdin.isatty():
+        try:
+            infile = open(cmds[0])
+        except IndexError:
+            return parser.print_help()
+    else:
+        infile = sys.stdin
+
+    definition=yaml.load(infile)
+
+    rows = []
+    mode = None
+    # Parse the table layout
+    for line in definition.get('layout', '').split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+
+        if 'BEGIN FORM' in line.upper():
+            mode = 'FORM'
+            continue
+
+        if 'BEGIN TABLE' in line.upper():
+            mode = None
+            continue
+
+        if 'BEGIN PAGER' in line.upper():
+            mode = None
+            continue
+
+        if mode == 'FORM':
+            if line.startswith('*'):
+                rows.append([line[1:]])
+            else:
+                cols = []
+                for col in line.split("|"):
+                    cols.append(col.split())
+                rows.append(cols)
+
+
+    definition['layout'] = rows
+    definition['form_action']  = form_action(definition)
+    definition['submit_label'] = definition.get('label','')
+    definition['submit_id'] = make_id('submit', definition.get('name','edit'))
+    definition['form_id'] = make_id('form', definition.get('name','edit'))
+    # Fill out blank columns
+    max = [len(r) for r in rows]
+    max.sort()
+    max = max[-1]
+    definition['_colspan_'] = max*2
+    rows = [r + (max - len(r))*[[]] for r in rows]
+    definition['_fields'] = list(definition['fields'])
+    definition['fields'] = dict([(k['name'], k)
+        for k in definition['fields']])
+
+    print tmpl.render(**definition)
+
+if __name__ == '__main__':
+    main()

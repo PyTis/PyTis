@@ -1,0 +1,115 @@
+#!/usr/bin/env python
+"""
+Crud output file
+Runs many crud out commands at once
+yaml merges the data/*.rdef with each data/*.crud file found
+pipes them to makoform and makotable and places the output into
+the t directory.
+"""
+import glob
+import optparse
+import os
+import logging; log=logging.getLogger('')
+
+class PathError(Exception):
+    pass
+
+
+def run(meta):
+    # ADD
+    if meta['add_file']:
+        if (os.path.isfile('t/add_%(name)s.tmpl' % meta) and \
+           raw_input("Overwrite %s?" % 't/add_%(name)s.tmpl' % meta).rstrip() \
+           in ['Y','y']) or not os.path.isfile('t/add_%(name)s.tmpl' % meta):
+            os.system("yaml_merge %(rdef_file)s %(add_file)s | " \
+                      "makoform %(inherit)s > t/add_%(name)s.tmpl" % meta)
+            print "Wrote: %s" % 't/add_%(name)s.tmpl' % meta
+
+    # EDIT
+    if meta['edit_file']:
+        if (os.path.isfile('t/edit_%(name)s.tmpl' % meta) and \
+           raw_input("Overwrite %s?" % 't/edit_%(name)s.tmpl' % meta).rstrip() \
+           in ['Y','y']) or not os.path.isfile('t/edit_%(name)s.tmpl' % meta):
+            os.system("yaml_merge %(rdef_file)s %(edit_file)s | " \
+                      "makoform %(inherit)s > t/edit_%(name)s.tmpl" % meta)
+            print "Wrote: %s" % 't/view_%(name)s.tmpl' % meta
+
+    # VIEW
+    if meta['view_file']:
+        if (os.path.isfile('t/view_%(name)s.tmpl' % meta) and \
+           raw_input("Overwrite %s?" % 't/view_%(name)s.tmpl' % meta).rstrip() \
+           in ['Y','y']) or not os.path.isfile('t/view_%(name)s.tmpl' % meta):
+            os.system("yaml_merge %(rdef_file)s %(view_file)s | " \
+                      "makotable %(inherit)s > t/view_%(name)s.tmpl" % meta)
+            print "Wrote: %s" % 't/view_%(name)s.tmpl' % meta
+
+    # LIST
+    if meta['list_file']:
+        log.warn("List code not yet written")
+
+def _(name, meta, data_dir):
+    if os.path.isfile(os.path.join(data_dir,'%s.crud' % name)):
+        meta['%s_file' % name] = os.path.join(data_dir,'%s.crud' % name)
+    else:
+        meta['%s_file' % name] = None
+
+def find_files(base_dir):
+    data_dir = os.path.join(base_dir, 'data')
+    if not os.path.isdir(data_dir):
+        raise PathError, "Cannot locate 'data' directory in: %s" % base_dir
+
+    files = glob.glob(os.path.join(data_dir,'*.rdef'))
+    if len(files) > 1:
+        raise PathError, "Cannot determin which '*.rdef' to use.\n%s" % \
+            "\n".join(files)
+    if not files:
+        raise PathError, "Cannot find '*.rdef' file in: %s" % data_dir
+
+
+    meta = {}
+    meta['rdef_file'] = files[0]
+    meta['name'] = os.path.splitext(os.path.basename(meta['rdef_file']))[0]
+
+    for name in ['add','edit','list','view']:
+        _(name, meta, data_dir)
+
+    return meta
+
+def main():
+    parser = optparse.OptionParser(description=__doc__)
+    parser.formatter.format_description = lambda s:s
+
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-i", "--inherit", 
+                      default=None, 
+                      help="Template to inherit from")
+
+    (opts, cmd) = parser.parse_args()
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    base_dir = os.path.abspath(os.curdir)
+    try:
+        meta = find_files(base_dir)
+    except PathError, e:
+        parser.print_help()
+        print
+        print "ERROR:", e
+        return
+
+    if opts.inherit:
+        meta['inherit'] = "-i%s" % opts.inherit
+    else:
+        meta['inherit'] = ''
+
+    run(meta)
+
+if __name__ == '__main__':
+    main()

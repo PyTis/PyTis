@@ -1,0 +1,44 @@
+# Example Output Files
+
+employee add_form 
+    label=Add Client
+    path=/employee/add
+    mode=HTML
+    BEGIN TABLE
+    first_name | last_name | dob
+    username   | password
+               | password_2
+    END
+
+employee view
+    label=Add Client
+    path=/employee/:employee_id/update
+    mode=VIEW
+
+    BEGIN TABLE
+    first_name     | last_name
+    email          | phone
+    dob
+    END
+
+    BEGIN TABLE
+    address_1 | address_2
+    city      | state zip_code
+    END
+
+employee edit_form
+    label=Add Client
+    path=/employee/:employee_id/update
+    mode=HTML
+
+    BEGIN TABLE
+    first_name     | last_name
+    address_1      | phone
+    address_2      | email
+    city           | dob
+    state zip_code |
+    {HEADER=Change Password}
+    password 
+    password_2
+    END
+

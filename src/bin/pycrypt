@@ -1,0 +1,204 @@
+#!/usr/bin/env python
+"""pycrypt
+=======
+"""
+
+import optparse
+import os
+import sys
+import pytis as PyTis
+from Crypto.Hash import SHA512
+import hmac
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__created__ = '04:18am 08 Aug, 2013'
+__copyright__ = 'PyTis'
+__version__ = '2.1'
+
+default_salt = "hippity hop hippity hop easter is on it's way!"
+
+def version():
+	print	__version__
+
+def encrypt(val,salt):
+	s = SHA512.new()
+	h = hmac.HMAC(salt, digestmod = SHA512)
+	h.update(val)
+	return h.hexdigest()
+
+def readFile(fpath):
+	handle = open(fpath,'r')
+	contents = handle.read(-1)
+	handle.close()
+	return contents
+
+def main(salt):
+	"""usage: pycrypt <STRING> [ optional <SALT> / -s<SALT> ] """
+	global log
+	errors=[]
+	PyTis.__option_always__ = [True]
+	help_dict = dict(version=__version__,
+						 author=__author__,
+						 created=__created__,
+						 copyright=__copyright__)
+	parser = PyTis.MyParser()
+
+	parser.extra_txt = """
+EXAMPLES:	
+
+	pycrypt -t[foo] -s[bar]
+	pycrypt [foo] [bar]
+	pycrypt -t[foo] [bar]
+	pycrypt [foo] -s[bar]
+
+
+SEE ALSO:
+	
+	N/A
+
+COPYRIGHT:
+
+	%(copyright)s
+
+AUTHOR:
+
+	%(author)s
+
+HISTORY:
+
+	Original Author
+
+CHANGE LOG:
+
+	v2.1 BUG FIX
+		major bug in dual input fixed >> pycrypt foo bar < this was broken)
+
+	v2.0 MINOR CHANGE
+		Fixed small bug, where default salt was not being set, or used.
+		Fixed pre-run error tests to distinguish no salt vs. default salt.
+		Fixed pre-run error tests to handle setting / resttting salt.
+
+	v1.0
+		original publish
+
+CREATED:
+
+	%(created)s
+
+VERSION:
+
+	%(version)s
+
+""" % help_dict
+
+	parser.formatter.format_description = lambda s:s
+	parser.set_description(__doc__)
+	parser.set_usage(main.__doc__)
+
+
+	runtime = optparse.OptionGroup(parser, "Runtime Arguments")
+
+	runtime.add_option("-t", "--string", action="store", type='string',
+				 default=None, metavar='[INPUT-TEXT]', dest='input',
+				 help="Target string to encrypt.")
+
+	runtime.add_option("-f", "--input-file", action="store", type='string',
+				 default=None, metavar='[FILE]', dest='file',
+				 help="Read the input string from a file.")
+
+	runtime.add_option("-L", "--trim-length", action="store", type='int',
+				 default=None, metavar='[INT]', dest='trim_length',
+				 help="Number of CHARS to trim results to.")
+
+	runtime.add_option("-l", "--length", action="store", type='int',
+				 default=None, metavar='[INT]', dest='trim_length',
+				 help="Alias for [-L/--trim-length]")
+
+	runtime.add_option("-s", "--salt", action="store", type='string',
+										#default=salt, metavar='[SALT]', dest='salt',
+										default=salt, metavar='[SALT-TEXT]', dest='salt',
+										help="Salt to use for digest.")
+
+	runtime.add_option("-F", "--salt-file", action="store", type='string',
+				 default=None, metavar='[SALT-FILE]', dest='saltfile',
+				 help="Read the salt input string from a file.")
+	parser.add_option_group(runtime)
+	# ----------------------------
+	dbgroup = optparse.OptionGroup(parser, "Debug")
+	dbgroup.add_option("-D", "--debug", action="store_true",
+					 default=False, dest='debug',
+					 help="Enable debugging")
+
+	dbgroup.add_option("-V", "--verbose", action="store_true",
+					 default=False, dest='verbose',
+					 #help=optparse.SUPPRESS_HELP)
+					 help="Be more Verbose (make lots of noise)")
+
+	dbgroup.add_option("-v", "--version", action="store_true",
+					 default=False, dest='version',
+					 help="Display Version")
+	parser.add_option_group(dbgroup)
+	# ----------------------------
+
+	(opts, args) = parser.parse_args()
+
+	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
+
+	if opts.input is not None and opts.file is not None:
+		errors.append("Please do not specify both a input string and a target file, choose one.")
+	elif opts.file is not None:
+		opts.input = readFile(opts.file)
+
+	if opts.salt is not None and opts.saltfile is not None and opts.salt != salt:
+		errors.append("Please do not specify both a salt string and a salt file, choose one.")
+	elif opts.salt == salt and opts.saltfile is not None:
+		opts.salt = readFile(opts.saltfile)
+
+	if len(args):
+		if len(args) == 1:
+			if opts.input is not None and (opts.salt is None or opts.salt==salt):
+				opts.salt = args[0]
+			elif opts.input is None and opts.salt is not None:
+				opts.input = args[0]
+			elif opts.input is None and opts.salt is None:
+				errors.append("No salt or input provided through flagged argument, but only one string was provided in STDIN.  Both an input string and salt need provided.")
+		if len(args) == 2:
+			if opts.input is None and (opts.salt is None or opts.salt==salt):
+				opts.input = args[0]
+				opts.salt = args[1]
+			elif opts.input is not None and opts.salt is None:
+				errors.append("No salt provided through flagged argument, but two stinrgs were provided in STDIN.  Input provided in an argument, so only one salt is required.")
+			elif opts.input is None and opts.salt is not None and opts.salt != salt:
+				errors.append("No input provided through flagged argument, but two stinrgs were provided in STDIN.  Salt provided in an argument, so only one input string is required.")
+		elif len(args) > 2:
+			errors.append("Too many input strings given via STDIN.")
+	if opts.version:
+		return version()
+
+	if errors:
+		if len(args) == 0 and (opts.input is None and (opts.salt is None or opts.salt==salt)):
+			return parser.print_usage()
+		return parser.print_help(errors)
+	else: 
+		if len(args) == 0 and (opts.input is None and (opts.salt is None or opts.salt==salt)):
+			return parser.print_usage()
+		else:
+			try:
+				results = encrypt(opts.input, opts.salt)
+				if opts.trim_length and len(results) > opts.trim_length:
+					print results[0:opts.trim_length]
+				else:
+					print results
+
+			except KeyboardInterrupt, e:
+				print 'bye!'
+			else:
+				sys.exit(0)
+	return
+			
+
+if __name__ == '__main__':
+	main(default_salt)
+	sys.exit(0)
+

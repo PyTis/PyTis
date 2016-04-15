@@ -1,0 +1,165 @@
+#!/usr/bin/env python
+"""dyndns
+======
+Dynamic DNS updater for DynDns.com
+Written by Josh Lee
+No warrenties what so ever.
+this file is to be licensed GPL
+
+When using flags to setup your config, this doesn't
+actually run the program, only set up the config.
+"""
+from ConfigParser import *
+import re
+import urllib
+import optparse
+import os
+import sys
+import logging; log=logging.getLogger('dyndns')
+
+__created__ = '2008-05-12 11:48:36.549714'
+
+cfile = '/home/jlee/.dyndns'
+
+def load_config(cfile=cfile):
+    ''' Load our config file for us, create it if it doesn't exist.
+        Also creates the first and only section used by ConfigParser.
+    '''
+    conf = ConfigParser()
+    try:
+       conf.readfp(open(cfile))
+       if not conf.has_section('info'):
+            conf.add_section('info')
+            conf.write(open(cfile,'w'))
+    except IOError:
+        log.info('config file not found, creating: %s', cfile)
+        os.system('touch %s' % cfile)
+        h = open(cfile, 'w')
+        h.write("[info]\n")
+        h.close()
+        conf.read(open(cfile))
+    return conf
+
+def conf_set(conf, option, value, cfile=cfile):
+    ''' Nice little wrapper that just writes a config option to our config file
+    '''
+    conf.set('info', option, value)
+    conf.write(open(cfile,'wb'))
+    log.info('updateing %s', option)
+
+def current_ip(conf):
+    ''' though you can specify different url, this defaults to dyndns's website.
+        this will just return your ip as a string
+    '''
+    try:
+        url = conf.get('info', 'hosturl')
+    except:
+        url = 'http://checkip.dyndns.com'
+    data = urllib.urlopen(url).read()
+    ipr = re.compile('[0-9.+]')
+    return ''.join(ipr.findall(data))
+
+def check(conf):
+    ''' make sure everything we need to post a change to dyndns.com is located
+        in the config file, and has a value, we woudln't want to send a bunch of
+        bogus request to them.  :-)
+    '''
+    for x in ['username', 'password', 'hosturl', 'hostname']:
+        try:
+            z = conf.get('info', x)
+            if not z:
+                log.warn('You are missing a value in your config file for: %s' % x)
+                return False
+        except:
+            log.warn('config file missing: %s', x)
+            return False
+    return True
+
+def run(conf):
+    ''' This guy actually tells dyndns.com your ip has changed.
+    '''
+    class AppURLopener(urllib.FancyURLopener):
+        version = "App/1.7"
+    urllib._urlopener = AppURLopener()
+    # I am too lazy to figure out how to do the url2 with base64 authentication, and
+    # sence they have https, we should be ok
+    url_string = "https://%s:%s@members.dyndns.org/nic/update/?hostname=%s&myip=%s&wildcard=NOCHG&mx=NOCHG&backmx=NOCHG" % \
+        (conf.get('info', 'username'),
+         conf.get('info', 'password'),
+         conf.get('info', 'hostname'),
+         conf.get('info', 'ip address')
+    )
+    return urllib.urlopen(url_string)
+
+def do(conf):
+    ''' The heart of our program, grabs the current (nip) and old ip (from confg)
+        This little guy is fairly self explanitory, as they all are.
+    '''
+    nip = current_ip(conf)
+    try:
+        oip = conf.get('info', 'ip address')
+    except:
+        oip = None
+    log.debug('OLD IP: %s', oip)
+    log.debug('NEW IP: %s', nip)
+    if oip != nip:
+        conf_set(conf, 'ip address', nip)
+        if check(conf):
+            return run(conf)
+    else:
+        log.info('Your ip has not changed: %s' % oip)
+
+def main():
+    """USAGE: dyndns """
+    parser = optparse.OptionParser(description=__doc__)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False,
+                      help="Enable debugging")
+
+    parser.add_option('-p', '--password', action='store',
+                      help='dyndns.com password')
+
+    parser.add_option('-u', '--username', action='store',
+                      help='dyndns.com username')
+
+    parser.add_option('-n', '--hostname', action='store',
+                      help="Your Hostname (example: me.dyndns.org)")
+
+    # Yeah yeah, I know, why z?  Well h is taken by help, and u by uzername,...
+    parser.add_option('-z', '--hosturl', action='store',
+                      help='dyndns.com host')
+
+    (opts, cmd) = parser.parse_args()
+
+    # Logging Configuration
+    log.setLevel(0)
+    formatter = '%(levelname)-8s %(message)s'
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG, format=formatter)
+    else:
+        logging.basicConfig(level=logging.INFO, format=formatter)
+    log.debug('starting...')
+
+    run = True
+    conf = load_config()
+    if opts.username:
+        run=False
+        conf_set(conf, 'username', opts.username)
+    if opts.password:
+        run=False
+        conf_set(conf, 'password', opts.password)
+    if opts.hosturl:
+        run=False
+        conf_set(conf, 'hosturl', opts.hosturl)
+    if opts.hostname:
+        run=False
+        conf_set(conf, 'hostname', opts.hostname)
+    # don't run if they were setting up some config var
+    if run: do(conf)
+
+if __name__ == '__main__':
+    main()

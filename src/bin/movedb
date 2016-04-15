@@ -1,0 +1,359 @@
+#!/usr/bin/env python
+"""movedb
+======
+"""
+
+import os
+import sys
+import optparse
+import subprocess
+
+import pytis as PyTis
+
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__created__ = '03:35pm 10 Oct, 2013'
+__copyright__ = 'PyTis.com'
+__version__ = '1.0'
+
+def validate_opt(opts,cfile,key):
+	dig_config=False
+	try:
+		getattr(opts,key)
+	except AttributeError,e:
+		dig_config=True
+
+	if dig_config or not getattr(opts,key):
+		try:
+			config = cfile.getConfig()
+			if not config.get(key):
+				raise PyTis.EmptyString('%s not provided, and could not be found in the config file.' % key.replace('_',' ').title())
+			setattr(opts,key,config[key])
+		except OSError,e:
+			raise PyTis.EmptyString('%s not provided, and a config file could not me found.' % key.replace('_',' ').title())
+	else:
+		test=getattr(opts,key) 
+		if type(test) == type(str('')) and test=='=': test=''
+		if test is None or ( type(test) == type(str('')) and test.replace("\r\n","\n").replace("\n","").strip() == ''):
+			del opts.__dict__[key]
+			return validate_opt(opts,cfile,key)
+
+
+def validate(opts, cfile):
+	for opt, value in opts.__dict__.items():
+		if opt.lower() in [c.lower() for c in cfile.fields]:
+			validate_opt(opts,cfile,opt.lower())	
+	for opt, value in opts.__dict__.items():
+		log.debug("VALIDATED OPTIONS %s: %s" % (opt,value))
+	log.debug('-'*80) 
+
+def run(opts):
+	global log
+
+	source = os.path.abspath(opts.source)
+	target = os.path.abspath(opts.target)
+	if not os.path.exists(source):
+		log.error('Source "%s" does not exist!' % source)
+		return
+	if os.path.exists(target):
+		log.error('Target "%s" already exists!' % target)
+		return
+
+	cmds = ["service mysql stop",
+					"mv %s %s" % (source, target),
+					"ln -s %s %s" % (target, source),
+					"chown -R mysql:mysql %s" % source,
+					"chown -h mysql:mysql %s" % source,
+					"service mysql start"
+				 ]
+
+	if opts.dryrun:
+		log.info("COMMANDS: (dry-run only)")
+		for cmd in cmds:
+			if opts.verbose:
+				log.info(cmd)
+			else:
+				log.debug(cmd)
+				print cmd
+		return
+	else: 
+		for cmd in cmds:
+			p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,shell=True)
+			log.debug(cmd)
+			while True:
+				retcode = p.poll()
+				line = p.stdout.readline()
+				if line:
+					log.debug(line.strip())
+				if retcode is not None:
+					break
+	return
+
+
+def main():
+	"""usage: %prog -d[DATABASE] -u[USER] <options>"""
+	global log
+	errors=[]
+	PyTis.__option_always__ = [True]
+	help_dict = dict(version=__version__,
+						 author=__author__,
+						 created=__created__,
+						 copyright=__copyright__)
+	parser = PyTis.MyParser()
+
+	parser.extra_txt = """
+
+If the DATA DIR and DESTINATION DIR are not already saved in the configuration
+file, then either A: they must be provided, or B: your source and target must
+be full paths.
+If the "--mysql-data-dir" and "--destination" have been saved then many ways
+of using this are possible.
+Hypothetically, lets say that your configuration INI file have the two
+following lines in them:
+
+	data_dir = /var/lib/mysql/
+	dest = /cryptdrive/mysql
+	*(note, trailing slashes "/" do not matter"
+
+ With the above saved configuration here is a list of a few examples, and their
+ functional results.
+
+ >movedb foo
+ or
+ >movedb -sfoo
+ or
+ >movedb -source=foo
+	source becomes: /var/lib/mysql/foo
+	target becomes: /cryptdrive/mysql/foo
+
+ >movedb foo bar 
+ or
+ >movedb -sfoo -tbar 
+ or
+ >movedb --source=foo bar 
+ or
+ >movedb --source=foo --target=bar 
+ or
+ >movedb foo --target=bar 
+	source becomes: /var/lib/mysql/foo
+	target becomes: /cryptdrive/mysql/bar
+
+ >movedb foo /somewhere/else/foo
+	source becomes: /var/lib/mysql/foo
+	target becomes: /somewhere/else/foo
+
+ >movedb /second/mysql/install/versionx/foo
+	source becomes: /second/mysql/install/versionx/foo
+	target becomes: /cryptdrive/mysql/foo
+
+ >movedb /second/mysql/install/versionx/foo bar
+	source becomes: /second/mysql/install/versionx/foo
+	target becomes: /cryptdrive/mysql/bar
+ 
+ >movedb /second/mysql/install/versionx/foo /another/cryptdrive/bar
+	source becomes: /second/mysql/install/versionx/foo
+	target becomes: /another/cryptdrive/bar
+
+Now, if the DATA DIR and the DESTINATION DIR are not saved in the configuration
+file, if you have not yet setup a configuration file, then all is well, but you
+must specify a full path for the source, and target.
+
+SEE ALSO:
+	myisam2innodb
+
+COPYRIGHT:
+	%(copyright)s
+
+AUTHOR:
+	%(author)s
+
+HISTORY:
+	Original Author
+
+VERSION:
+	%(version)s
+""" % help_dict
+
+
+	parser.formatter.format_description = lambda s:s
+	parser.set_description(__doc__)
+	parser.set_usage(main.__doc__)
+
+	runtime = optparse.OptionGroup(parser, "Runtime Arguments")
+
+	runtime.add_option("--dry-run", action="store_true",
+					 default=False, dest='dryrun',
+					 help="Do not actually alter the database, instead print the alter commands to STDOUT when done.")
+
+
+	runtime.add_option("-s", "--source", 
+										action="store",
+										default=None, 
+										dest="source",
+										metavar="[DB NAME]",
+										type="str",
+										help="Source DB to be moved.")
+
+	runtime.add_option("-t", "--target",
+										action="store",
+										default=False, 
+										dest="target",
+										metavar="[NEW NAME]",
+										type="str",
+										help="Target directory to move the db to.")
+	parser.add_option_group(runtime)
+	# -------------------------------------------------------------------------
+	# variable setting
+	vars = optparse.OptionGroup(parser, "-- CONFIGURATION SETTINGS")
+	vars.add_option("-m", "--mysql-data-dir", action="store",
+										metavar="[FULL-PATH]",
+										type='str',
+										dest='data_dir',
+										default=None, 
+										help="Full path to the mysql data directory.  For saving so that this script may be used without paths *(use --help to see the full explination).")
+
+	vars.add_option("-d", "--destination", action="store",
+										metavar="[FULL-PATH]",
+										type='str',
+										dest='dest',
+										default=None, 
+										help="Full path to the directory to place the database.")
+
+	vars.add_option("-S", "--save", action="store_true",
+										default=False, 
+										help="Save cryptmount information for future use?")
+
+	parser.add_option_group(vars)
+	# ----------------------------
+	dbgroup = optparse.OptionGroup(parser, "Debug")
+	dbgroup.add_option("-D", "--debug", action="store_true",
+					 default=False, dest='debug',
+					 help="Enable debugging")
+
+	dbgroup.add_option("-V", "--verbose", action="store_true",
+					 default=False, dest='verbose',
+					 help="Be more Verbose (make lots of noise)")
+
+	dbgroup.add_option("-v", "--version", action="store_true",
+					 default=False, dest='version',
+					 help="Display Version")
+	parser.add_option_group(dbgroup)
+	# ----------------------------
+
+	(opts, args) = parser.parse_args()
+#	if opts.quiet: opts.verbose=False
+
+	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
+
+	if opts.version:
+		return PyTis.version(__version__)
+
+	if len(args) == 0:
+		pass
+	elif len(args) == 1:
+		if not opts.source:
+			opts.source = args[0]
+		elif not opts.target:
+			opts.target = args[0]
+		else:
+			errors.append("A target or source was provided as arguments, yet extra input found on STDIN.")
+	elif len(args) == 2:
+		if opts.source or opts.target:
+			errors.append("A target and source was provided as arguments, yet extra input found on STDIN.")
+		else:
+			opts.source = args[0]
+			opts.target = args[1]
+	else:
+		log.error("Too many arguments.")
+		return parser.print_usage()
+
+
+	cfile = PyTis.ConfigFile(opts)
+	cfile.prompts = []
+	cfile.fields = ['data_dir','dest']
+
+	config = None
+	try:
+		config = cfile.getConfig()
+	except OSError,e:
+		pass
+		#raise PyTis.EmptyString('%s not provided, and a config file could not me found.' % key.title())
+
+
+	if opts.save:
+		if cfile.exists:
+			title = 'updating config'
+		else:
+			title = 'creating config'
+		cfile.saveConfig(opts)
+		log.info(title)
+		log.info("your settings have been saved")
+		return PyTis.toContinue()
+
+
+	else:
+		if not opts.data_dir and config: opts.data_dir = config.get('data_dir')
+		if not opts.dest and config:
+			opts.dest = config.get('dest')
+		elif not opts.dest:
+			log.error("%s" % config)
+			return
+
+
+		if not opts.data_dir and opts.source:
+			if os.path.isfile(opts.source) and not os.path.exists(opts.source):
+				errors.append("No data dir provided, and source was not a full path.")
+			else:
+				pass #we're good
+		else:
+			pass #we're good
+		
+		if not opts.target:
+			if opts.dest:
+				opts.target = os.path.abspath(os.path.join(opts.dest, os.path.basename(opts.source)))
+			else:
+				errors.append("No target provided, no destination provided, and destination not stored in configuration file.")
+		elif opts.target:
+			if opts.target == os.path.basename(opts.target):
+				opts.target = os.path.abspath(os.path.join(opts.dest, os.path.basename(opts.target)))
+			else:
+				opts.target = os.path.abspath(opts.target)
+
+		
+		if opts.source and opts.source == os.path.basename(opts.source):
+			if not os.path.exists(os.path.abspath(opts.source)):
+				if not opts.data_dir:
+					errors.append("Source provided was only a dirname however no path was specified, and no data dir was provided, and the data dir is not stored in the configuration file.")
+				else:
+					opts.source = os.path.abspath(os.path.join(opts.data_dir, opts.source))
+			else:
+				# it exists, source is good.
+				opts.source=os.path.abspath(opts.source)
+		elif not opts.source:
+			if not opts.data_dir:
+				errors.append("Full path to data directory not provided.")
+			else:
+				errors.append("No source name provided.")
+
+	if len(args) == 0:
+		parser.print_usage()
+	else:
+		if not errors:
+			try:
+				validate(opts, cfile)
+			except PyTis.EmptyString, e:
+				errors.append(str(e))
+			else:
+				try:
+					run(opts)
+				except KeyboardInterrupt, e:
+					print 'bye!'
+				else:
+					sys.exit(1)
+					return
+		else:
+			return parser.print_help(errors)
+
+if __name__ == '__main__':
+    main()

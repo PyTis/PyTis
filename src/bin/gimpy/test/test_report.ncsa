@@ -1,0 +1,12 @@
+#$-:Image Map file created by GIMP Imagemap Plugin
+#$-:GIMP Imagemap Plugin by Maurits Rijk
+#$-:Please do not edit lines starting with "#$"
+#$VERSION:2.0
+#$TITLE:map
+#$AUTHOR:jlee
+#$FORMAT:ncsa
+# alt2
+rect client_name 30,46 150,64
+rect medicaide_no 30,82 135,100
+rect 1.a 255,64 270,82
+rect 1.b 285,64 300,82

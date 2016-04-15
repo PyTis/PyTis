@@ -1,0 +1,142 @@
+#!/usr/bin/env python
+"""
+Attempt to port the ruby pg_diff.rb script to python. This script currently
+does not work.
+"""
+import re
+import psycopg2 as psycopg
+DSN_FROM = "dbname='jlowery'"
+DSN_TO = "dbname='client_v1'"
+
+def to_tuple(ds):
+    """ Replace lists with tuples recursively in a data structure."""
+    if isinstance(ds, (tuple, list)):
+        d = []
+        for item in ds:
+            d.append(to_tuple(item))
+        return tuple(d)
+    else:
+        return ds
+
+def tuple_dict(lookup, fields):
+    return dict((k[0], lookup[i]) for i, k in enumerate(fields))
+
+def format_type(conn, oid):
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT pg_catalog.format_type(pg_type.oid, typtypmod) AS type_name
+         FROM pg_catalog.pg_type
+         JOIN pg_catalog.pg_namespace ON (pg_namespace.oid = typnamespace)
+         WHERE pg_type.oid = %s""", (oid,)) 
+    return cursor.fetchone()[0]
+
+def function_args(conn, args):
+    tipes = args['function_args'].split()
+    if not args['function_arg_names']:
+        arnames = [""] * len(tipes)
+    elif isinstance(args['function_arg_names'], tuple):
+        arnames = args['function_arg_names']
+    else:
+        match = re.match("^\{(.*)\}$", args['function_arg_names'])
+        if args['function_arg_names'] and match:
+            arnames = match.groups()[0].split(',')
+        else:
+            arnames = [""] * len(tipes)
+    alist = []
+    for idx, typ in enumerate(tipes):
+        alist.append("%s %s" % (arnames[idx], format_type(conn, typ)))
+    return ", ".join(alist)
+
+def function_values(conn, args):
+    args['name'] = "%(namespace)s.%(function_name)s" % args
+    args['return_type'] = format_type(conn, args['return_type'])
+    args['arglist'] = function_args(conn, args)
+    if args['proisstrict']:
+        args['strict'] = 'STRICT'
+    else:
+        args['strict'] = ''
+    if args['prosecdef']:
+        args['secdef'] = ' SECURITY DEFINER'
+    else:
+        args['secdef'] = ''
+
+    if args['provolatile'] == 'i':
+        args['volatile'] = ' IMMUTABLE'
+    elif args['provolatile'] == 's':
+        args['volatile'] = ' STABLE'
+    else:
+        args['volatile'] = ''
+    
+    if args['returns_set']:
+        args['rset'] = 'SETOF '
+    else:
+        args['rset'] = ''
+    args['signature'] = "%(name)s(%(arglist)s)" % args
+    return args
+
+def function_source(args):
+    return ("CREATE OR REPLACE FUNCTION %(signature)s RETURNS %(rset)s "\
+        "%(return_type)s AS $BODY$%(source_code)s$BODY$ "\
+        "LANGUAGE '%(language_name)s' "\
+        "%(volatile)s %(strict)s %(secdef)s;") % args
+
+def function_set(conn):
+    cursor = conn.cursor()
+    cursor.execute("""
+         SELECT proname AS function_name
+         , nspname AS namespace
+         , lanname AS language_name
+         , pg_catalog.obj_description(pg_proc.oid, 'pg_proc') AS comment
+         , proargtypes AS function_args
+         , proargnames AS function_arg_names
+         , prosrc AS source_code
+         , proretset AS returns_set
+         , prorettype AS return_type,
+         provolatile, proisstrict, prosecdef
+         FROM pg_catalog.pg_proc
+         JOIN pg_catalog.pg_language ON (pg_language.oid = prolang)
+         JOIN pg_catalog.pg_namespace ON (pronamespace = pg_namespace.oid)
+         JOIN pg_catalog.pg_type ON (prorettype = pg_type.oid)
+         WHERE pg_namespace.nspname !~ 'pg_catalog|information_schema'
+         AND proname != 'plpgsql_call_handler'
+         AND proname != 'plpgsql_validator'
+         ORDER BY proname
+    """)
+    return set(to_tuple(list(cursor))), cursor.description
+
+def trigger_set(conn):
+    cursor = conn.cursor()
+    cursor.execute("""
+    select nspname || '.' || relname as tgtable, tgname, pg_get_triggerdef(t.oid) as tg_def
+    from pg_trigger t join pg_class c ON (tgrelid = c.oid ) JOIN pg_namespace n ON (c.relnamespace = n.oid)
+    where not tgisconstraint
+    and nspname !~ 'pg_catalog|information_schema'""")
+    return set(to_tuple(list(cursor))), cursor.description
+
+def main():
+    from_conn = psycopg.connect(DSN_FROM)
+    to_conn = psycopg.connect(DSN_TO)
+
+    to_funcs, desc = function_set(to_conn)
+    from_funcs, desc = function_set(from_conn)
+    for diff in to_funcs:
+        args = tuple_dict(diff, desc)
+        args = function_values(to_conn, args)
+        #print "DROP FUNCTION %(signature)s" % args
+    for diff in from_funcs:
+        args = tuple_dict(diff, desc)
+        args = function_values(from_conn, args)
+        print function_source(args)
+
+    to_trigs, desc = trigger_set(to_conn)
+    from_trigs, desc = trigger_set(from_conn)
+    for diff in to_trigs - from_trigs:
+        args = tuple_dict(diff, desc)
+        print 'DROP TRIGGER %(tgname)s ON %(tgtable)s;' % args
+    for diff in from_trigs - to_trigs:
+        args = tuple_dict(diff, desc)
+        print "%s;" % args['tg_def']
+    
+if __name__ == '__main__':
+    main()
+

@@ -1,0 +1,940 @@
+#!/usr/bin/env python
+"""PgImport
+=========
+
+NAME: PgImport
+
+SYNOPSIS:
+  This tool was designed out of nessicity.  I've written too many scripts to 
+parse/read a file provided by a fellow employee just to import that data into
+a postgres database.  In programming, repetition dictates functions, thus 
+tools.
+
+DESCRIPTION:
+  PgImport will read from several filetypes and can be easily extended with to 
+support other file types.  To learn how to extend the functionality, please see
+below.
+
+  READS FROM:
+    Comma seperated files (*.csv)
+    Tab seperated files (*.txt)
+    Colon seperated files (*.csv)
+    Excel Files (*.xls) - Versions of Excel supported: 2003, 2002, XP, 2000, 
+      97, 95, 5.0, 4.0, 3.0.
+    Access Databases (*.mdb)
+
+COMMANDS:
+
+ENVIRONMENT:
+
+
+SEE ALSO:
+  PyTis Tools - pg_func_diff
+  PyTis Tools - pg_diff
+  PyTis Tools - pg_strip
+
+HISTORY:
+
+VERSION: 
+ v-%(version)s
+
+DEPENDENCIES:
+  pg - PyGreSQL classic python to postgresql interface.
+  xlrd - Python Microsoft Excel interface *(xls)
+  pyodbc - Python ODBC interface *(mdb)
+  * only required for reading certian filetypes.
+
+EXTENDING:
+  To add in a new supported filetype, you must do 3 things.
+
+  1. add the filetype to the dictionary "magic_bag"
+  2. create a function using the file extention as the function name, and 
+    decorated it with parse.  This function is responsible for reading the 
+    input file, and must return a list of lists and the max length of any one
+    of those lists, after parsing the file.
+  3. Add yourself to the credits, and email me back the updated version.
+    Josh Lee - PgImport@cellbg.com
+
+  Things to remember, please make sure that your addon is compatible in both 
+  linux and windows 32/64.
+
+AUTHOR:
+  %(author)s
+
+COPYRIGHT:
+  %(copyright)s
+
+CREDITS:
+
+  Josh Lee - Original Author
+  next guy here.
+
+"""
+# built-in
+#from mx.DateTime import ISO, DateTimeFrom
+import datetime
+import optparse
+import os
+import sys
+# custom 
+import pytis as PyTis
+# third party
+
+
+# in version 2, we must do a os test, and we can then choose to use pg in linux
+# or odbc in windows.  Though then, the dbConn function and testTable will need
+# altered.  perhaps an os decorator with different functions of the same name 
+# would be a good way of doing this
+
+try:
+  import pg
+except ImportError, e:
+  # it is ok not to use log here, in fact it is not even defined yet
+  print 'Missing required package pg - PyGreSQL classic interface.'
+  sys.exit(1)
+
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__created__ = '03:01pm 06 Jun, 2010'
+__copyright__ = 'PyTis.com'
+__version__ = '8.4.4'
+
+magic_bag = {'csv' : {},
+             'mdb' : {},
+             'xls' : {},
+             'txt' : {}
+}
+
+def dbConn(opts):
+  """ Standard db connection function.  They don't get any easier than this.
+      This function takes a class dict, or in this case, opts from the option
+      parser, then references the values by property name.
+  """
+  '''
+  try:
+    import pyodbc 
+  except ImportError, e:
+    raise ImportError('Missing required python module pyodbc')
+  dsn = 'DRIVER={PostgreSQL};SERVER=%(host)s;DATABSE=%(database)s;UID=%(username)s;PWD=%(password)s;' % dict(host=opts.host,database=opts.database,username=opts.username,password=opts.password)
+  conn = pyodbc.connect(dsn)
+
+  conn.Connect(dsn)
+
+  '''
+
+  
+  conn = pg.connect(dbname=opts.database,
+                        user=opts.username,
+                        passwd=opts.password,
+                        host=opts.host,
+                        port=opts.port)
+  return conn
+
+# =============================================================================
+# Begin Helpers
+# -----------------------------------------------------------------------------
+"""
+def valid_date(s):
+    ''' Determines if the given string is a valid date representation. '''
+    try:
+        DateTimeFrom(s)
+        return True
+    except:
+        return False
+    
+def to_iso(value):
+  '''
+  global log
+  log.debug(value)
+  x = ISO.str(DateTimeFrom(value)).split(' ')[0]
+  log.debug(x)
+  return x
+  '''
+  x = value.split('/')
+  s = '%s-%s-%s' % (x[2], x[0], x[1])
+  return s
+"""
+def calc(val, qs=False):
+  if val:
+    try:
+      float(val)
+    except ValueError, e:
+      val = unicode(val)
+      val = val.encode('ascii', 'replace')
+      if qs:
+        val = "'%s'" % pg.escape_string(str(val))
+      else:
+        val = "%s" % str(val)
+    except TypeError, e:
+      if type(val) == type(datetime.datetime(2010, 1, 1)):
+        if qs:
+          val = "'%s'" % val
+        else:
+          val = '%s' % val
+      else:
+        raise TypeError(e)
+    else:
+      try: 
+        val = int(val)
+      except ValueError, e:
+        val = float(val)
+  else:
+    if qs:
+      val = 'Null'
+    else:
+      val = '' 
+  return val
+
+def tolen(s,delimiter=' ', i=80):
+    """ Reads the input string :s: and reformatts to an specified length :i:
+    """
+
+    lines = []; line = []
+    for f in s.split(delimiter):
+        if len('%s %s' % (' '.join(line), f)) > i:
+            lines.append(' '.join(line))
+            line = [f]
+        else:
+            if f.startswith('\n'):
+                lines.append(' '.join(line))
+                line = [f]
+            else:
+                line.append(f)
+    if line:
+        lines.append(' '.join(line))
+    return '\n'.join(lines)
+
+def integretyCheck(data, maxlen):
+  """ first lets make sure all records have the same len """
+  for rec in data:
+    if len(rec) != maxlen:
+      raise UserWarning('Some of the records are not have less columns than ' \
+        'others')
+  return
+
+def getDelimiter():
+  """ helpper function that will retrieve a cell delimiter from the user.
+  """
+
+  print 'Please choose the delimiter.'
+  delimiter = raw_input('Common choices are "," ";" or "|"  (enter for default ,)' + "\n>> ")
+  if len(delimiter) < 1:
+    return ','
+  else:
+    return delimiter
+
+def getQuote():
+  """ helpper function that will retrieve a cell wall from the user.
+  """
+
+  print 'Please choose the quote used'
+  quotechar = raw_input('Common choices are " or \' (enter for default ")' + "\n>> ")
+  if len(quotechar) < 1:
+    return '"'
+  else:
+    return quotechar
+
+# I LOVE CLOSURES I like this way more, but the other is easier to understand
+def parse(func, magic_bag=magic_bag): magic_bag[func.__name__]['parse'] = func
+def check(func, magic_bag=magic_bag): magic_bag[func.__name__]['check'] = func
+# easy as pie.
+
+def promptFromList(options, err, other, error=None):
+  """ Takes a list of utf8 strings and prompts the user to pick one. Then 
+  returns the name of the sheet choosen.
+  """
+  PyTis.clearScreen()
+  if error:
+    print err 
+  elif other:
+    print other
+  print 
+
+  print "please choose one of the following"
+  print "=================================="
+  i=0
+  options.sort()
+  for k in options:
+    i+=1
+    print "%s. %s" % (i,k)
+  print "\n q to quit\n"
+  res = raw_input('>> ')
+  if res in ('Q','q'):
+    print 'bye!'
+    sys.exit(0)
+  try:
+    k = int(res) -1
+    if k < 0:
+       raise IndexError, 'null'
+    return options[k]
+  except (IndexError, ValueError), e:
+    return promptFromList(options, err, other, error=True)
+  
+def chooseSheet(sheets, error=None):
+  """ picks from a list of excel sheets """
+  return promptFromList(options=sheets,
+    err="INVALID SELECTION, YOU MUST CHOOSE 1-%s" % str(len(sheets)),
+    other='', error=None)
+
+def askFileType(opts, error=None, magic_bag=magic_bag):
+  """ picks from a list of file extentions """
+  return promptFromList(options=magic_bag.keys(),
+    err="INVALID SELECTION, YOU MUST CHOOSE 1-%s" % str(len(magic_bag.keys())),
+    other="Could not determine the filetype of '%s'" % os.path.basename(opts.filename),
+    error=None)
+
+# -----------------------------------------------------------------------------
+# End Helpers
+# =============================================================================
+
+# =============================================================================
+# Begin Check Functions
+# -----------------------------------------------------------------------------
+def testConn(opts, cfile):
+  """ verifies that all required options are present to connect, then attempts
+      to connect to the database.
+  """
+  
+  if not opts.database or not opts.username or not opts.password or not opts.port or not opts.host:
+    if not opts.host:
+      try:
+        config = cfile.getConfig()
+        if not config.get('host'):
+          raise PyTis.EmptyString('Host name not provided, and could not be found in the config file.')
+        opts.host = config['host']
+      except OSError, e:
+        raise PyTis.EmptyString('Host name not provided, and a config file could not me found.')
+
+    if not opts.database:
+      try:
+        config = cfile.getConfig()
+        if not config.get('database'):
+          raise PyTis.EmptyString('Database name not provided, and could not be found in the config file.')
+        opts.database = config['database']
+      except OSError, e:
+        raise PyTis.EmptyString('Database name not provided, and a config file could not me found.')
+
+    if not opts.port:
+      try:
+        config = cfile.getConfig()
+        if not config.get('port'):
+          raise PyTis.EmptyString('Port not provided, and could not be found in the config file.')
+        opts.port = config['port']
+      except OSError, e:
+        raise PyTis.EmptyString('Port not provided, and a config file could not me found.')
+
+    if not opts.password:
+      try:
+        config = cfile.getConfig()
+        if not config.get('password'):
+          raise PyTis.EmptyString('Password not provided, and could not be found in the config file.')
+        opts.password = config['password']
+      except OSError, e:
+        raise PyTis.EmptyString('Password not provided, and a config file could not me found.')
+
+    if not opts.username:
+      try:
+        config = cfile.getConfig()
+        if not config.get('username'):
+          raise PyTis.EmptyString('User name not provided, and could not be found in the config file.')
+        opts.username = config['username']
+      except OSError, e:
+        raise PyTis.EmptyString('User name not provided, and a config file could not me found.')
+
+  conn = dbConn(opts)
+
+def testTable(opts):
+  """ simply test the given table does indeed exist """
+  return dbConn(opts).query('SELECT * FROM "%s" LIMIT 1' % opts.table)
+
+def testFile(opts):
+  """ ensures that the user provided data source exists """
+  if opts.filename is None or not opts.filename.strip():
+    raise PyTis.NoFiles, "No file provided to load records from."
+  if not os.path.exists(opts.filename):
+    raise PyTis.FileNotFound, "File cannot be found or does not exist. '%s'" % opts.filename
+
+def guessFiletype(opts):
+  """ atempts to guess the file type, if it fails returns none """
+  try:
+    return os.path.splitext(opts.filename)[1]
+  except (IndexError, AttributeError), e:
+    return None
+
+def testFiletype(filetype, magic_bag=magic_bag):
+  """ ensure that the user provided data source is a valid type,
+      returns bool
+  """
+  return str(filetype).replace('.','') in magic_bag.keys()
+
+
+# -----------------------------------------------------------------------------
+# End Check Functions
+# =============================================================================
+
+# =============================================================================
+# Begin Apply Functions
+# -----------------------------------------------------------------------------
+
+
+@parse
+def csv(opts):
+  """ CSV specific parsing function """
+  import csv
+  data = []
+  maxlen = 0
+  for row in csv.reader(open(os.path.abspath(opts.filename)), delimiter=getDelimiter(), quotechar=getQuote() ):
+    if len(row) > maxlen:
+      maxlen = len(row)
+    data.append(row)
+  return data, maxlen
+
+@parse
+def txt(opts):
+  """ tab seperated file specific parsing function """
+  import csv
+  delimiter = "\t" 
+  quotechar = '"'
+  data = []
+  maxlen = 0
+  for row in csv.reader(open(os.path.abspath(opts.filename)), delimiter=delimiter, quotechar=quotechar):
+    if len(row) > maxlen:
+      maxlen = len(row)
+    data.append(row)
+  return data, maxlen
+
+@parse
+def xls(opts):
+  """ Microsoft Excel file specific parsing function """
+  try:
+    import xlrd
+  except ImportError, e:
+    raise ImportError('Missing required python module xlrd')
+
+  wb = xlrd.open_workbook(os.path.abspath(opts.filename))
+  if not wb.sheet_names():
+    raise PyTis.EmptyTemplate('The Excel file provided had no sheets, this file was empty.')
+  if len(wb.sheet_names()) > 1:
+    sheet=chooseSheet(wb.sheet_names())
+  else:
+    sheet = wb.sheet_names()[0]
+  sh = wb.sheet_by_name(sheet)
+  data = []
+  maxlen = 0
+  for i in range(sh.nrows):
+    if len(sh.row_values(i)) > maxlen:
+      maxlen = len(sh.row_values(i))
+    rec = sh.row_values(i)
+
+    ctypes = sh.row_types(i)
+    counter = 0
+    for ctype in iter(ctypes.tolist()):
+      if ctype == 3:
+        rec[counter] = datetime.datetime(*xlrd.xldate_as_tuple(rec[counter], wb.datemode))
+      counter+=1
+    data.append(rec)
+  return data, maxlen
+
+@parse
+def mdb(opts):
+  """ Microsoft Access specific parsing function.
+      This function will be responsible for asking which table to pull data 
+      from. 
+      
+      In version 2,...
+      In the future, I'd like to show a list of tables, with an numeric 
+      option; i.e. [1. TABa, 2. TABb, 3. TABc] please choose 1-3. 
+    
+      In version 3,... 
+      Additionally, I'd like to be able to pull schema, and create the table
+      for the user.  Also, provide an [a]ll option, to allow for a strait 
+      Access to PostgreSQL migration.
+  """
+
+  try:
+    import pyodbc 
+  except ImportError, e:
+    raise ImportError('Missing required python module pyodbc')
+
+  raise PyTis.FutureFeature('This feature has not yet been completed or tested.')
+
+  conn = pyodbc.connect('DRIVER={Microsoft Access Driver (*.mdb)};DBQ='+str(os.path.abspath(opts.filename)))
+  conn.Connect(dsn)
+  cursor = conn.cursor()
+  data = []
+  maxlen = 0
+  table = raw_input("table>> ")
+  sql = "SELECT * FROM %s" % table
+  for row in cursor.execute(sql):
+    if len(row) > maxlen:
+      maxlen = len(row)
+    data.append(row)
+  return data, maxlen
+
+
+# -----------------------------------------------------------------------------
+# End Apply Functions
+# =============================================================================
+
+# =============================================================================
+# Begin Program 
+# -----------------------------------------------------------------------------
+def run(opts, filetype):
+  """ meat and tators """
+  global log
+  try:
+    records, maxlen =  magic_bag[filetype.replace('.','')]['parse'](opts)
+  except KeyError, e:
+    raise PyTis.IdiotError('The programmer forgot to write a parse function ' \
+                           'for this filetype: %s' % filetype)
+  if not records:
+    raise PyTis.EmptyTemplate("No records could be loaded from file: %s" % opts.filename)
+
+  try:
+    integretyCheck(records, maxlen)
+  except UserWarning, e:
+    log.warn(str(e))
+  fields = testTable(opts).listfields()
+
+  log.debug('FIELDS: %s' % ', '.join(fields))
+
+
+  if len(fields) <> maxlen:
+    if len(fields) == 0:
+      log.error("No columns on the database table '%s'" % opts.table)
+      return False
+
+    elif len(fields) > maxlen:
+      log.warn("More columns on the database table '%s' then available in " \
+        "the input file %s" % (opts.table, os.path.basename(opts.filename)))
+    elif len(fields) < maxlen:
+      log.warn("Less columns on the database table '%s' then available in " \
+        "the input file %s" % (opts.table, os.path.basename(opts.filename)))
+    else:
+      raise PyTis.IdiotError('The programmer is an idiot')
+  
+  if log.hadWarning:
+    mapping = lineUp(fields, records) 
+  else:
+    mapping = zip(range(0,len(fields)),range(0,len(fields)))
+
+  if opts.headers:
+    records = records[1:]
+
+  while not showExample(mapping, fields, records):
+    mapping = lineUp(fields, records)
+ 
+  outbound = buildOutbound(mapping, fields, records)
+  if opts.headers:
+    sql_statements = buildSQL(fields, outbound, opts.table)
+  else:
+    sql_statements = buildSQL(fields, outbound, opts.table)
+    
+  trigger = False 
+  PyTis.clearScreen()
+  for test in sql_statements[:3]:
+    print "-- INSERT STATEMENT"
+    print test
+    print
+  if not PyTis.getInputYN("Do these look right?"):
+     return run(opts, filetype)
+  else:
+    # do inserts
+    log.debug("Inserting %s records" % len(sql_statements))
+    if opts.insert:
+      conn = dbConn(opts)
+    else:
+      print "-- INSERT STATEMENTS BELOW"
+    for sql in sql_statements:
+      if opts.insert:
+        conn.query(sql)
+      else:
+        print sql
+    if not opts.insert:
+      print "-- END INSERT STATEMENTS"
+   
+    else:
+      trigger = True
+  if trigger:
+    fname = "%s.done" % os.path.abspath(opts.filename)
+    cmd = "touch %s" % fname
+    os.system(cmd)
+
+
+def buildOutbound(mapping, fields, records):
+  buf=[]
+  for rec in records:
+    mapped_rec = {}
+    for k1,k2 in mapping:
+      mapped_rec[fields[k1]]=rec[k2]
+    buf.append(mapped_rec)
+  return buf
+
+def buildSQL(fields, outbound, table):
+  buf = []
+  for row in outbound:
+    oflds = []
+    ovals = []
+    for field in fields:
+       if field in row.keys():
+         oflds.append('"%s"' % field)
+         val = calc(row[field], True)
+         ovals.append('%s' % val)
+    buf.append('INSERT INTO "%s" (%s) VALUES (%s);' % (table, ', '.join(oflds), ', '.join(ovals)))
+  return buf
+
+def lineUp(fields, records):
+  """ Assist the user in lining up fields to columns.
+      given a list of field names, and a list of lists (records)
+      determine the mapping of columns from the records to field names.
+      return a list of tuples i.e., a strait 1 to 1 mapping would look like
+      this:
+        [(0, 0), (1, 1), (2, 2), (3, 3), (4, 4), (5, 5)]
+  """
+  raise PyTis.FutureFeature('This feature has not yet been completed or tested.')
+
+  print "FIELDS, |, DATA"
+  print "="*80
+  i = 0
+  rec_pointer = 0
+  buf = []
+  while True:
+    current_record = records[rec_pointer]
+    try:
+      fieldname = fields[i]
+    except IndexError:
+      fieldname = ''
+    try:
+      recval = current_record[i]
+    except IndexError:
+      recval = ''
+
+
+  for rec in records[:5]:
+    newrec=[]
+    for r in rec:
+      newrec.append('%s' % r)
+
+    print tolen(','.join(newrec), ',')
+
+  return zip(range(0,len(fields)),range(0,len(fields)))
+
+def showExample(mapping, fields, records):
+  global log
+  if not records:
+    return False
+  i = 0
+  buf = []
+  for k1,k2 in mapping:
+    if len(records) == 1:
+      buf.append("|%s., %s, |, %s, |" % ( i+1, fields[k1], calc(records[0][k2])) )
+    elif len(records) == 2:
+      buf.append("|%s., %s, |, %s, |, %s, |" % ( i+1, fields[k1], calc(records[0][k2]), calc(records[1][k2])) )
+    else:
+      buf.append("|%s., %s, |, %s, |, %s, |, %s, |" % ( i+1, fields[k1], calc(records[0][k2]), calc(records[1][k2]),  calc(records[2][k2])) )
+
+    i+=1
+
+  widths = []
+  maxlen=0
+  for line in buf:
+      if len(line) > maxlen:
+        maxlen = len(line)
+      cols = line.split(',')
+      for i, c in enumerate(cols):
+          if i == len(widths):
+              widths.append(0)
+          if len(c) > widths[i]:
+              widths[i] = len(c)
+
+  PyTis.clearScreen()
+  print
+  print " Please verify this mapping is correct. "
+  print "_"*maxlen
+
+  for line in buf:
+      line = line.rstrip('\n')
+      print (" ").join([
+         d.ljust(i) for d, i in zip(line.split(','), widths) 
+      ])
+  print "-"*maxlen
+  return PyTis.getInputYN("Are these correct?", "Please enter y for yes or n for no.")
+    
+
+# -----------------------------------------------------------------------------
+# End Program 
+# =============================================================================
+def myHack(opts):
+  return os.path.splitext(os.path.basename(opts.filename))[0].split('_')[0]
+# =============================================================================
+# Begin MAIN 
+# -----------------------------------------------------------------------------
+def main():
+    """usage: pg_import 
+>pg_import  << displays quick-help (when called with no arguments)
+>pg_import -h (OR --help) << displays full help manual 
+"""
+    global log
+    parser = PyTis.MyParser()
+    hlp = __doc__ % dict(version=__version__,
+                         author=__author__,
+                         copyright=__copyright__)
+    parser.extra_txt = """
+examples:    
+  pg_import -Dari WebDirDesc_97_WithHeaders.xls
+  (display lineup fields to cols)
+  >>> Do these look right? [y/N/?]>>> y
+  (display sample sql inserts)
+  >>> Do these look right? [y/N/?]>>> y
+
+
+    """ 
+
+    if '?' in sys.argv[1:] or '-h' in sys.argv[1:] or '--h' in sys.argv[1:]:
+      parser.set_description(hlp)
+
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+
+    # -------------------------------------------------------------------------
+    # generics
+    gene = optparse.OptionGroup(parser, "Helpers")
+    gene.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    gene.add_option("-V", "--version", action="store_true",
+                      default=False, 
+                      help="Display Version")
+
+    gene.add_option("-v", "--verbose", action="store_true",
+                      default=False, 
+                      help="Be more Verbose")
+
+    parser.add_option_group(gene)
+    # -------------------------------------------------------------------------
+     
+    # -------------------------------------------------------------------------
+    # main settings
+    body = optparse.OptionGroup(parser, "BASIC USAGE")
+    body.add_option("-f", "--file", action="store",
+                      metavar="[FILENAME]",
+                      type='str',
+                      dest='filename',
+                      default=None, 
+                      help="Specify a filename to import records from")
+  
+    body.add_option("-x", "--filetype", action="store",
+                      metavar="[FILETYPE option]",
+                      type='str',
+                      dest='filetype',
+                      default=None, 
+                      help="If the filetype cannot be determined from the file " \
+                      "extention, you may manually specify it here. Options " \
+                      "are: csv, xls, mdb or txt. (CSV - comma seperated " \
+                      "file || TXT - tab seperated file || XLS - Microsoft " \
+                      "Excel || MDB - Microsft Access)  ")
+
+    body.add_option("-c", "--col-headers", action="store_true",
+                      dest='column',
+                      default=False, 
+                      help="Declare this flag if the input file uses the " \
+                      "first column as headers (ignoring the first column. ")
+
+    body.add_option("-r", "--headers", action="store_true",
+                      dest='headers',
+                      default=False, 
+                      help="Declare this flag if the input file uses the " \
+                      "first row as headers (ignoring the first row).")
+
+    body.add_option("-t", "--table", action="store",
+                      metavar="[TABLE NAME]",
+                      type='str',
+                      dest='table',
+                      default=None, 
+                      help="Specify a table name to import records to")
+
+    body.add_option("-a", "--auto", action="store_true",
+                      dest='auto',
+                      default=None, 
+                      help="Pull table name from filename automatically")
+
+    body.add_option("-i", "--insert", action="store_true",
+                      dest='insert',
+                      default=False, 
+                      help="For a saftey percaution, you must actually " \
+                      "declare this flag to perform inserts.  If not " \
+                      "declared, they are printed to the screen instead.")
+
+    parser.add_option_group(body)
+
+    # -------------------------------------------------------------------------
+    # variable setting
+    vars = optparse.OptionGroup(parser, "Configuration Settings")
+    vars.add_option("-H", "--host", action="store",
+                      metavar="[HOST]",
+                      type='str',
+                      dest='host',
+                      default='localhost', 
+                      help="Sets the host name to connect to")
+
+    vars.add_option("-d", "--dbname", action="store",
+                      metavar="[DBNAME]",
+                      type='str',
+                      dest='database',
+                      default=None, 
+                      help="Sets the database name to connect to")
+
+    vars.add_option("-u", "--user", action="store",
+                      metavar="[USERNAME]",
+                      default=None, 
+                      dest='username',
+                      help="Sets the user name of the db connection")
+
+    vars.add_option("-p", "--pass", action="store",
+                      metavar="[PASSWORD]",
+                      dest='password',
+                      default=None, 
+                      help="The password for the db connection")
+
+    vars.add_option("-P", "--port", action="store",
+                      metavar="[Port #]",
+                      type='int',
+                      dest='port',
+                      default=5432, 
+                      help="Select a non-standard port (default 5432)")
+
+    vars.add_option("-s", "--save", action="store_true",
+                      default=False, 
+                      help="Save DB connection information for future use?")
+
+    parser.add_option_group(vars)
+    # -------------------------------------------------------------------------
+    (opts, args) = parser.parse_args()
+
+    filetype = None
+    errors = []
+    log = PyTis.set_logging(opts, 'pg_import')
+    # Logging Configuration
+    log.setLevel(0) 
+    formatter = '%(levelname)-8s %(message)s'
+
+
+    log.debug("  === GENERIC PARAMETERS ===  ")
+    log.debug('COMMAND: %s' % ' '.join(sys.argv[0:]))
+    log.debug("OPTS version: %s" % opts.version)
+    log.debug("OPTS verbose: %s" % opts.verbose)
+    log.debug("OPTS debug: %s" % opts.debug)
+
+    if opts.version:
+      return PyTis.version(__version__)
+
+    if len(sys.argv) < 2 :
+      return parser.print_help()
+
+    cfile = PyTis.ConfigFile(opts)
+    if opts.save:
+      cfile.prompts = ['password']
+      cfile.fields = ['username','password','port','database','host']
+      if cfile.exists:
+        title = 'Updating config,'
+      else:
+        title = 'Creating config,'
+      cfile.saveConfig()
+      log.info(title)
+      print "your settings have been saved"
+      return PyTis.toContinue()
+
+
+    if not opts.filename and len(args) > 0:
+      opts.filename = args[0]
+      del args[0]
+
+    if not opts.table and len(args) > 0:
+      log.debug("TABLExx: %s" % opts.table)
+      log.debug("LEN: %s" % len(args))
+      log.debug("args: %s" % args)
+      opts.table = args[0]
+
+    log.debug(os.path.basename(opts.filename))
+    if not opts.table and opts.auto and opts.filename:
+      opts.table = myHack(opts)
+
+    
+
+    try:
+      testConn(opts, cfile)
+    except (pg.InternalError, PyTis.EmptyString), e:
+      log.error(str(e))
+
+    log.debug("  === CONNECTION PARAMETERS ===  ")
+    log.info("DATABASE: %s" % opts.database)
+    log.debug("HOSTNAME: %s" % opts.host)
+    log.debug("USERNAME: %s" % opts.username)
+    log.debug("PASSWORD: %s" % str('*'*int(len(opts.password))))
+    log.debug("PORT:     %s" % opts.port)
+
+    try:
+      testFile(opts)
+    except (PyTis.FileNotFound, PyTis.NoFiles), e:
+      log.error(str(e))
+    else:
+      filetype = guessFiletype(opts) 
+      if not testFiletype(filetype):
+        filetype = askFileType(opts)
+
+    # take a break, show errors and return or move on
+    if log.hadErrors:
+      PyTis.toContinue()
+      return parser.print_help()
+
+    log.debug("  === ACTION PARAMETERS ===  ")
+    log.info("ROW 1 HEADERS: %s" % opts.headers)
+    log.info("COLUMN 1 HEADERS: %s" % opts.column)
+    log.info("FILENAME: %s" % opts.filename)
+    log.info("FILETYPE: %s" % filetype)
+    log.info("TABLENAME: %s" % opts.table)
+    log.info("AUTO PULL: %s" % opts.auto)
+
+
+    if not opts.filename:
+      errors.append('Missing filename')
+    if not opts.table:
+      errors.append('Missing table')
+    if not filetype:
+      errors.append('Unknown filetype')
+
+    try:
+      testTable(opts)
+    except pg.ProgrammingError, e:
+      log.error("Relation '%s' does not exist on %s." % (opts.table, opts.database))
+
+    if not log.hadErrors and not errors:
+      try:
+        return run(opts, filetype)
+      except PyTis.IdiotError, e:
+        log.error('ERROR: ', str(e))
+        return PyTis.toContinue()
+      except (ImportError,PyTis.EmptyTemplate), e:
+        log.error('ERROR: ', str(e))
+        return PyTis.toContinue()
+      except PyTis.QuitNow, e:
+        log.debug("No answer provided for question: %s" % str(e))
+        print 'bye!'
+        return PyTis.toContinue()
+  
+    if log.hadErrors:
+      return
+    else:
+      PyTis.toContinue()
+      PyTis.clearScreen()
+      return parser.print_help(errors)
+
+# -----------------------------------------------------------------------------
+# End MAIN 
+# =============================================================================
+if __name__ == '__main__':
+    main()
+

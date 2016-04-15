@@ -1,0 +1,358 @@
+#!/usr/bin/env python
+"""duplicate-images
+================
+This tool will search a directory (iteratively by default), comparing files 
+and will report to you which images are duplicates of others.  
+This tool will then provide you with the option to remove duplicate files. 
+
+In simple mode it will only compare one file type, and raise an error if images
+of more than one type are passed in, i.e. *.png and *.gif
+In Advanced mode this tool will compare gif's to png's, png's to bmp's etc;
+However a third party python package (PIL) is required.
+"""
+import hashlib
+import optparse
+import os
+import sys
+import pytis as PyTis
+from pprint import pprint
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__copyright__ = 'PyTis.com'
+__created__ = '06:14pm 09 Sep, 2011'
+__version__ = '1.0'
+
+def version():
+	print	__version__
+
+
+# used to trach uniqueness of files
+hash = {}
+# used to report files alphabetically
+alpha = PyTis.OrderedDict()
+# used for prettier reporting, if only one directory is scanned, then no need 
+# for abspaths, else we will need them
+dirs = [] 
+# no point in checking files we can't work with
+# XXX-TODO: convert other types all to one type to test for same image with different ext
+
+accepted_types = ['.bmp', '.gif', '.jpg', '.png', '.tif']
+
+def gather_images(files):
+	for file in files:
+		file = os.path.abspath(file)
+		basename = os.path.basename(file)
+		parts = os.path.splitext(file)
+		if len(parts) > 1:
+			ext = parts[len(parts)-1].lower()
+			if ext in accepted_types:
+				yield file
+
+def find_primary(args):
+	""" this function will help you not delete an incremented filename from a
+		  group of filenames, when one has no pre or postfix increment.  It makes
+			more sense to remove the one with pre or post fixed increments.
+	"""
+	bad_ids = []
+	if len(args) == 1: return args[0], []
+
+	others = list(args)
+	for i, arg in enumerate(args):
+		for letter in arg:
+			try:
+				int(letter)
+			except ValueError, e:
+				pass
+			else:
+				if i not in bad_ids: bad_ids.append(i)
+				
+	bad_ids.sort(); bad_ids.reverse()
+	for id in bad_ids: del others[id]
+	if len(others) >= 1: good = others[0]
+	else: good = args[0]
+	bads = [arg for arg in args if arg != good]
+	return good,bads 
+
+
+def md5_for_file(f, block_size=2**20):
+	md5 = hashlib.md5()
+	while True:
+		data = f.read(block_size)
+		if not data:
+			break
+		md5.update(data)
+	return md5.digest()
+
+def showfile(file, opts, dirs=dirs):
+	if len(dirs) > 1 or opts.debug:
+		return os.path.abspath(file)
+	else:
+		return os.path.basename(file)
+
+def run(files, opts, alpha=alpha, hash=hash, dirs=dirs, 
+				accepted_types=accepted_types):
+# get list of all files
+	# (already done now by PyTis.filesFromArgs(opts,args))
+# trim list to all workable files
+	files = gather_images(files)
+	total_files = 0
+	duplicate_files = 0
+	files_deleted = 0
+
+# in future convert all filetypes to same filetype using tmp dir
+	for file in files:
+		total_files+=1
+		file = os.path.abspath(file)
+		basename = os.path.basename(file)
+		parts = os.path.splitext(file)
+		if os.path.dirname(file) not in dirs:
+			dirs.append(os.path.dirname(file))
+		# md5sum each one
+		md5 = md5_for_file(open(file,'rb'))
+		if md5 not in hash:
+			hash[md5] = []
+		hash[md5].append(file)
+		if basename not in alpha:
+			alpha[basename] = [] 
+		alpha[basename].append(file)
+
+#	run through and list secondary, teriary, etc in hash dict
+	if opts.verbose:
+		for fname,files in alpha.items():
+			for file in files:
+				print "CHECKED: ", showfile(file,opts,dirs)
+
+# print report (unless we are removing too, then only print if report is turned on)
+	if opts.report:
+		print '# BEGIN REPORT'
+	for md5, files in hash.items():
+		if len(files) > 1:
+			orig = files[0]
+			others = files[1:]
+			duplicate_files = duplicate_files + len(others)
+			if opts.report: 
+				print "DUPLICATE FOUND: '%s'" % os.path.basename(orig)
+			for file in others:
+				if opts.report:
+					print "\t%s is a duplicate of\n\t%s" % (showfile(file,opts,dirs), showfile(orig,opts,dirs))
+	if not opts.delete:
+		print 'Total files checked: ', total_files
+		print 'Duplicates found:    ', duplicate_files
+		print 'Total unique images: ', len(hash.keys())
+	if opts.report: 
+		print '# END REPORT'
+
+# offer to remove or remove if flag is present
+	if opts.delete and not opts.report:
+		for md5, files in hash.items():
+			if len(files) > 1:
+				orig, others = find_primary(files)
+				cnt_of_dups = len(others)
+				base_orig = os.path.basename(orig)
+				if cnt_of_dups > 1:
+					if_s = 's'
+				else:
+					if_s = ''
+
+				print '-'*80
+				print "DUPLICATE FOUND: '%s'" % os.path.basename(orig)
+				i = 1
+				for file in others:
+					print "\t%s.  %s" % (i, showfile(file,opts,dirs))
+					i+=1
+
+				if opts.force or getInputYN("Remove duplicate%s?" % if_s,"Would you like to remove %s duplicate file%s of '%s'?" % (cnt_of_dups, if_s, base_orig)):
+					for other in others:
+						if opts.verbose or (opts.delete and opts.force): print 'removing other: ', other
+						os.unlink(other)
+						files_deleted+=1
+	if opts.delete:
+		print 'Total files checked: ', total_files
+		print 'Duplicates found:    ', duplicate_files
+		print 'Total Files Deleted: ', files_deleted 
+		print 'Total unique images: ', len(hash.keys())
+
+def bulk_mv(): 
+# move with prefix
+# 
+	pass
+
+def getInputYN(q,h=None):
+	try:
+		return PyTis.getInputYN(q,h,PyTis.__option_always__)
+	except KeyboardInterrupt, e:
+		print "\nInvalid input, press 'q' to quit or 'h' for help."
+		return getInputYN(q,h,PyTis.__option_always__)
+	
+def main():
+	"""usage: duplicate-images [options] [optional[file or pattern]]"""
+	global log
+	errors = []
+	help_dict = dict(version=__version__,
+						 author=__author__,
+						 created=__created__,
+						 copyright=__copyright__)
+	hlp = __doc__ % help_dict
+	parser = PyTis.MyParser()
+	parser.extra_txt = """
+NAME:
+	duplicate-images - finds and or removes duplicate image files
+
+SYNOPSIS:
+	duplicate-images [-h][-R] [options...] [-r[Path]] || [*.patern]	
+
+
+DESCRIPTION:
+	In advance mode this tool will actually convert all images (except 
+	images already saved as pngs) to a png, then compare the png files
+	against one another.  In order to do this, the third party python PIL
+	Image library is required.  If you do not have this installed, please 
+	try running as root "easy_install PIL".  
+
+
+COMMANDS:
+-v --verbose 
+	The verbose flag will show additional information, such as which 
+	files are being checked.  This is useful when you are not sure if this
+	tool has read permissions of images in subdirectories.
+
+-d --delete
+	The delete will simply bypass the first "Would you like to begin 
+	removing duplicate files?" prompt, and is useful when combined with the
+	-f --force flag for scripting.
+
+
+ENVIRONMENT:
+	Written on linux, tested on CentOS and Debian, but should run on 
+	DOS/Windows as well.
+
+
+EXAMPLES:	
+	$ duplicate-images -rV pg_*
+	$ duplicate-images -r *.gif
+	$ duplicate-images -arR .
+
+
+SEE ALSO:
+	bulkcopy, bulkmove
+
+
+COPYRIGHT:
+	%(copyright)s
+
+AUTHOR:
+	%(author)s
+
+HISTORY:
+	Original Author
+
+VERSION:
+	%(version)s
+""" % help_dict
+	#if '?' in sys.argv[1:] or '-h' in sys.argv[1:] or '--help' in sys.argv[1:]:
+#		hlp = "%s\n%s" % (hlp,parser.extra_text)
+
+
+	parser.set_description(hlp)
+	parser.set_usage(main.__doc__)
+	parser.formatter.format_description = lambda s:s
+
+	parser.add_option("-?", None, action="store_true",
+						default=False, 
+						help="Alias for -h --help")
+
+	parser.add_option("-v", "--version", action="store_true",
+						default=False, 
+						help="Display Version")
+	# -------------------------------------------------------------------------
+	# generics
+	gene = optparse.OptionGroup(parser, "Helpers")
+
+	gene.add_option("-D", "--debug", action="store_true",
+						default=False, 
+						help="Enable debugging")
+
+
+	parser.add_option_group(gene)
+	# -------------------------------------------------------------------------
+	# file creationg
+
+	news = optparse.OptionGroup(parser, "File Manipulation")
+
+	news.add_option("-d", "--delete", action="store_true",
+						default=False, 
+						help="Remove Duplicates")
+
+
+	news.add_option("-f", "--force", action="store_true",
+						default=False, 
+						help="For use with -d, --delete.  To duplicate files without prompts.")
+
+	parser.add_option_group(news)
+
+	# -------------------------------------------------------------------------
+	# variable setting
+
+	vars = optparse.OptionGroup(parser, "Settings")
+
+	vars.add_option("-r", "--recursive", action="store_true", 
+			default=False,
+			help="Recursively scan all subdirectories.")
+
+	vars.add_option("-V", "--verbose", action="store_true",
+			default=False, 
+			help="Be more Verbose.")
+
+	vars.add_option("-R", "--report", action="store_true",
+			default=False, 
+			help="Report only, no prompts for deletion of duplicates.")
+
+	parser.add_option_group(vars)
+
+
+	# -------------------------------------------------------------------------
+	(opts, args) = parser.parse_args()
+	# Logging Configuration
+	log = PyTis.set_logging(opts, 'duplicate-images')
+
+	log.debug('-'*80) 
+	log.debug("Starting %s at %s" % (os.path.basename(sys.argv[0]),PyTis.prettyNow())) 
+
+	log.debug("OPTS debug: %s" % opts.debug)
+	log.debug("OPTS version: %s" % opts.version)
+	log.debug("OPTS verbose: %s" % opts.verbose)
+	log.debug("OPTS force: %s" % opts.force)
+	log.debug("OPTS delete: %s" % opts.delete)
+	log.debug("OPTS recursive: %s" % opts.recursive)
+
+	if opts.version:
+		return PyTis.version(__version__)
+
+	if opts.report and opts.delete:
+		errors.append("The REPORT flag is to be declared with the DELETE flag, they may not both be declared.") 
+	if opts.force and not opts.delete:
+		errors.append("The FORCE flag is to be declared with the DELETE flag, the DELETE flag was not declared, but FORCE was.")
+
+	if errors:
+		return parser.print_help(errors)
+	try:
+		if sys.stdin.isatty():
+			files = PyTis.filesFromArgs(opts,args)
+		else:
+			files = [x.strip() for x in sys.stdin]
+
+		if not files:
+			errors.append("No files found, try refining your search terms.");
+			return parser.print_help(errors)
+		else:
+			return run(files, opts)
+	except PyTis.QuitNow, e:
+		print "Exiting now, bye!"
+	except KeyboardInterrupt, e:
+		if opts.verbose:
+			print "\nbye!"
+		return
+
+if __name__ == '__main__':
+	main()

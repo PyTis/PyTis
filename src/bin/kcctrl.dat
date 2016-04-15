@@ -1,0 +1,3 @@
+[global]
+app_dir = /home/jlee/tools/scripts
+component = /home/jlee/tools/scripts/components.py

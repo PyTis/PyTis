@@ -1,0 +1,95 @@
+#!/usr/bin/env python
+"""makopager
+=========
+Doc Here"""
+
+import optparse
+import sys
+import logging; log=logging.getLogger('makopager')
+import yaml
+from mako.template import Template
+
+tmpl = Template("""
+<% context.write("<%") %>
+    <% context.write("pager = kcontrol.Pager('%s_pager')" % name) %>
+    <% context.write("pager.editCaption = 'View %s'" % single_name) %>
+    <% context.write("pager.editJSFunc = 'view_%s'" % name) %>
+    <% context.write("pager.editJSFuncArgs = [%s]" % keylist) %>
+    <% context.write("pager.records = ctx.%ss" % name) %>
+
+% for field in layout:
+    <%
+        context.write("pager.addField(kcontrol.%s('%s'))" % (
+            fields[field]['type'], fields[field]['name']))
+        context.write("%>")
+    %>
+% endfor
+
+<% context.write("%>") %>
+""")
+
+__created__ = '2007-06-30 20:51:34.457345'
+
+def main():
+    """USAGE: makopager """
+    parser = optparse.OptionParser(description=__doc__)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    (opts, cmd) = parser.parse_args()
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    if sys.stdin.isatty():
+        try:
+            infile = open(cmds[0])
+        except IndexError:
+            return parser.print_help()
+    else:
+        infile = sys.stdin
+
+    definition=yaml.load(infile)
+    keylist = definition.get('key','').split(':')
+    keylist = ["'%s'" % k for k in keylist]
+    definition['keylist'] = ', '.join(keylist)
+
+    rows = []
+    mode = None
+    # Parse the table layout
+    for line in definition.get('layout', '').split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+
+
+        if 'BEGIN PAGER' in line.upper():
+            mode = 'PAGER'
+            continue
+
+        if 'BEGIN TABLE' in line.upper():
+            mode = None
+            continue
+
+        if 'BEGIN FORM' in line.upper():
+            mode = None
+            continue
+
+        if mode == 'PAGER':
+            rows.append(line.rstrip().strip())
+
+    definition['layout'] = rows
+
+    # Fill out blank columns
+    definition['fields'] = dict([(k['name'], k)
+        for k in definition['fields']])
+
+    print tmpl.render(**definition)
+if __name__ == '__main__':
+    main()

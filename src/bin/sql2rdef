@@ -1,0 +1,164 @@
+#!/usr/bin/env python2.4
+"""
+SQL to Relation Definition
+==========================
+
+
+Outputs a Relation Definition File.
+
+Examples:
+    sql2rdef employee.sql > employee.rdef
+
+
+"""
+import cStringIO
+import datetime
+import optparse
+import os
+import re
+import sys
+
+def name(na):
+    na = na.replace('-','_').split('_')
+    return ' '.join([n.title() for n in na])
+def lname(na):
+    return na.replace('-','_').lower()
+def path(na):
+    return "/%s" % lname(na)
+
+def get_defaults(in_file, opts):
+
+    sname_default = name(os.path.splitext(os.path.basename(in_file))[0])
+    sname = opts.single
+    if not sname:
+        sname = sname_default
+
+    mname_default = "%ss" % sname
+    mname = opts.multiple
+    if not mname:
+        mname = mname_default
+    
+    path_default = path(sname)
+    dpath = opts.path
+    if not dpath:
+        dpath = path_default
+    key = None
+    handle = open(in_file,'r')
+    for line in handle.readlines(-1):
+        line = line.strip()
+        if not line:
+            continue
+        if 'PRIMARY KEY' in line.upper():
+            try:
+                part=line.split('PRIMARY KEY')[1]
+            except:
+                pass
+            else:
+                ex = re.compile("\(\s*[`'\"](.+?)[`'\"]\s*\)")
+                m = ex.match(part)
+                key = m.groups()[0]
+    handle.close()
+    return dict(sname=sname,
+                mname=mname,
+                path=dpath,
+                key=key)
+
+commons = {
+    'DOB' : 'Date of Birth',
+    'ADDRESS_1' : 'Address',
+    'ADDRESS_2' : 'PO Box / APT #',
+    'SSN' : 'Social Security Number'
+}
+def get_label(n):
+    if n.strip().upper() in commons.keys():
+        return commons[n.strip().upper()]
+    else:
+        return name(n)
+
+def filter(lines):
+    for line in lines:
+        field = line[0].replace("'",'').replace('"','').strip()
+        label = get_label(field)
+        ftype = line[1]
+        yield field, label, ftype
+
+def write_fields(buf, base, lines):
+    buf.write("\nfields:\n")
+    for field, label, ftype in filter(lines):
+        buf.write("-\n")
+        buf.write(" name: %s\n" % field)
+        buf.write(" label: %s\n" % label)
+        buf.write(" type: %s\n" % ftype)
+
+
+mapping = [
+    ('VARCHAR(255)',    'TextBox'),
+    ('TINYINT(4)',      'CheckBox'),
+    ('BOOLEAN',     'CheckBox'),
+    ('BIGINT(20)',      'Hidden'),
+    ('BIGINT,',      'Hidden'),
+    ('BIGSERIAL',      'Hidden'),
+    ('DATETIME',        'DateTimePicker'),
+    ('DATE,',            'DatePicker'),
+    ('DECIMAL(10,2)',   'Currency'),
+    ('DECIMAL,',         'Number'),
+    ('"PUBLIC"."PHONE"',     'Phone'),
+    ('"PUBLIC"."SSN12,','SSN')
+]
+def parse_sql(sql):
+    for line in sql:
+        line = line.replace('\t',' ').rstrip().strip()
+        if not line:
+            continue
+        parts = line.split(' ')
+        for trans in mapping:
+            if trans[0] in ' '.join(parts[1:]).upper():
+                yield (parts[0], trans[1])
+
+
+def write_head(buf, base):
+    buf.write("# Auto Generated: %s\n" % datetime.datetime.now())
+    buf.write("# COMMAND:  %s %s\n" % (os.path.basename(sys.argv[0]), " ".join(sys.argv[1:])))
+    buf.write("# %s Definition File\n\n" % base['mname'])
+    buf.write("single_name: %s\n" % base['sname'])
+    buf.write("multi_name: %s\n" % base['mname'])
+    buf.write("path: %s\n" % base['path'])
+    buf.write("key: %s\n" % base['key'])
+
+
+def main():
+
+    parser = optparse.OptionParser(description=__doc__)
+    parser.formatter.format_description = lambda s:s
+    parser.add_option("-s", "--single", 
+                      default=None,
+                      help="Single case name")
+
+    parser.add_option("-m", "--multiple", 
+                      default=None,
+                      help="Multiple case name")
+
+    parser.add_option("-p", "--path", 
+                      default=None,
+                      help="Default base path")
+
+    (opts, cmd) = parser.parse_args()
+    try:
+        in_file = cmd[0]
+    except IndexError:
+        return parser.print_help()
+    try:
+        base = get_defaults(in_file, opts)
+        handle = open(in_file,'r')
+    except IOError:
+        return parser.print_help()
+    
+    lines = list(parse_sql(handle.readlines(-1)))
+    buf = cStringIO.StringIO()
+    write_head(buf, base)
+    write_fields(buf, base, lines)
+
+    print buf.getvalue()
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,3 @@
+#!/bin/bash
+echo 'jk_chrootlaunch -j /data/jails/apache2 -x /usr/sbin/apache2ctl restart'
+jk_chrootlaunch -j /data/jails/apache2 -x /usr/sbin/apache2ctl restart

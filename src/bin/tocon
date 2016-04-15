@@ -1,0 +1,23 @@
+
+def toContinue():
+    """
+    Silly a function this big for somethign so simple, but I haven't found an 
+    easier way yet in linux to present a dos "pause."
+    """
+    try:
+        import tty
+        fd = sys.stdin.fileno()
+        old = tty.tcgetattr(fd)
+        tty.setcbreak(fd)
+        getchar = lambda: sys.stdin.read(1)
+    except (ImportError, AttributeError):
+        tty = None
+        getchar = lambda: sys.stdin.readline()[:-1][:1]
+    try:
+        print "press enter continue..."
+        while not getchar():
+            pass
+    finally:
+        if tty:
+            tty.tcsetattr(fd, tty.TCSAFLUSH, old)
+        return

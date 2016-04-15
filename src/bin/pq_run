@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+""" Run a stored procedure from a given module. """
+import sys
+import os
+import optparse
+import getpass
+import logging
+import getpass
+
+import MySQLdb
+
+def main():
+    parser = optparse.OptionParser()
+    parser.add_option("-u", "--user", default=getpass.getuser(), dest="user",
+                      help="Database user")
+    parser.add_option("-p", "--passwd", dest="passwd", default=False,
+                      action="store_true",
+                      help="Password")
+    parser.add_option("-m", "--module", dest="module", default="sql",
+                      help="Stored procedure module")
+    parser.add_option("-d", "--db", default=getpass.getuser(), dest="db",
+                      help="Database to access")
+    parser.add_option("-H", "--host", default="", dest="host",
+                      help="Database host")
+    parser.add_option("-D", "--debug", action="store_true", default=False,
+                      dest="debug", help="Enable debug output")
+    parser.add_option("-S", "--stop", action="store_true", default=False,
+                      dest="stop", help="Stop on errors")
+
+    (options, args) = parser.parse_args()
+
+    if options.debug:
+        logging.basicConfig(level=logging.DEBUG)
+
+    mod_name = options.module.split(".")[-1]
+    mod = __import__(options.module, {}, {}, [mod_name])
+
+    if options.passwd:
+        options.passwd = getpass.getpass()
+    else:
+        options.passwd = ''
+    conn = MySQLdb.connect(host=options.host,
+                           user=options.user,
+                           passwd=options.passwd,
+                           db=options.db)
+
+    sp = mod.sp(conn)
+    for call in args:
+        result = eval("sp.%s" % call)
+        print result
+    conn.commit()
+
+if __name__ == '__main__':
+    main()

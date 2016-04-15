@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+"""CSS Namer
+=====
+Doc Here"""
+
+import optparse
+import os
+import sys
+import logging; 
+log=logging.getLogger('quick')
+
+
+__created__ = '11:48pm 10 Oct, 2009'
+__version__ = '1.0'
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+
+def version():
+    print  __version__
+
+def main():
+    """usage: quick """
+    parser = optparse.OptionParser(description=__doc__)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-v", "--version", action="store_true",
+                      default=False, 
+                      help="Display Version")
+
+    parser.add_option("-n", "--name", action="store",
+                      default=None, 
+                      help="filename")
+    (opts, args) = parser.parse_args()
+
+    # Logging Configuration
+    log.setLevel(0) 
+    formatter = '%(levelname)-8s %(message)s'
+
+    if opts.debug:
+        logging.basicConfig(filename='/%s/css_namer.log' % __curdir__, level=logging.DEBUG, format=formatter)
+    else:
+        logging.basicConfig(filename='/%s/css_namer.log' % __curdir__, level=logging.INFO, format=formatter)
+
+    if opts.version:
+        return version()
+    if not opts.name or not opts.name.strip():
+        parser.print_help()
+        return
+    foo = ['chrome', 'firefox', 'iexplorer', 'mobile', 'opera', 'safari']
+    bar = opts.name
+    bar = bar.replace('.css','')
+    for x in foo:
+        name = "%s_%s.css" % ( bar, x)
+        os.system("touch %s" % name)
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,11 @@
+rect (4096,4096) (4096,4096) imap:#$-:Image Map file created by GIMP Imagemap Plugin
+rect (4096,4096) (4096,4096) imap:#$-:GIMP Imagemap Plugin by Maurits Rijk
+rect (4096,4096) (4096,4096) imap:#$-:Please do not edit lines starting with "#$"
+rect (4096,4096) (4096,4096) imap:#$VERSION:2.0
+rect (4096,4096) (4096,4096) imap:#$TITLE:map
+rect (4096,4096) (4096,4096) imap:#$AUTHOR:jlee
+rect (4096,4096) (4096,4096) imap:#$FORMAT:cern
+rect (30,46) (150,64) client_name
+rect (30,82) (135,100) medicaide_no
+rect (255,64) (270,82) 1.a
+rect (285,64) (300,82) 1.b

@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+""" Given a database name and a SQL query, dumps results in CSV format to
+STDOUT.
+
+mysql_csv_export test "SELECT * FROM foobar ORDER BY foo"
+
+"""
+import sys
+import csv
+import MySQLdb
+
+if __name__ == '__main__':
+    conn = MySQLdb.connect(db=sys.argv[1], user='root')
+    cur = conn.cursor()
+    cur.execute(sys.argv[2])
+
+    writer = csv.writer(sys.stdout)
+
+    writer.writerow([d[0] for d in cur.description])
+    for rec in cur:
+        writer.writerow(rec)

@@ -1,0 +1,189 @@
+#!/usr/bin/env python
+"""test-ini
+========
+"""
+
+import optparse
+import os
+import sys
+import pytis as PyTis
+from pytis import COBJ
+from pylib import configobj 
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__created__ = '06:14pm 06 Jun, 2015'
+__version__ = '1.0'
+__author__ = 'Josh Lee'
+__copyright__ = 'PyTis'
+__license__ = 'GPL'
+
+def run(opts,args):
+	"""test-ini run doc help"""
+	global log
+	
+	if not os.path.exists(opts.config):
+		return log.warn('INI file does not exist at: %s' % opts.config)
+	
+	force_create = False
+	try:
+		config = COBJ.load(opts.config, force_create)
+	except configobj.ParseError as e:
+		log.warn(str(e))
+	else:
+		log.info("%s appears to load correctly." % os.path.abspath(opts.config))
+
+
+def main():
+	"""usage: test-ini"""
+	global log
+	
+
+	filename = os.path.abspath(os.path.join(PyTis.__configdir__, '%s.ini' % os.path.basename(os.path.abspath(sys.argv[0]))))
+	main.__doc__ = "%s\n\n	CONFIG FILE: %s" % (main.__doc__,os.path.abspath(filename))
+
+
+	errors=[]
+	PyTis.__option_always__ = [True]
+	help_dict = dict(version=__version__,
+						 author=__author__,
+						 created=__created__,
+						 copyright=__copyright__)
+	parser = PyTis.MyParser()
+
+	parser.extra_txt = "\n\n%s\n" % run.__doc__ + """
+
+examples:	
+	xxx
+
+SEE ALSO:
+	xxx
+
+COPYRIGHT:
+	%(copyright)s
+
+AUTHOR:
+	%(author)s
+
+HISTORY:
+	Original Author
+
+VERSION:
+	%(version)s
+""" % help_dict
+
+	parser.formatter.format_description = lambda s:s
+	parser.set_description(__doc__)
+	parser.set_usage(main.__doc__)
+
+	runtime = optparse.OptionGroup(parser, "-- RUNTIME ARGUMENTS")
+	runtime.add_option("-c", "--config-file", action="store",
+					 default='', metavar='[PATH]', dest='config',
+					 help="")
+	parser.add_option_group(runtime)
+	# -------------------------------------------------------------------------
+	# variable setting
+	vars = optparse.OptionGroup(parser, "-- CONFIGURATION SETTINGS")
+	parser.add_option_group(vars)
+	# ----------------------------
+	dbgroup = optparse.OptionGroup(parser, "-- DEBUG")
+	dbgroup.add_option("-D", "--debug", action="store_true",
+					 default=False, dest='debug',
+					 help="Enable debugging")
+	helpishere=False
+	for a in sys.argv:
+		if a == '--help':
+			helpishere=True
+			dbgroup.add_option("-V", "--verbose", action="store_true",
+							 default=True, dest='verbose',
+							 help="Be more Verbose (make lots of noise)")
+	if not helpishere:
+		dbgroup.add_option("-V", "--verbose", action="store_true",
+						 default=True, dest='verbose',
+						 help=optparse.SUPPRESS_HELP)
+
+	dbgroup.add_option("-q", "--quiet", action="store_true",
+					 default=False, dest='quiet',
+					 help="be vewwy quiet (I'm hunting wabbits)")
+
+	dbgroup.add_option("-v", "--version", action="store_true",
+					 default=False, dest='version',
+					 help="Display Version")
+
+	parser.add_option_group(dbgroup)
+	# ----------------------------
+
+	(opts, args) = parser.parse_args()
+	if opts.quiet: opts.verbose = False
+
+	old_version = opts.version
+	opts.version = True
+	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
+	
+	opts.version = old_version
+
+	if opts.version:
+		return PyTis.version(__version__)
+
+	# TODO: make this thing work on many files:
+	"""
+		try:
+			if sys.stdin.isatty():
+				files = PyTis.filesFromArgs(opts,args)
+			else:
+				files = [x.strip() for x in sys.stdin]
+
+			if not files:
+				if len(args) == 0:
+					return parser.print_usage()
+				else:
+					return parser.print_help("No files provided")
+			else:
+				return run(files,rootdir,opts)
+		except PyTis.QuitNow,e:
+			print "Exiting now, bye!"
+		except KeyboardInterrupt,e:
+			if opts.verbose:
+				print "\nbye!"
+			return
+
+	"""
+	if len(args) > 1:
+		errors.append("AS for now, this will only handle reading and testing " \
+			"a single INI file.  Finish coding to handle many at once.")
+	
+	if len(args) and opts.config:
+		errors.append("Please use STDIN or flags, not both.  Multiple files " \
+			"may be inspected, but only if provided via STDIN.  It appears one " \
+			"was provided via STDIN, and a second as an argument (-c/--config-file)")
+	
+	if len(args) == 1 and not opts.config:
+		opts.config = args[0]
+		del args[0]
+
+	if not opts.config and not errors:
+		return parser.print_usage()
+
+	elif not errors:
+
+		try:
+			run(opts, args)
+		except KeyboardInterrupt,e:
+			log.debug("Keyboard-Interrupt, bye!")
+			if not opts.quiet:
+				log.info("\nbye!")
+			return
+		else:
+			log.debug("Done.")
+			return
+	else:
+		parser.print_usage()
+		if errors:
+			log.error(str("\n".join(errors)))
+		return parser.print_help(errors)
+
+	parser.print_help("ERROR: Unknown, but invalid input.")
+	sys.exit(0)
+
+if __name__ == '__main__':
+		main()
+

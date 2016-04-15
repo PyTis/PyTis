@@ -1,0 +1,88 @@
+This tool is being made to help automatically generate python files,
+that generate PDF files.
+
+The idea is the background image can be scanned in.  Posibly scanning in an
+old report.  Using your image editor, white out parts that will now be
+automatically filled in by this program.
+
+Then create an image map representing where text will get located on you image.
+
+Lastly read in your image map and then lastly pass it to the PDF generator.
+
+After studying the three types of output that can be generated from the gimp's
+image map tool (.cern, .csim, .nsca), I've decided to use csim because it
+appears to retain the most information.  This would allow maximum
+extendablility in the future.
+
+The PDF Generator creates complete python files that can be used to generate
+that pdf.
+
+The report files that are created can also be ran in 'test' mode by running
+them by themselves.  In this case, they use a default dict with the word "Test"
+as the value for everything.
+
+
+Example File:
+
+	<img src="test.jpg" width="420" height="256" border="0" usemap="#map" />
+	<map name="map">
+	<!-- #$-:Image Map file created by GIMP Imagemap Plugin -->
+	<!-- #$-:GIMP Imagemap Plugin by Maurits Rijk -->
+	<!-- #$-:Please do not edit lines starting with "#$" -->
+	<!-- #$VERSION:2.0 -->
+	<!-- #$AUTHOR:jlee -->
+	<area shape="rect" coords="30,46,150,64""
+		href="client_name" />
+	<area shape="rect" coords="30,82,135,100" target="Verdana, 10"
+		href="medicaide_no" />
+	</map>
+
+
+
+Gimp Help:
+	1. Canvas Size
+		4.25 w - 5.5 h inches (gets a smaller file size)
+		Click center button
+	2. Scale
+		300 px dpi
+		5.5 inch  height
+		? width (whatever it tells you the width becomes
+	3. Layor to Image
+	4. Save as .png (smaller file size)
+
+	5. Filters > Web > ImageMap
+	6. ImageMap Mapping > Edit Map Info > Type = "CSIM"
+		Use Rectangles Only
+
+		href = entity
+		coords = xstart, ystart, xend, yend
+		target = font, fontsize
+
+DPI is VERY IMPORTANT!  Make sure you specifiy it.
+Example Useage:
+	Single useage
+		# Our canvas was half the size of a real page,
+		# so we cut our canvas's dpi in half
+		# DPI is required becuase gimp stores the image map
+		# areas location in pixels.
+		./gimpy.py --dpi 150 --image report.jpg --outdir /foo
+		# Generates /foo/report.py
+		from foo.report import report
+		client = dict()
+		x = report(ds=client)
+		# Render closes the current (only) page
+		# Then render saves the report as a temp file by calling the built in
+		# canvas.save()
+		x.render()
+
+	OR multiple pages
+
+		from foo.report import report
+		canvas = canvas.Canvas(file_name, #(destination_file)
+	                pagesize=(72 * 8.5, # page width
+	                	72 * 11) # page height
+	                )
+		for client in clients:
+			x = new report(ds=client,my_canvas=canvas,file_name='ClientReport.pdf')
+			canvas = x.draw()
+		canvas.save()

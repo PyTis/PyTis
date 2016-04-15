@@ -1,0 +1,139 @@
+#!/usr/bin/env python
+###############################################################################
+# The contents of this program are subject to the Koar Public License
+# (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.koarcg.com/license
+# 
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+# included LICENSE.txt file for more information. Copyright 2007 KCG.
+###############################################################################
+"""
+Usage: 
+    cat FILE.schema.dat | fixedwidth_viewer -sMySchema.py
+    fixedwidth_viewer FILE.schema.dat
+
+You may set a schema directory in your environmental variables.
+If you do not pass in a schema argument, this script will try to assume one
+based on the filename passed in.
+
+"""
+import os
+import sys
+import optparse
+import cStringIO
+
+import logging; log=logging.getLogger('')
+
+ENV_SCHEMADIR_VAR = 'CPS_COBOL_SCHEMA_DIR'
+
+def schema_help():
+    """SCHEMA HELP
+===========
+The schema definition file must be a valid python file.
+The following format is expected.
+
+The first element of the tuples is the field name, the second is the fixed with.
+schema = list(tuple)
+
+EXAMPLE:
+schema = [('group_number', 8),
+ ('patient_ssn', 11),
+ ('patient_dob', 8),
+ ('patient_last_name', 15)
+]
+    """
+    print schema_help.__doc__
+
+def fixed_parse(fileh, fields):
+    fileh.seek(0)
+    for line in fileh.readlines():
+        out = {}
+        for field, width in fields:
+            s = line[:width]
+            line = line[width:]
+            s = s.rstrip()
+            out[field] = s
+        yield out
+
+def main():
+    parser = optparse.OptionParser(description=__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-s", "--schema",
+                      default=None, 
+                      help="Schema Definition")
+
+    parser.add_option("-d", "--dir",
+                      default=None, 
+                      help="Schema Directory")
+
+    parser.add_option("-m", "--schema_help",  action='store_true',
+                      default=False, 
+                      help="Schema Definition Help")
+
+    (opts, cmd) = parser.parse_args()
+    
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    if opts.schema_help:
+        return schema_help()
+
+    if sys.stdin.isatty():
+        try:
+            in_file_name = cmd[0]
+            in_file = open(in_file_name)
+        except IndexError:
+            log.warn("No input file found.")
+            return parser.print_help()
+    else:
+        try:
+            in_file = sys.stdin
+        except:
+            log.warn("No input file found.")
+            return parser.print_help()
+
+    if opts.schema:
+        pass
+    elif sys.stdin.isatty():
+        schema_dir = opts.dir or os.environ.get(ENV_SCHEMADIR_VAR)
+        if not schema_dir:
+            log.warn('Please set your %s in your environment' %
+                ENV_SCHEMADIR_VAR)
+            return
+
+        opts.schema = os.path.join(schema_dir, '%s.py' %
+            '.'.join(os.path.splitext(in_file_name)[0].split('.')[1:]))
+    else:
+        log.error("Schema file not specified.")
+        return
+
+    try:
+        d = {}
+        schema = execfile(opts.schema,d,d)
+        schema = d['schema']
+    except (IOError, OSError, KeyError), e:
+        log.error("Schema file %s cannot be read." % opts.schema)
+        log.debug(str(e))
+        return 
+    records = fixed_parse(in_file, schema)
+    #Print headers
+
+    onew = max([len(d[0]) for d in schema])
+
+    for record in records:
+        for field_def in schema:
+            print field_def[0].rjust(onew), ':', record[field_def[0]]
+
+if __name__ == '__main__':
+    main()

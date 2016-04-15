@@ -1,0 +1,698 @@
+#!/usr/bin/env python
+"""cryptwatch
+==========
+"""
+# builtin
+import os
+import sys
+import optparse
+import subprocess
+# third-party
+import memcache
+
+# internal (mine/yours/ours) 
+import pytis as PyTis
+from pylib import configobj as COBJ
+
+#from pylib import pyservice
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__created__ = '02:01pm 09 Sep, 2013'
+__copyright__ = 'PyTis.com'
+__version__ = '1.0'
+
+def validate_opt(opts,cfile,key, section=None):
+	dig_config=False
+	try:
+		getattr(opts,key)
+	except AttributeError,e:
+		dig_config=True
+
+	title = key.replace('_',' ').title()
+	if dig_config or not getattr(opts,key):
+		try:
+			if section:
+				try:
+					config = cfile.getConfig()[section]
+				except KeyError, e:
+					raise PyTis.EmptyString('Section "%s" provided, and could not be ' \
+						'found in the config file.' % section)
+			else:
+				config = cfile.getConfig()
+
+			value = config.get(key)
+			if type(value) == type(list([])):
+				pass
+			elif not value:
+				if key in cfile.optional_fields:
+					pass # it's okay
+				else:
+					raise PyTis.EmptyString('%s not provided, and could not be found ' \
+						'in the config file.' % title)
+
+			else:
+				setattr(opts,key,config[key])
+		except OSError,e:
+			raise PyTis.EmptyString('%s not provided, and a config file could not ' \
+				'me found.' % title)
+
+	else:
+		test=getattr(opts,key) 
+
+		if type(test) == type(str('')) and test=='=': test=''
+
+		if test is None or ( type(test) == type(str('')) and \
+			test.replace("\r\n","\n").replace("\n","").strip() == ''):
+
+			del opts.__dict__[key]
+			return validate_opt(opts,cfile,key)
+
+
+def validate(opts, cfile, section=None):
+	for opt, value in opts.__dict__.items():
+		if opt.lower() in [c.lower() for c in cfile.fields]:
+			validate_opt(opts,cfile,opt.lower(),section)	
+	for opt, value in opts.__dict__.items():
+		log.debug("VALIDATED OPTIONS %s: %s" % (opt,value))
+	log.debug('-'*80) 
+
+def mount_commands(opts,key):
+	pre_mount_cmds=opts.pre_do_cmds
+	if opts.file:
+		mount_cmds = ["losetup %s %s"%(opts.device,opts.file)]
+	else:
+		mount_cmds = []
+	mount_cmds = mount_cmds + [
+								"echo '%s' | cryptsetup luksOpen %s %s"%(key,opts.device,
+								opts.name), "mount %s"%opts.mount]
+
+	post_mount_cmds=opts.post_do_cmds
+	return pre_mount_cmds+mount_cmds+post_mount_cmds
+
+def mount(opts, key):
+	global log
+	cmds = mount_commands(opts,key)
+	for cmd in cmds:
+		p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+			stderr=subprocess.STDOUT,shell=True)
+
+		i = len(key)
+		if i < 8: i=8
+		if i > 16: i=16
+		s='*'*i
+		cmd = cmd.replace(key,s)
+		tolog = "cmd is: %s" % cmd
+		log.debug(cmd)
+		while True:
+			retcode = p.poll()
+			line = p.stdout.readline()
+			if line:
+				log.debug(line.strip())
+			if retcode is not None:
+				break
+
+
+def unmount_commands(opts):
+	pre_unmount_cmds=opts.pre_undo_cmds
+	if opts.file:
+		unmount_cmds=["losetup -d %s"%opts.device]
+	else:
+		unmount_cmds=[]
+
+	unmount_cmds = [
+								"umount %s"%opts.mount,
+								"cryptsetup luksClose %s"%opts.name] +unmount_cmds
+
+	post_unmount_cmds=opts.post_undo_cmds
+	return pre_unmount_cmds+unmount_cmds+post_unmount_cmds
+
+def unmount(opts):
+	global log
+	cmds = unmount_commands(opts)
+	for cmd in cmds:
+		p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+			stderr=subprocess.STDOUT,shell=True)
+
+		tolog = "cmd is: %s" % cmd
+		log.debug(cmd)
+		while True:
+			retcode = p.poll()
+			line = p.stdout.readline()
+			if line:
+				log.debug(line.strip())
+			if retcode is not None:
+				break
+
+def watch(opts):
+	global log
+	log.debug('watch called, watching for: %s' % opts.watch)
+	if os.path.isfile(os.path.abspath(opts.watch)) and \
+		 os.path.exists(os.path.abspath(opts.watch)):
+		 return True
+	return False
+
+def load(opts):
+	''' Please understand.  I was writing to memcache with PHP from a site that
+would allow certian employees to unlock our cryptdrive.  When I did this, PHP
+was able to write an entire 256 bit passphrase to memory, however python on the
+box I am typing this on, could for some reason only read up to 32 chars at a
+time as a value.  So... I broke it up into 32 char chunks.  The memory addresses
+(or memcache - keys) are randomly generated and stored in a file, known by this
+program as the watch file.  Below I am pasting an exact copy of my watch file as
+an example for you.
+
+BEGIN FILE PASTE
+[work]
+action = unmount
+p1 = 487988
+p2 = 254504
+p3 = 132273
+p4 = 914705
+p = 5
+END FILE PASTE (no new lines, but doesn't matter (it's in INI file format).
+	'''
+	global log
+	c = COBJ.load(opts.watch)	
+	action=c['work']['action']
+	'''
+	try:
+		assert str(action).lower() in ['mount','unmount']
+	except (AssertionError, ValueError), e:
+		return
+	'''
+	log.info('found watchfile: %s' % opts.watch)	
+	try:
+		p=c['work']['p']
+	except:
+		p=None
+	if p is not None:
+		try:
+			int(p)
+			assert p > 1
+		except (AssertionError, ValueError), e:
+			return
+		i=1; key=''
+
+		m = memcache.Client(['127.0.0.1:11211'], debug=0)
+		while int(i) < int(p):
+			pp = 'p'+str(i)
+			key = '%s%s' % (key, m.get(str(c['work'][pp])))
+			m.delete(str(c['work'][pp]))
+			i+=1
+		#log.error("KEY: %s" % key)
+	if action.lower() == 'mount':
+		mount(opts, key)
+	elif action.lower() == 'unmount':
+		unmount(opts)
+	else:
+		os.unlink(opts.watch)
+		raise PyTis.IdiotError("Invalid action provided")
+	os.unlink(opts.watch)
+
+def run(opts,cfile):
+	global log
+	try:
+		os.nice(self.opts.niceness)
+	except (AttributeError, NameError), e:
+		pass
+	fields = ['name',
+						'mount',
+						'device',
+						'file',
+						'watch',
+						'pre_do_cmds',
+						'post_do_cmds',
+						'pre_undo_cmds',
+						'post_undo_cmds'
+	]
+
+	has_sections = False
+	sections = []
+	section_names = []
+	for fld in cfile.keys():
+		sub = cfile[fld]
+		if str(type(sub)) == "<class 'pylib.configobj.Section'>":
+			section_names.append(fld)
+			has_sections = True
+			
+
+	d = AttrDict()
+	if opts.load:
+		for field in fields:
+			try:
+				d[field]=cfile[opts.load][field]
+			except KeyError, e:
+				pass
+
+		if watch(d):
+			load(d)
+
+	elif has_sections:
+		# do we have multiple sections?  if so and load wasn't called we must watch
+		# them all... and work with them all (tricky, tricky)
+		if has_sections:
+			d = {}
+			try:
+				for field in fields:
+					try:
+						d[field]=getattr(opts,field)
+					except KeyError, e:
+						pass
+			except AttributeError, e:
+				pass
+			else:
+				sections.append(d)
+			for name in section_names:
+				sections.append(cfile[name])
+
+			for s in sections:
+				d = AttrDict(s)
+				if watch(d):
+					load(d)
+	else:
+		if watch(opts):
+			load(opts)
+
+
+def main():
+	"""usage: %prog -n[mountname] -f[cryptfile] ...<options>"""
+	global log
+
+	filename = os.path.abspath(os.path.join(PyTis.__configdir__,
+		'%s.ini' % os.path.basename(os.path.abspath(sys.argv[0]))))
+
+	main.__doc__ = "%s\n\n  CONFIG FILE: %s" % (main.__doc__,
+		os.path.abspath(filename))
+
+
+	errors=[]
+	PyTis.__option_always__ = [True]
+	help_dict = dict(version=__version__,
+						 author=__author__,
+						 created=__created__,
+						 copyright=__copyright__)
+	parser = PyTis.MyParser()
+
+	parser.extra_txt = load.__doc__ + """
+cryptwatch may be ran without an INI file, so long as all arguments are
+provided when you use the "start" action.
+
+The easiest way to save the settings is without a --save-as name.  However if
+you have the need to run this daemon to monitor and mount TWO separate
+cryptmounts, then I would suggest using a named section for each of the two
+cryptmounts.  Technically you can name the second section, but leave the first
+unnamed and in the global INI file.
+
+If cryptwatch is configured with multiple cryptmounts, if you do not specify a
+section while running cryptwatch, it will run for all section.  To only run for
+one section when cryptwatch is configured to for multiple cryptmounts, use the
+--load flag.
+
+** Please note, cryptwatch can only run one instance at a time, so if you have 
+three sections configured, and you wish to only run two of them, edit out the 
+INI file and comment out the section you do not wish to be monitored.
+
+examples:	
+
+	cryptwatch status
+	cryptwatch -Lserverx start
+
+SEE ALSO:
+	pycrypt
+
+COPYRIGHT:
+	%(copyright)s
+
+AUTHOR:
+	%(author)s
+
+HISTORY:
+	Original Author
+
+VERSION:
+	%(version)s
+""" % help_dict
+
+	parser.formatter.format_description = lambda s:s
+	parser.set_description(__doc__)
+	parser.set_usage(main.__doc__)
+
+	runtime = optparse.OptionGroup(parser, "-- RUNTIME ARGUMENTS")
+
+	runtime.add_option("-a", "--action", type="choice", action='store',
+					 default=None, 
+					 dest='action',
+					 choices=['start','stop','restart','status'],
+					 metavar='[ACTION]', help="choices: <start,stop,restart,status>")
+
+	runtime.add_option("-L", "--list", 
+					 action='store_true',
+					 default=False, 
+					 dest='list',
+					 help='List out the current mount and unmount commands.')
+
+	runtime.add_option("--full-list", 
+					 action='store_true',
+					 default=False, 
+					 dest='fulllist',
+					 help='List out the current mount and unmount commands in full, " \
+						"as they would run INCLUDING the ones built by the other " \
+						"stored variables.')
+
+	runtime.add_option("-n", "--nice", type="int", action='store',
+					 default=PyTis.MyThread.default_niceness, 
+					 dest='niceness',
+					 metavar='[INT <-20 - 19>]', help="Nicenesses range from -20 " \
+						"(most favorable scheduling) to 19 (least favorable).  Default 10")
+
+	runtime.add_option("-t", "--time", type="int", action='store',
+					 default=1, 
+					 dest='frequency',
+					 metavar='[INT]', help="Frequency of how often the loop runs, " \
+						"how long (in seconds) to sleep before re-running registered " \
+						"command (default is 1).")
+		
+	parser.add_option_group(runtime)
+	# -------------------------------------------------------------------------
+	# variable setting
+	vars = optparse.OptionGroup(parser, "-- CONFIGURATION SETTINGS")
+	vars.add_option("-N", "--name", action="store",
+										metavar="[NAME]",
+										type='str',
+										dest='name',
+										default=None, 
+										help="Device name.")
+
+	vars.add_option("-f", "--file", action="store",
+										metavar="[PATH-TO-CRYPT-FILE]",
+										type='str',
+										dest='file',
+										default=None, 
+										help="Full path to the unmounted, encrypted file " \
+											"before being mounted.")
+
+	vars.add_option("-d", "--device", action="store",
+										metavar="[/dev/<some-loop>]",
+										type='str',
+										dest='device',
+										default=None, 
+										help="Device path.")
+
+	vars.add_option("-m", "--mount", action="store",
+										metavar="[/dev/mapper/<name>]",
+										type='str',
+										dest='mount',
+										default=None, 
+										help="Full path to mount point.")
+
+	vars.add_option("-p", "--pre-mount-commands", action="append",
+										metavar="[command]",
+										type='str',
+										dest='pre_do_cmds',
+										default=[], 
+										help="Additional commands to run when mounting " \
+											"cryptfile.  Ex: -p'mount --bind " \
+											"/crypt-drive/samba/share /data/samba/Share'")
+
+	vars.add_option("-P", "--post-mount-commands", action="append",
+										metavar="[command]",
+										type='str',
+										dest='post_do_cmds',
+										default=[], 
+										help="Additional commands to run when mounting " \
+											"cryptfile.  Ex: -P'mount --bind " \
+											"/crypt-drive/samba/share /data/samba/Share'")
+
+	vars.add_option("-u", "--pre_unmount-commands", action="append",
+										metavar="[command]",
+										type='str',
+										dest='pre_undo_cmds',
+										default=[], 
+										help="Additional commands to run when un-mounting " \
+											"cryptfile (before cryptmount is unmounted).  " \
+											"Ex: -u'umount /data/samba/Share'")
+
+	vars.add_option("-U", "--post_unmount-commands", action="append",
+										metavar="[command]",
+										type='str',
+										dest='post_undo_cmds',
+										default=[], 
+										help="Additional commands to run when un-mounting " \
+											"cryptfile (after cryptmount is unmounted).  " \
+											"Ex: -U'umount /data/samba/Share'")
+
+	vars.add_option("-w", "--watch-file", action="store",
+										metavar="[PATH-TO-WATCH-FILE]",
+										type='str',
+										dest='watch',
+										default=None, 
+										help="Full path to the file to watch.")
+
+	vars.add_option("-l", "--load", action='store',
+										metavar='[NAME-to-LOAD]',
+										type='str',
+										dest='load',
+										default='', 
+										help='Name of configuration section to load the ' \
+											'options from the config file.')
+	
+
+	vars.add_option("-s", "--save-as", action="store",
+										metavar="[SAVE-AS SECTION NAME]",
+										type='str',
+										dest='saveas',
+										default=None, 
+										help='Optional name to save configuration into a ' \
+											'section.  *(use "--help" for more details)')
+	
+
+	vars.add_option("-S", "--save", action="store_true",
+										default=False, 
+										help="Save cryptmount information for future use?")
+
+	parser.add_option_group(vars)
+	# ----------------------------
+	dbgroup = optparse.OptionGroup(parser, "-- DEBUG")
+	dbgroup.add_option("-D", "--debug", action="store_true",
+					 default=False, dest='debug',
+					 help="Enable debugging")
+	helpishere=False
+	for a in sys.argv:
+		if a == '--help':
+			helpishere=True
+			dbgroup.add_option("-V", "--verbose", action="store_true",
+							 default=True, dest='verbose',
+							 help="Be more Verbose (make lots of noise)")
+	if not helpishere:
+		dbgroup.add_option("-V", "--verbose", action="store_true",
+						 default=True, dest='verbose',
+						 help=optparse.SUPPRESS_HELP)
+
+
+	dbgroup.add_option("-q", "--quiet", action="store_true",
+					 default=False, dest='quiet',
+					 help="be vewwy quiet (I'm hunting wabbits)")
+
+	dbgroup.add_option("-v", "--version", action="store_true",
+					 default=False, dest='version',
+					 help="Display Version")
+
+	parser.add_option_group(dbgroup)
+	# ----------------------------
+
+	(opts, args) = parser.parse_args()
+	if opts.quiet: opts.verbose = False
+
+	if opts.action is None and len(args) and args[0] in ('start','stop',
+			'restart','status'):
+
+		opts.action = args[0]
+		del args[0]
+
+	old_version = opts.version
+	opts.version = True
+	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
+	opts.version = old_version
+
+	if opts.version:
+		return PyTis.version(__version__)
+
+	if opts.action and len(args) == 1 and args[0] in \
+		'start stop restart status'.split() and opts.action != args[0]:
+
+		errors.append("Silly human, you provided an action via a flag (%s) " \
+			"and an option on STDIN (%s) and they are different.  Please only " \
+			"provide one action." % (opts.action, args[0]))
+
+	if len(args) == 1 and args[0] in 'start stop restart status'.split() and \
+		opts.action is None:
+
+		opts.action = args[0]
+		del args[0]
+
+
+
+
+
+
+	filename = os.path.abspath(os.path.join(PyTis.__configdir__, \
+		'%s.ini' % os.path.basename(os.path.abspath(sys.argv[0]))))
+
+	section = opts.load.strip()
+	if section:
+		try:
+		  c = COBJ.load(filename)[section]
+		except KeyError, e:
+			errors.append('Section "%s" provided, and could not be found in the ' \
+				'config file.' % section)
+
+			#raise PyTis.EmptyString('Section "%s" provided, and could not be found
+			#in the config file.' % section)
+
+		except OSError, e:
+			# file does not exist
+			c = {}
+	else:
+		try:
+			c = COBJ.load(filename)
+		except OSError, e:
+			# file does not exist
+			c = {}
+
+	if not errors:
+		# mount 
+		try: pre_do_cmds = c['pre_do_cmds']
+		except KeyError, e: pre_do_cmds = []
+		try: post_do_cmds = c['post_do_cmds']
+		except KeyError, e: post_do_cmds = []
+
+		# un-mount 
+		try: pre_undo_cmds = c['pre_undo_cmds']
+		except KeyError, e: pre_undo_cmds = []
+		try: post_undo_cmds = c['post_undo_cmds']
+		except KeyError, e: post_undo_cmds = []
+
+		opts.pre_do_cmds=PyTis.unique(opts.pre_do_cmds+pre_do_cmds)
+		opts.post_do_cmds=PyTis.unique(opts.post_do_cmds+post_do_cmds)
+		opts.pre_undo_cmds=PyTis.unique(opts.pre_undo_cmds+pre_undo_cmds)
+		opts.post_undo_cmds=PyTis.unique(opts.post_undo_cmds+post_undo_cmds)
+
+
+	if opts.saveas and not opts.save:
+		errors.append('You specified a section to save "%s," but did not use ' \
+			'the save flag "-s/--save."' % opts.saveas)
+
+	if not errors:
+		cfile = PyTis.ConfigFile(opts)
+		cfile.prompts = ['watch']
+		cfile.fields = ['name','mount','file','device','watch','pre_do_cmds',
+			'post_do_cmds','pre_undo_cmds','post_undo_cmds']
+
+		cfile.optional_fields = ['file']
+		if opts.save:
+			if cfile.exists:
+				title = 'updating config'
+			else:
+				title = 'creating config'
+			cfile.saveConfig(opts, opts.saveas)
+			log.info(title)
+			log.info("your settings have been saved")
+			return PyTis.toContinue()
+		if opts.fulllist:
+			cfile.fields = ['name','mount','file','device','watch','pre_do_cmds',
+				'post_do_cmds','pre_undo_cmds','post_undo_cmds']
+
+			try:
+				validate(opts, cfile, opts.load)
+			except PyTis.EmptyString, e:
+				errors.append(str(e))
+				return parser.print_help(errors)
+			fudgebucket = {
+				'MOUNT':mount_commands(opts,'SECRET KEY WILL BE REPLACED WITH REAL ' \
+					'KEY DURING RUNTIME'),
+				'UNMOUNT': unmount_commands(opts)
+			}
+			parser.print_usage()
+			for k in fudgebucket.keys():
+				v=fudgebucket[k]
+				t="%s COMMANDS" % k
+				print t
+				print '='*len(t)
+				print "%s\n" % ("\n".join([" %s" % c for c in v]))
+			return
+		elif opts.list:
+			if section:
+				try:
+					config = cfile.getConfig()[section]
+				except KeyError, e:
+					errors.append('Section "%s" provided, and could not be found in ' \
+						'the config file.' % section)
+					
+					parser.print_usage()
+					for e in errors:
+						log.error(e)
+					# raise PyTis.EmptyString('Section "%s" provided, and could not be found in the config file.' % section)
+					return 
+			else:
+				config = cfile.getConfig()
+
+			parser.print_usage()
+			fudgebucket = {'PRE MOUNT':config.get('pre_do_cmds'),
+			'POST MOUNT': config.get('post_do_cmds'),
+			'PRE UNMOUNT': config.get('pre_undo_cmds'),
+			'POST UNMOUNT': config.get('post_undo_cmds')
+			}
+			for k in fudgebucket.keys():
+				v=fudgebucket[k]
+				t="%s COMMANDS" % k
+				print t
+				print '='*len(t)
+				print "%s\n" % ("\n".join([" %s" % c for c in v]))
+			return
+	else:
+		parser.print_usage()
+		for e in errors:
+			log.error(e)
+		return 
+	
+	try:
+		validate(opts, cfile, opts.load)
+	except PyTis.EmptyString, e:
+		parser.print_usage()
+		log.error(str(e))
+		for e in errors:
+			log.error(e)
+		return 
+
+	if not errors:
+		if not opts.action:
+			return parser.print_usage()
+		else:
+			y = PyTis.MyThread()
+			y.setLogFile(log)
+			y.setOpts(opts)
+			y.register(run,opts,cfile)
+			y.service(opts)
+			return
+	else:
+		if len(args) == 0 and not opts.action and not errors:
+			return parser.print_usage()
+		return parser.print_help(errors)
+
+	parser.print_help("ERROR: Unknown, but invalid input.")
+	sys.exit(0)
+
+class AttrDict(dict):
+
+	def __getattr__(self,key):
+		try:
+			return dict.__getattr__(self, key)
+		except AttributeError, e:
+			try:
+				return dict.__getitem__(self, key)
+			except KeyError, e:
+				return None
+
+if __name__ == '__main__':
+		main()

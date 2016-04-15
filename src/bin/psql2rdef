@@ -1,0 +1,276 @@
+#!/usr/bin/env python
+"""psql2rdef
+=========
+PostgreSQL to Relation Definition
+
+Example:
+    psql2rdef -Hpostgres://jlee:pass@localhost/jlee person > person.rdef
+"""
+###############################################################################
+# The contents of this program are subject to the Koar Public License
+# (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.koarcg.com/license
+# 
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+# included LICENSE.txt file for more information. Copyright 2007 KCG.
+###############################################################################
+
+import cStringIO
+import datetime
+import logging; log=logging.getLogger('psql2rdef')
+import optparse
+import os
+import sys
+
+import psycopg2
+import kg.udb as UDB
+
+__author__ = 'Josh Lee'
+__created__ = '2007-06-29'
+__copyright__ = 'KCG'
+__version__ = '1.0'
+
+# Constants (Used for query index when pulling field 
+# data from the information schema)
+NAME = 0
+DEFUALT = 1
+NULL = 2
+TYPE = 3
+MAX_LEN = 4
+DOMAIN = 5
+UPDATEABLE = 6
+
+# Used to map field types, to KControls
+mapping = {
+    'VARCHAR'   : 'TextBox',
+    'TEXT'      : 'TextArea',
+    'TINYINT'   : 'CheckBox',
+    'BOOLEAN'   : 'CheckBox',
+    'BIGINT'    : 'Hidden',
+    'BIGSERIAL' : 'Hidden',
+    'DATETIME'  : 'DateTimePicker',
+    'DATE'      : 'DatePicker',
+    'DECIMAL'   : 'Number',
+    'Currency'  : 'Currency',
+    'PHONE'     : 'Phone',
+    'SSN12'     : 'SSN',
+    'SSN'       : 'SSN',
+}
+
+# Used for common labels, from field_names to labels
+commons = {
+    'DOB' : 'Date of Birth',
+    'ADDRESS_1' : 'Address',
+    'ADDRESS_2' : 'PO Box / APT #',
+    'SSN' : 'Social Security Number'
+}
+
+# Helpers
+def name(na):
+    na = na.replace('-','_').split('_')
+    return ' '.join([n.title() for n in na])
+
+def lname(na):
+    return na.replace('-','_').lower()
+
+def path(na):
+    return "/%s" % lname(na)
+
+def get_defaults(opts):
+    # Single Name
+    sname_default = opts.table
+    sname = opts.single
+    if not sname:
+        sname = get_label(sname_default)
+    # Multi Name
+    mname_default = "%ss" % sname
+    mname = opts.multiple
+    if not mname:
+        mname = get_label(mname_default)
+
+    # Path
+    path_default = path(opts.table)
+    dpath = opts.path
+    if not dpath:
+        dpath = path_default
+    return dict(sname=sname,
+                mname=mname,
+                path=dpath)
+
+def write_head(buf, data):
+    buf.write("# Auto Generated: %s\n" % datetime.datetime.now())
+    buf.write("# COMMAND:  %s %s\n" % (os.path.basename(sys.argv[0]), " ".join(sys.argv[1:])))
+    buf.write("# %s Definition File\n\n" % data['mname'])
+    buf.write("name: %s\n" % data['name'])
+    buf.write("single_name: %s\n" % data['sname'])
+    buf.write("multi_name: %s\n" % data['mname'])
+    buf.write("path: %s\n" % data['path'])
+    buf.write("key: %s\n" % data['primary_key'])
+
+def get_label(field_name, commons=commons):
+    for key, value in commons.items():
+        if key in field_name.upper():
+            return value
+    else:
+        return name(field_name)
+
+def filter(fields, mapping=mapping):
+    #NAME = 0
+    #DEFUALT = 1
+    #NULL = 2
+    #TYPE = 3
+    #MAX_LEN = 4
+    #DOMAIN = 5
+    #UPDATEABLE = 6
+    for field in fields:
+        name = field[NAME]
+        label = get_label(name)
+        ftype = field[TYPE].split('.')[1]
+        default = field[DEFUALT]
+        required = field[NULL]
+        max_len = field[MAX_LEN]
+        updateable = field[UPDATEABLE]
+        if ftype.upper() in mapping:
+            ftype = mapping[ftype.upper()]
+
+        if str(required).upper() in ['0','NONE','FALSE','NO']:
+            required = True
+        else:
+            required = False
+        yield name, label, ftype, default, required, max_len, updateable
+
+def write_fields(buf, fields):
+    buf.write("\nfields:\n")
+    for name, label, ftype, default, required, max_len, updateable in \
+        filter(fields):
+
+        buf.write("-\n")
+        buf.write(" name: %s\n" % name)
+        buf.write(" label: %s\n" % label)
+        buf.write(" default: %s\n" % default)
+        buf.write(" type: %s\n" % ftype)
+        buf.write(" required: %s\n" % required)
+        buf.write(" max_length: %s\n" % max_len)
+        buf.write(" updateable: %s\n" % updateable)
+        buf.write(" visible: True\n")
+        
+def relation_fields(conn, rel_name):
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            column_name AS name,
+            column_default AS default_value,
+            is_nullable AS is_nullable,
+            CASE WHEN
+                domain_name IS NOT NULL
+            THEN 'postgres.' || domain_name
+            ELSE 'postgres.' || udt_name END AS type,
+            character_maximum_length,
+            udt_schema || '.' || udt_name AS schema_path,
+            is_updatable
+        FROM information_schema.columns
+        WHERE table_name=%s AND table_schema='public'
+    """, (rel_name,))
+
+    res = list(cursor)
+    if res:
+        return res
+
+    # Wasn't found on a table or view, try a composite type
+    cursor.execute("""
+        SELECT
+            attribute_name AS name,
+            attribute_default AS default_value,
+            is_nullable AS is_nullable,
+            'postgres.' || data_type AS type,
+            character_maximum_length,
+            udt_schema || '.' || udt_name AS schema_path,
+            TRUE as is_updatable
+        FROM information_schema.attributes
+        WHERE udt_name=%s AND udt_schema='public'
+    """, (rel_name,))
+    
+    return list(cursor)
+        
+def main():
+    """USAGE: psql2rdef TABLE_NAME [-H dbURI]"""
+    parser = optparse.OptionParser(description=__doc__)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-H", "--URI", action='store', type='string',
+                      help="Host URI")
+
+    parser.add_option("-s", "--single", 
+                      default=None,
+                      help="Single case name")
+
+    parser.add_option("-m", "--multiple", 
+                      default=None,
+                      help="Multiple case name")
+
+    parser.add_option("-p", "--path", 
+                      default=None,
+                      help="Default base path")
+
+    (opts, cmd) = parser.parse_args()
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+    if not opts.URI:
+        log.warn("A dbURI is required")
+        return
+    try:
+        opts.table = cmd[0]
+    except IndexError:
+        log.warn("No table name specified")
+        return parser.print_help()
+    try:
+        db = UDB.DB(opts.URI)
+    except psycopg2.OperationalError, e:
+        print "Invalid URI: %s" % opts.URI
+        return
+    
+    conn = db.conn
+    cursor = conn.cursor()
+    # Check to make sure it was a valid talbe name provided
+    cursor.execute("SELECT * FROM information_schema.tables WHERE "\
+                   "table_schema = 'public' AND table_name=%s", (opts.table,))
+    res = cursor.fetchall()
+    if not res:
+        print "Invalid table name: %s" % opts.table
+        return
+
+    ## Primary Key
+    cursor.execute("""SELECT column_name 
+                      FROM information_schema.key_column_usage 
+                      WHERE table_schema = 'public' and
+                      table_name=%s""", (opts.table,))
+    data = get_defaults(opts)
+    keys = list([k[0] for k in cursor.fetchall()])
+    data['primary_key'] = ':'.join(keys)
+    data['name'] = opts.table
+    buf = cStringIO.StringIO()
+
+    # Write out document Header
+    write_head(buf, data)
+
+    # Gather all fields
+    fields = relation_fields(conn, opts.table)
+    write_fields(buf, fields)
+
+    print buf.getvalue()
+
+if __name__ == '__main__':
+    main()

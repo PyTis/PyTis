@@ -1,0 +1,189 @@
+#!/usr/bin/env python
+"""zcore
+=====
+Doc Here"""
+
+import optparse
+import os
+import sys
+import logging; log=logging.getLogger('zcore')
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee'
+__created__ = '11:31pm 10 Oct, 2009'
+__copyright__ = 'PyTis.com'
+__version__ = '1.0'
+
+__configdir__ = ''
+
+def version():
+    print  __version__
+
+def license():
+    """The contents of this file are subject to the PyTis Public License Version
+1.0 (the "License"); you may not use this file except in compliance with
+the License. You may obtain a copy of the License at
+
+    http://www.PyTis.com/License/
+    
+    Copyright \xa9  2009 Josh Lee 
+
+Software distributed under the License is distributed on an "AS IS" basis,
+WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+for the specific language governing rights and limitations under the
+License.
+"""
+    print license.__doc__
+
+def reset(opts):
+    pass
+
+def cp(opts):
+    pass
+
+def getConfig(opts):
+    print
+    oldpath = os.path.abspath(__configdir__)
+    if __configdir__.strip()  and \
+    os.path.isdir(os.path.abspath(__configdir__)) and \
+    os.path.exists(os.path.abspath(__configdir__)):
+        print 'ZCORE installation dir was already set to:', oldpath
+        if raw_input('Reset default ZCORE dir? [y/N]').lower().strip() == 'n':
+            return False
+    
+    newpath = os.path.abspath(os.curdir)
+    print "Path to ZCORE base directory (leave blank to use current path) q to quit "
+    configdir = raw_input('>>>')
+    if not configdir.strip():
+        configdir = newpath
+
+    if configdir.lower() == 'q':
+        return False
+
+    if not testConfig(configdir):
+        print "\nInvalid ZCore Installation."
+        print "Please try again."
+        return getConfig(opts)
+    else:
+        return True
+
+def setConfig(d):
+
+    mpath = os.path.abspath(sys.argv[0])
+    handle = open(mpath, 'r')
+    lines = handle.readlines(-1)
+    handle.close()
+    nfile_lines = []
+    for line in lines:
+        if line.startswith('__configdir__'):
+            line = "__configdir__ = '%s'\n" % d
+        nfile_lines.append(line)
+
+    handle = open(mpath,'w')
+    handle.writelines(nfile_lines)
+    handle.close()
+
+def testConfig(d):
+    dirs = ['lib', 'modules','admin','res','skins']
+    files ['index.php','pass.php','config.ini','config.inc.php']
+    d = os.pat.abspath(d)
+    # Basic tests
+    if not d.strip() or \
+    not os.path.exists(d) or \
+    not os.path.isdir(d):
+        return False
+    # direcotry path tests
+    for di in dirs:
+        test = os.path.join(d,di)
+        if not os.path.exists(test) or not os.path.isdir(test):
+            return False
+    # file path tests
+    for fi in files:
+        test = os.path.join(d,fi)
+        if not os.path.exists(test) or not os.path.isfile(test):
+            return False
+    # all tests passed
+    return True
+
+def config(opts):
+    print 'Setting up ZCORE quick script generator.'
+    print '='*80
+    return getConfig(opts)
+
+def main():
+    """usage: zcore """
+    parser = optparse.OptionParser(description=__doc__)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+    parser.add_option("-D", "--debug", action="store_true",
+                      default=False, 
+                      help="Enable debugging")
+
+    parser.add_option("-z", "--zcore", action="store",
+                      default=None, 
+                      help="Specify a ZCore installation to use, without over-riding the default")
+
+    parser.add_option("-s", "--set", action="store",
+                      default=None, 
+                      help="Specify a ZCore installation to use, and save for future use")
+
+
+    parser.add_option("-l", "--license", action="store_true",
+                      default=False, 
+                      help="Display license")
+    parser.add_option("-v", "--version", action="store_true",
+                      default=False, 
+                      help="Display version")
+
+    (opts, args) = parser.parse_args()
+
+    # Logging Configuration
+    log.setLevel(0) 
+    formatter = '%(levelname)-8s %(message)s'
+
+    if opts.debug:
+        logging.basicConfig(filename='/%s/zcore.log' % __curdir__,
+                            level=logging.DEBUG, 
+                            format=formatter)
+    else:
+        logging.basicConfig(filename='/%s/zcore.log' % __curdir__,
+                            level=logging.INFO,
+                            format=formatter)
+
+
+
+    if opts.version:
+        return version()
+
+    if opts.license:
+        return license()
+    try:
+        if opts.set is not None:
+            if setConfig(opts.set):
+                print "this tool needs restarted (quit now, use again)"
+                print "\nbye!"
+                return
+            else:
+                print "invalid ZCORE path"
+                print "\nbye!"
+                return
+
+        if not testConfig(__configdir__):
+            if raw_input("No default ZCore installation specified, would you like to set one now?") in ['y','Y']:
+                if config(opts):
+                    print "this tool needs restarted (quit now, use again)"
+                    print "\nbye!"
+            return
+
+
+
+    except KeyboardInterrupt, e:
+        print "\nbye!"
+        return
+    else:
+        parser.print_help()
+        return
+
+if __name__ == '__main__':
+    main()

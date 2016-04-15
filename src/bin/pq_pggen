@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+""" Generate a PQ SQL file for a given table. """
+import sys
+import optparse
+import getpass
+
+import psycopg2 as psycopg
+
+def build_dsn(opts):
+    arg_map = [
+        ('dbname', 'db'),
+        ('user', 'user'),
+        ('host', 'host'),
+        ('password', 'passwd')
+    ]
+    dsn = []
+    for name, lookup in arg_map:
+        value = getattr(opts, lookup)
+        if value:
+            dsn.append("%s='%s'" % (name, value))
+   
+    return " ".join(dsn)
+
+def main():
+    parser = optparse.OptionParser()
+    parser.add_option("-u", "--user", default=getpass.getuser(), dest="user",
+                      help="Database user")
+    parser.add_option("-p", "--passwd", dest="passwd", default=False,
+                      action="store_true",
+                      help="Password")
+    parser.add_option("-d", "--db", default=getpass.getuser(), dest="db",
+                      help="Database to access")
+    parser.add_option("-H", "--host", default="", dest="host",
+                      help="Database host")
+    parser.add_option("-D", "--debug", action="store_true", default=False,
+                      dest="debug", help="Enable debug output")
+    parser.add_option("-S", "--stop", action="store_true", default=False,
+                      dest="stop", help="Stop on errors")
+
+    (options, tables) = parser.parse_args()
+
+    conn = psycopg.connect(build_dsn(options))
+    cursor = conn.cursor()
+    if not tables:
+        cursor.execute("""
+            SELECT table_name 
+            FROM information_schema.tables
+            WHERE table_schema='public'""")
+        tables = [c[0] for c in cursor]
+
+    for table in tables:
+        if '.' in table:
+            schema, table = table.split('.', 2)
+        else:
+            schema = 'public'
+
+        cursor.execute("""
+            SELECT
+                column_name AS name
+            FROM information_schema.columns
+            WHERE table_name=%s AND table_schema=%s
+            """,  (table, schema))
+
+        cols = [c[0] for c in cursor]
+
+        # Add
+        print "--SP: add_%s" % table
+        print "INSERT INTO %s (" % table
+        print ",\n".join(["    %s" % c for c in cols])
+        print ") VALUES ("
+        print ",\n".join(["    %%(%s)s" % c for c in cols])
+        print ")\n"
+
+        # Delete
+if __name__ == '__main__':
+    main()

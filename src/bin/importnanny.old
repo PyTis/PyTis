@@ -1,0 +1,239 @@
+#!/usr/bin/env python
+""" Ensures that all imported modules are referenced from the Python code
+in the module. Use to detect unneeded imports.
+
+Provide a list of file names to the ARGV of the script or pipe in a 
+list of file names to STDIN.
+
+"""
+
+import sys
+import traceback
+import logging
+import compiler
+
+class modref(object):
+    def __init__(self, modname, alias, lineno):
+        self.modname = modname
+        self.alias = alias
+        self.lineno = lineno
+
+    def __repr__(self):
+        return '<%s:%s at line %s>' % (self.alias, self.modname, self.lineno)
+
+class ns_stack(list):
+    def __init__(self):
+        self._master_list = {}
+
+    def add_mod(self, mod):
+        self[0][mod.alias] = [mod]
+        self._master_list[mod] = False
+    
+    def mark(self, name):
+        """ Mark a name as matched. propigating up the stack until we're done
+        or we hit a None. """
+        for stack in self:
+            for ref in stack.get(name, []):
+                if ref is None:
+                    # We hit a name that was covered up
+                    return
+                self._master_list[ref] = True
+                return
+
+    def missing(self):
+        return [m for m, f in self._master_list.items() if not f]
+
+    def push_stack(self, stack=None):
+        if stack is None:
+            stack = {}
+        self.insert(0, stack)
+
+    def pop_stack(self):
+        return self.pop(0)
+    
+    def has_name(self, name):
+        for lookup in self:
+            if name in lookup:
+                return True
+        return False
+
+    def cover_name(self, name):
+        if self.has_name(name):
+            if name not in self[0]:
+                self[0][name] = []
+            self[0][name].insert(0, None)
+
+class ImportVisitor(object):
+    def __init__(self):
+        self._ns_stack = ns_stack()
+
+    def visit(self, node):
+        self._ns_stack.push_stack()
+        self._visit(node)
+
+    def missing(self):
+        return self._ns_stack.missing()
+
+    def _visit(self, node):
+        if not node:
+            return
+        type = node.__class__.__name__
+        if type == 'Function':
+            logging.debug('starting stack on function %s', node.name)
+            # The function name covers up
+            self._ns_stack.cover_name(node.name)
+            self._ns_stack.push_stack()
+
+            # In the inner frame, the arguments cover up
+            for arg in node.argnames:
+                self._ns_stack.cover_name(arg)
+            for sub in node.getChildren():
+                self._visit(sub)
+            self._ns_stack.pop_stack()
+            logging.debug('ending stack on function %s', node.name)
+        elif type == 'Class':
+            # classes are tricky because what happens in the class scope never
+            # leaves the class. The methods in the class don't have access to
+            #this scope
+            self._ns_stack.push_stack()
+            for e in node.bases:
+                self._dispatch_type(e)
+            self.walk_class(node.code, class_name=node.name)
+            self._ns_stack.pop_stack()
+            self._ns_stack.cover_name(node.name)
+        elif self._dispatch_type(node):
+            pass
+        elif hasattr(node, 'getChildren'):
+            for sub in node.getChildren():
+                self._visit(sub)
+
+    def _dispatch_type(self, node):
+        type = node.__class__.__name__
+        if type == 'Import':
+            for modname, alias in node.getChildren()[0]:
+                if alias is None:
+                    alias = modname
+                self._ns_stack.add_mod(modref(modname, alias, node.lineno))
+        elif type == 'From':
+            implist = node.getChildren()
+            modname, implist = implist[:2]
+            for var, alias in implist:
+                if alias is None:
+                    alias = var
+                self._ns_stack.add_mod(modref(modname, alias, node.lineno))
+        elif type == 'AssName':
+            var_name = node.getChildren()[0]
+            self._ns_stack.cover_name(var_name)
+        elif type == 'Name':
+            logging.debug('checking Name: %s stack level: %s',
+                node.getChildren()[0], len(self._ns_stack))
+            self._ns_stack.mark(node.getChildren()[0])
+        elif type == 'Getattr':
+            # We have to handle the "DOT" notation with GetAttr.
+            #print 'GETATTR', node.attrname, node
+            #print '\t', node.getChildren()
+            resolved = self.resolve_attribute(node)
+            #print 'Our result for', node.attrname,  resolved
+            for r in resolved:
+                self._ns_stack.mark(r)
+        elif type == 'Lambda':
+            self._ns_stack.push_stack()
+            for arg_name in node.argnames:
+                self._ns_stack.cover_name(arg_name)
+            self._visit(node.code) 
+            self._ns_stack.pop_stack()
+        else:
+            return False
+        return True
+
+    def resolve_attribute(self, node):
+        """ Resolving an attribute builds up a dotted list of names. """
+        head, tail = node.getChildren()
+        head_type = head.__class__.__name__
+        if head_type == 'Getattr':
+            hv = self.resolve_attribute(head)
+            if hv:
+                return hv + ["%s.%s" % (hv[-1], tail)]
+            else:
+                return []
+        elif head_type == 'Name':
+            return [head.name, "%s.%s" % (head.name, tail)]
+        else:
+            #print 'Deferring type %s: %s' % (head_type, head)
+            # It's something strange like b().c. We defer off to visit
+            # However, none of the names in the tail will
+            # count towards a resolution
+            self._visit(head)
+            return []
+
+    def walk_class(self, node, class_name=None):
+        # Whenever we dive into a lexical close, we have to track
+        # ourselves and add ourselves back because of the funny scope class
+        # semantics.
+        if not hasattr(node, 'getChildren'):
+            return
+        for child in node.getChildren():
+            type = child.__class__.__name__
+            if type in ('Function', 'Lambda', 'Class'):
+                logging.debug('going to function from class on %s', child)
+                cur = self._ns_stack.pop_stack()
+
+                # The class name is available in functions under the class, but
+                # not the class scope itself
+                if class_name:
+                    self._ns_stack.push_stack()
+                    self._ns_stack.cover_name(class_name)
+
+                self._visit(child)
+                if class_name:
+                    self._ns_stack.pop_stack()
+                self._ns_stack.push_stack(cur)
+            elif self._dispatch_type(child):
+                pass
+            else:
+                self.walk_class(child, class_name)
+
+
+def main():
+    if sys.stdin.isatty():
+        files = sys.argv[1:]
+    else:
+        files = [x.strip() for x in sys.stdin]
+    for path in files:
+        try:
+            mod = compiler.parseFile(path)
+        except SyntaxError:
+            print 'Syntax Error in %r' % path
+            traceback.print_exc(0, file=sys.stdout)
+            continue
+        #print mod
+        v = ImportVisitor()
+        v.visit(mod.node)
+        file_buf = [x for x in open(path)]
+        mods = v.missing()
+        mods.sort(lambda x, y: cmp(x.lineno, y.lineno))
+
+        show_filename = False
+
+        for mod in mods:
+            if not show_filename:
+                print 'Results for %r' % path
+                show_filename = True
+            if mod.alias == '*':
+                print 'Skipping * import on module %r (line %s)'\
+                    % (mod.modname, mod.lineno)
+                print '  %s' % file_buf[mod.lineno-1].strip()
+            else:
+                if mod.alias == mod.modname:
+                    print 'Missing reference %r (line %s)'\
+                        % (mod.modname, mod.lineno)
+                else:
+                    print 'Missing reference %r for variable %r (line %s)'\
+                        % (mod.alias, mod.modname, mod.lineno)
+                print '  %s' % file_buf[mod.lineno-1].strip()
+
+        if show_filename:
+            print
+
+if __name__ == '__main__':
+    main()

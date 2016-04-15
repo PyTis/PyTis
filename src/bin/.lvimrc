@@ -1,0 +1,8 @@
+
+"" default overrides for this folder only
+set ts=2
+set noexpandtab
+set shiftwidth=2
+set softtabstop=2
+set colorcolumn=80
+"source /home/ubuntu/.vim/syntax/tabcolor.vim

@@ -1,0 +1,1621 @@
+#!/usr/bin/python3
+"""cloud-checkr-verify
+===================
+
+DESCRIPTION:
+  AWS Account Onboarding Program
+
+SYNOPSIS:
+	This program is essential for on-boarding new AWS accounts.  It first
+	configures the aws-cli by requesting AWSAccessKeyID/AWSSecretKey keys from
+	the user.  It proceeds to configure cloudtrail, defines mandatory AWS group
+	policies, groups, and users.  This program also creates
+	AWSAccessKeyID/AWSSecretKey pair required to create a new cloudcheckr
+	account.  Finally, it loads the AWSAccessKeyID/AWSSecretKey pair into
+	cloudcheckr through their unique API.
+
+CODE:
+	XXX-TODO: - Future Feature, next version or later.
+	XXX-FIXME: - Should be corrected this version.
+
+	The only three configurable variables in this file that could or should be
+	changed by a user are the default positions of the AWS Access Key ID's and
+	AWS Secret Access Key's in the CVS Batch Files.
+
+		_aws_access_key_id_positon_default : INTEGER
+		_aws_secret_access_key_positon_default : INTEGER
+		_cloud_checker_access_key_default: STRING
+"""
+# Default positions to look in CSV batch files for aws_access_key_id  and
+# aws_secret_access_key
+_aws_access_key_id_positon_default = 6
+_aws_secret_access_key_positon_default = 7
+_cloud_checker_access_key_default = ''
+
+# errors:list - a global list of errors to display to the user.  This prevents
+# them from having to correct one issue at a time, they can get a nice little
+# list of everything that is wrong, correct all of it at once, and re-run this
+# program
+errors=[]
+
+#
+# Built-In
+#
+from io import StringIO
+import fcntl
+import os
+from html.parser import HTMLParser
+import optparse
+
+import requests
+from requests.exceptions import ConnectionError, MissingSchema, Timeout
+
+from urllib2 import Request, urlopen, URLError, HTTPError
+import urllib
+from urllib.parse import quote
+
+import subprocess
+from subprocess import Popen, PIPE, STDOUT
+from pprint import pprint
+import sys
+import time
+
+# 
+# Internal
+#
+try:
+	#import pytis as PyTis # Shared GPL/PPL License
+	#from pylib import configobj as COBJ # Shared GPL/PPL License
+	import pytis3 as PyTis # Shared GPL/PPL License
+	from pylib3 import configobj as COBJ
+except ImportError as e:
+	# We cannot go any further than this, we can't use the Parser or Logging tool
+	# to display these errors because those very tools are loaded from PyTis.
+	# Therefore, display errors now and exit with an errored exit code.
+	print("This program requires the PyTis python library to run.")
+	print("You may download the PyTis library, or do an SVN checkout from:")
+	print("<https://sourceforge.net/projects/pytis/>")
+	print("This program should be installed in the bin directory of the PyTis library.")
+	print(str(e))
+	sys.exit(1)
+
+
+#
+# Third-Party
+#
+try:
+	import boto
+	import boto.cloudtrail
+	import boto.exception
+except ImportError as e:
+	errors.append("This program requires python-boto " \
+	"<https://github.com/boto/boto>.\nPlease ask your administrator for " \
+	"assistance.")
+
+
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__author__ = 'Josh Lee and Bernard Constantino'
+__created__ = '05:25pm 06 Jun, 2015'
+__copyright__ = 'Booz Allen Hamilton'
+__version__ = '0.7' # 3 things left to go (see aws.help)
+
+class IamXmlErrorParser(HTMLParser):
+	"""
+	Custom XML parser to read in error strings from boto.iam messages.
+	"""
+
+	read = False 
+	data = [] # To collect lines of text from the error message parsed.
+
+	def __str__(self):
+		if self.data: return str(self.__repr__())
+		else: return ''
+	
+	def __repr__(self):
+		if self.data: return "\n".join(self.data)
+		else: return HTMLParser.__repr__(self)
+
+	def handle_starttag(self, tag, attrs):
+		""" know when to start error message collection """
+		if tag == 'message': self.read=True
+
+	def handle_endtag(self, tag):
+		""" know when to stop error message collection """
+		if tag == 'message': self.read=False
+
+	def handle_data(self, data):
+		""" collect error messages """
+		if self.read: self.data.append(str(data))
+
+def flush():
+	sys.stderr.flush()
+	sys.stdout.flush()
+
+def read_aws_xml_error(e):
+	"""
+	First we have to clean up the error string, AWS ClI not only can hand us
+	errors back in any old random JSON or XML, but sometimes the XML is
+	malformed, containing undocumented comment strings.
+	"""
+
+	try:
+		iamp = IamXmlErrorParser()
+		iamp.feed(str(e))
+		return "%s" % iamp
+	except:
+		return ''
+		#return str(e)
+
+def read_aws_json_error(e):
+	""" 
+	This is horible, I just realized that the clouldtrail uses json for error
+	responses, but iam uses xml.  what a pain in the ass.
+
+	"""
+	# LAZY - no reason to load it into memory if it isn't being used
+	import json as J
+	try:
+		lines = str(e).split("\n")
+		last_line = lines[-1] # last line should be the json
+		json = last_line.replace("'",'"').strip()
+	except Exception as eee:
+		# is it possible that amazon returned the error message in XML instead?
+		#return read_aws_xml_error(e)
+		return ''
+	else:
+		if json.startswith("{") and json.endswith("}"):
+			# we may have valid json
+			try:
+				j = J.JSONDecoder()
+				bag = j.decode(json)
+				log.error(bag)
+				sys.exit()
+				if 'Message' in bag.keys():
+					return bag['Message']
+				if 'message' in bag.keys():
+					return bag['message']
+				if 'MESSAGE' in bag.keys():
+					return bag['MESSAGE']
+			except Exception as eeee:
+				if 'The request signature we calculated does not match the ' \
+					'signature you provided.' in json:
+
+					return "The request signature we calculated does not match the " \
+						"signature you provided. Check your AWS Secret Access Key and " \
+						"signing method. Consult the service documentation for details."
+
+				else:
+					log.error("JSON Parsing Exception(%s)" % str(eeee))
+					return ''
+				
+	# couldn't parse it, something went wrong, but something already went
+	# wrong, so just spit out what we can
+	return ''
+	#return str(e)
+
+def read_error(e):
+
+	ee = read_aws_json_error(e)
+	if ee.strip():
+		return str(ee)
+	
+	ee = read_aws_xml_error(e)
+	if ee.strip():
+		return str(ee)
+	
+	return str(e)
+	
+
+def create_sid():
+	def name():
+		if len(sys.argv) <= 1:
+			if not sys.argv[0].strip():
+				return 'Python Cli'
+		prog = os.path.basename(sys.argv[0].strip())
+		return prog.replace('-',' ').title().replace(' ','')
+	pieces=[
+		'AutoGeneratedBy',
+		name(),
+		'On',
+		str(PyTis.timestamp(full=True)).replace(' ',
+			'').replace('-',
+			'').replace('.',
+			'').replace(':','')
+	]
+	return ''.join(pieces)
+
+	
+
+
+def run_python_program(cmd):
+	"""
+	I broke this out into function because currently, I do not like the way it
+	behaves.  In the future I would like to use subprocess, and put a wrapper
+	around subprocess that catches errors, python tracebacks.  If the traceback
+	contains "KeyboardInterrupt."  Then handle it without showing it to the
+	screen.  For now, I spent too much time messing with the subprocess.PIPES, so
+	I am going to use the built in os.system (just for now).  
+	"""
+	# XXX:TODO  - finish this, change the way it behaives.  Read the docstring
+	# for more information.
+
+	if type(cmd) is str: 
+		# if it is not a list, turn it into one
+		cmdl = cmd.split(' ')
+
+	def _():
+		# subprocess.call(cmdl) # did not print output until I hit enter, then once
+		# I hit enter it still only prints one line, then no more regardless of
+		# number of returns press
+
+		# subprocess.check_output(cmdl)# did not print output until I hit enter,
+		# then once I hit enter it still only prints one line, then no more
+		# regardless of number of returns press
+		 
+		# subprocess.Popen(cmdl) # odd but incorrect behavior
+		os.system(cmd)
+		#sys.stdout.flush()
+	return _
+
+def add_test(dic):
+	"""
+	I don't want to add this method in the object's root code, however I do want
+	this method added to the object, so I am adding it like this.
+	"""
+	def test(key):
+		if key in dic._keys:
+			return dic.__getitem__(key)
+		else:
+			return False
+	dic.test = test
+	return dic
+
+
+def check_aws_config(opts,args):
+	"""
+	Run tests to ensure that this script should run without any issues.  Append 
+	any errors we find into the global errors list so that they may be reported
+	to the user.
+	"""
+	global errors, log
+	# aws_secret_access_key, aws_access_key_id, aws_region, aws_profile
+	# data: dict(aws_secret_access_key, output, region, aws_access_key_id)
+	data = PyTis.ImmutableDict()
+	data.allowEmptyReset()
+	data = add_test(data)
+
+	#
+	# If the aws attributes were  passed in as options, set them to use here.
+	# Since we are now using an ImmutableDict, the folowing is no longer needed.
+	#
+	#if opts.aws_access_key_id.strip():
+	#	data['aws_access_key_id'] = opts.aws_access_key_id.strip()
+	#
+	# Instead, we can just always assign, doing this in the right order, highest
+  # priority first, and we're set.
+  #
+
+	data['aws_access_key_id'] = opts.aws_access_key_id.strip()
+	data['aws_secret_access_key'] = opts.aws_secret_access_key.strip()
+	data['region'] = opts.aws_region.strip()
+	data['profile'] = opts.aws_profile.strip()
+
+	# ###########################################################################
+	# *LOCATE AWS CONFIG*, this is usually located in a user account.  First we
+	# will attempt to determin which user we are signed in as.  Then we will look
+	# for the file in the default paths.  If we cannot find it there we will look
+	# in other likely locations.  If we still haven't found it, we will report
+	# this to the user.
+	# - begin
+
+	if opts.aws_config:
+		#
+		# passed in as an argument by the user
+		#
+		possible_config_path = opts.aws_config
+		if not os.path.exists(os.path.abspath(opts.aws_config)):
+		# XXX: Do I want to do this, or do I want to log.error(x) then sys.exit()?
+			errors.append("The path you provided for the aws config file does not " \
+				"exist, or I do not have read access to that file.")
+			return
+
+	else:
+
+		# 
+		# config path NOT provided, try to guess
+		#
+		assumed_home_dir = PyTis.homedir()
+
+		possible_aws = os.path.join(assumed_home_dir,'.aws')
+
+		possible_config_path = os.path.abspath(os.path.join(possible_aws,'config'))
+
+		if not os.path.exists(possible_config_path):
+			#
+			# It does not exist in their user directory, lets try one other place
+			# first.
+			#
+			possible_config_path = os.path.abspath(os.path.join('/etc', 'aws',
+				'config'))
+
+			if not opts.quiet:
+				#
+				# Cannot locate the config file, would the user like to create it?
+				#
+				if PyTis.getInputYN("Cannot locate the config file for " \
+					"awscli.  AWS cli may not yet be configured.  Would you like " \
+					"to configure it now?"):
+					run_python_program('aws configure')()
+
+				if not os.path.exists(possible_config_path):
+					errors.append("Cannot locate the config file for awscli.  Please " \
+						"manually specify using the --boto-config argument.")
+					return
+	# - end
+	# By now, we have guessed, asked, or determined the possible_config_path
+	#############################################################################
+
+	aws_config = COBJ.load(possible_config_path)
+
+	aws_profile = opts.aws_profile.strip()
+	if not aws_profile:
+		log.warn('The AWS profile cannont be an empty string, "default" ' \
+			'will be assumed.')
+		aws_profile = 'default'
+
+
+	try:
+		profile_section = aws_config[aws_profile]
+	except KeyError as e:
+
+		try:
+			# We could not find the aws_profile in the .aws/config file, perhaps it
+			# is in the root of the config, without a section, let's try looking
+			# there.
+			profile_section = aws_config['region']
+		except KeyError as e:
+			errors.append("The %s section could not be found in the config file "\
+				"at: %s" % (aws_profile, possible_config_path))
+			return
+		else:
+			data.update(aws_config)
+
+	else:
+		data.update(profile_section)
+
+
+	# ###########################################################################
+	# *LOCATE AWS CREDENTIALS*, this is usually located in a user account.  This
+	# is to be handeld in the same way as the AWS CONFIG FILE above.  
+
+	if opts.credentials:
+		#
+		# passed in as an argument by the user
+		#
+		possible_credentials_path = opts.credentials
+		if not os.path.exists(os.path.abspath(opts.credentials)):
+			errors.append("The path you provided for the aws credentials file " \
+				"does not exist, or I do not have read access to that file.")
+			return
+
+	else:
+		possible_credentials_path = os.path.abspath(os.path.join(possible_aws,
+			'credentials'))
+
+		if not os.path.exists(possible_credentials_path):
+			# It does not exist in their user directory, lets try one other place
+			# first.
+			possible_credentials_path = os.path.abspath(os.path.join('/etc', 
+				'aws', 'credentials'))
+
+			if not os.path.exists(possible_credentials_path):
+				if data.test('aws_access_key_id') and \
+					data.test('aws_secret_access_key'): 
+					
+					log.warn("Cannot locate the credentials file for awscli.")
+				else:
+					errors.append("Cannot locate the credentials file for awscli.  " \
+						"Please manually specify using the --credentials argument.")
+					return
+
+	# - end
+	# By now, we have guessed, asked, or determined the possible_credentials_path
+	#############################################################################
+
+	if os.path.exists(os.path.abspath(possible_credentials_path)):
+		#
+		# May or may not be needed, or found, depending on arguments passed in.  If
+		# we have one located then we will try to locate, else, we won't bother.
+		#
+		cred_file = COBJ.load(possible_credentials_path, False)
+		try:
+			profile_section = cred_file[aws_profile]
+		except KeyError as e:
+			try:
+				cred_file['aws_access_key_id']
+				cred_file['aws_secret_access_key']
+			except KeyError as e:
+				errors.append("The %s section could not be found in the " \
+				"credentials file at: %s, nor could the values for " \
+				'"AWS Access Key ID" and "AWS Secret Access Key" without a ' \
+				"section." % (aws_profile, possible_credentials_path))
+				return
+			else:
+				data.update(cred_file)
+		else:
+			data.update(profile_section)
+
+
+	if not data.test('output'): 
+		errors.append("Sorry, but we could not determine the output type.  " \
+			"This was not found in the .aws/config, .aws/credentials, nor was it " \
+			"passed in as an argument.")
+	if not data.test('region'): 
+		errors.append("Sorry, but we could not determine the region.  " \
+			"This was not found in the .aws/config, .aws/credentials, nor was it " \
+			"passed in as an argument.")
+	if not data.test('aws_access_key_id'): 
+		errors.append("Sorry, but we could not determine the AWS Access Key ID. " \
+			"This was not found in the .aws/config, .aws/credentials, nor was it " \
+			"passed in as an argument.")
+	if not data.test('aws_secret_access_key'): 
+		errors.append("Sorry, but we could not determine the " \
+		"AWS Secret Access Key.  This was not found in the .aws/config, " \
+		".aws/credentials, nor was it passed in as an argument.")
+
+	return data
+
+
+
+def check_input(opts,args,data={}):
+	#global log
+	return data
+
+def run(opts,args,data={}, records=[]):
+	""" cloud-checkr-verify run __doc__ help
+
+	This function takes all digested, parsed and processed data, and runs our
+	program with it.  Depending on the input, it will run once, or run over and
+	over for multiple records.
+	"""
+	global log
+
+	fail_msg = "Process Failed for aws_access_key_id: %s with " \
+		"aws_secret_access_key: (%s)\n"
+
+	if records:
+		for r in records:
+			val = jog(
+				opts,
+				r.get('aws_access_key_id'),
+				r.get('aws_secret_access_key'),
+				r.get('region',data.get('region','us-east-1')),
+				r.get('profile',data.get('profile','default'))
+			)
+			if val: # there was an error, let's show what account it was for.
+
+				# Log to look at later, for security reasons, showing safe secret key
+				log.debug(fail_msg % (r.get('aws_access_key_id_for_logging'),
+					r.get('aws_secret_access_key_for_logging')))
+
+				# Displaying to user
+				sys.stderr.write(fail_msg % (r.get('aws_access_key_id'),
+					r.get('aws_secret_access_key')))
+				flush()
+
+	else:
+		kid = data.get('aws_access_key_id','UNSET')
+		sec = data.get('aws_secret_access_key','UNSET')
+
+		log_akey = '%s%s' % ('*'*(len(kid)-4), kid[(len(kid)-4):])
+		log_skey = '%s%s' % ('*'*(len(sec)-4), sec[(len(sec)-4):])
+
+		val = jog(opts, kid, sec)
+	
+		if val: # there was an error, let's show what account it was for.
+
+			# Log to look at later, for security reasons, showing safe secret key
+			log.debug(fail_msg % (log_akey, log_skey))
+
+			# Displaying to user
+			sys.stderr.write(fail_msg % (kid, sec))
+			flush()
+
+def jog(opts, key_id,secret_key,region='us-east-1',profile='default'):
+	""" cloud-checkr-verify jog __doc__ help
+
+	(string) key_id, used for:			aws_access_key_id
+	(string) secret_key, used for:	aws_secret_access_key
+	(string) region, used for:			region (defaults to "us-east-1")
+	(string) profile, used for:			profile (defaults to "default")
+
+	CloudTrail leverages Simple Storage Service (S3).  This program will talk to
+	CloudTrail via it's API (built into AWS internal) to ...
+
+	Steps:
+		- create account
+		- turn on cloud trail
+		- ask cloud trail, please send logs to S3 Bucket in Master Computer
+			Incident Response Team's (CIRT) account
+
+	S3 Bucket that every account to point to.
+
+	"""
+	global log
+
+
+	if not key_id:
+		log.error("Attempting to process, but no AWS Access Key ID was provided.")
+		return
+
+	if not secret_key:
+		log.error("Attempting to process, but no AWS Secret Access Key was " \
+			"provided.")
+		return
+
+	if not region:
+		log.error("Attempting to process, but no Region was provided.")
+		return
+
+	if not region:
+		log.error("Attempting to process, but no Profile was provided.")
+		return
+
+	#
+	# Create a connection to the Cloudtrail service (we are leveraging python's
+	# BOTO as an API to speak with cloudtrail).
+#
+	# BOTO will also utilize the config/credentials file automatically to grab
+	# the key and secret key.  This is automated for us by BOTO; which is why we
+	# donot have to provide them here in code.
+	#
+
+	# primary region in this account
+	try:
+		cloudtrail=boto.cloudtrail.connect_to_region(region,
+			aws_access_key_id=key_id, aws_secret_access_key=secret_key)
+	except boto.exception.NoAuthHandlerFound as e:
+		log.error("%s" % str(e))
+		log.error("It is likely you have a missmatched version of awscli and " \
+			"boto installed, please ask an administrator to ensure you have the " \
+			"latest version of both installed, and try again.")
+		return 1
+	else:
+		if type(cloudtrail) is type(None):
+			log.error("Failed Connection, invalid region.")
+			return 1
+
+	#
+	# Define Cloudtrail service
+	#
+
+	trail_name = 'Default' # name of new trail
+	s3bucket_name = 'awsbahcloudtrail' # name of master S3 bucket
+	try:
+		response = cloudtrail.create_trail(
+								 trail_name,
+								 s3bucket_name,
+								 s3_key_prefix=None,
+								 sns_topic_name=None,
+								 include_global_service_events=None,
+								 cloud_watch_logs_log_group_arn=None,
+								 cloud_watch_logs_role_arn=None
+							 )
+	except boto.cloudtrail.exceptions.TrailAlreadyExistsException:
+		# good, we are glad it already exists
+		log.warn("FAIL creating trail '%s' - ALREADY EXISTS." % trail_name)
+	
+	except boto.cloudtrail.exceptions.InvalidS3BucketNameException as e:
+		log.error("%s" % read_error(e))
+		return 1
+
+	except boto.cloudtrail.exceptions.InvalidTrailNameException as e:
+		log.error("%s" % read_error(e))
+		return 1
+
+	except boto.exception.JSONResponseError as e:
+		if 'not a valid key=value pair' in str(e):
+			# bad secret_key
+			log.error("Failed Connection, invalid access key id and secret " \
+				"key pair.")
+			return 1
+		else:
+			log.error("%s" % read_error(e))
+			return 1
+	else:
+		log.debug("creating trail '%s'" % trail_name)
+
+
+	
+
+# What happens if one already exists with this name?
+# Answer - apparently nothing, no errors are returned.
+										 
+	try:
+		# tell cloud trial to turn logging on for this new trail
+		response = cloudtrail.start_logging(trail_name)
+	except boto.exception.JSONResponseError as e:
+		if 'not a valid key=value pair' in str(e):
+			# bad secret_key
+			log.error("Failed Connection, invalid access key id and secret " \
+				"key pair.")
+			return 1
+		else:
+			log.error("%s" % read_error(e))
+			return 1
+	except boto.cloudtrail.exceptions.InvalidTrailNameException as e:
+		log.error("%s" % read_error(e))
+		return 1
+	else:
+		log.debug("logging started for trail '%s'" % trail_name)
+		
+# What happens if it was for some reason, already turned on for this trail?
+# Answer - apparently nothing, no errors are returned.
+
+
+	#
+	# Create a connection to the Identity Access Management (IAM) service
+	#
+	iam = boto.connect_iam(aws_access_key_id=key_id, 
+		aws_secret_access_key=secret_key)
+
+
+	#
+	# Define IAM Password Policy
+	#
+
+	iam_policy = iam.update_account_password_policy( 
+		allow_users_to_change_password=True,
+		hard_expiry=False,
+		max_password_age=90,
+		minimum_password_length=15,
+		password_reuse_prevention=6,
+		require_lowercase_characters=True,
+		require_numbers=True,
+		require_symbols=True,
+		require_uppercase_characters=True
+	)
+
+	#
+	# Define Policies for cloudcheckr, ProjectAdmin, and Cyber Solutions Network
+	# (CSN) Now create a group for the cloudcheckr and ProjetAdmin users.
+	# This group will allow members to use all EC2 and S3 functionality
+	#
+
+	ProjectAdmin_policy = """{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Allow",
+				"Action": "*",
+				"Resource": "*"
+			},
+			{
+				"Sid": "%(Sid)s",
+				"Effect": "Deny",
+				"Action": "ec2:PurchaseReservedInstancesOffering",
+				"Resource": "*"
+			}
+		]
+	}""" % dict(Sid=create_sid())
+
+	cloudcheckr_policy = """{
+		"Version": "2012-10-17",
+		"Statement": [
+		{
+		"Sid": "%(Sid)s",
+		"Action": [
+					"autoscaling:Describe*",
+					"cloudformation:DescribeStacks",
+					"cloudformation:GetStackPolicy",
+					"cloudformation:GetTemplate",
+					"cloudformation:ListStackResources",
+					"cloudfront:List*",
+					"cloudfront:GetDistributionConfig",
+					"cloudfront:GetStreamingDistributionConfig",
+					"cloudsearch:DescribeDomains",
+					"cloudsearch:DescribeServiceAccessPolicies",
+					"cloudsearch:DescribeStemmingOptions",
+					"cloudsearch:DescribeStopwordOptions",
+					"cloudsearch:DescribeSynonymOptions",
+					"cloudsearch:DescribeDefaultSearchField",
+					"cloudsearch:DescribeIndexFields",
+					"cloudsearch:DescribeRankExpressions",
+					"cloudtrail:DescribeTrails",
+					"cloudtrail:GetTrailStatus",
+					"cloudwatch:GetMetricStatistics",
+					"cloudwatch:ListMetrics",
+					"config:DescribeDeliveryChannels",
+					"config:DescribeDeliveryChannelStatus",
+					"config:DescribeConfigurationRecorders",
+					"config:DescribeConfigurationRecorderStatus",
+					"datapipeline:ListPipelines",
+					"datapipeline:GetPipelineDefinition",
+					"datapipeline:DescribePipelines",
+					"directconnect:DescribeLocations",
+					"directconnect:DescribeConnections",
+					"directconnect:DescribeVirtualInterfaces",
+					"dynamodb:ListTables",
+					"dynamodb:DescribeTable",
+					"ec2:DescribeAvailabilityZones",
+					"ec2:DescribeKeyPairs",
+					"ec2:DescribePlacementGroups",
+					"ec2:DescribeAddresses",
+					"ec2:DescribeReservedInstances",
+					"ec2:DescribeSpotInstanceRequests",
+					"ec2:DescribeImages",
+					"ec2:DescribeImageAttribute",
+					"ec2:DescribeSnapshots",
+					"ec2:DescribeVolumes",
+					"ec2:DescribeTags",
+					"ec2:DescribeNetworkInterfaces",
+					"ec2:DescribeSecurityGroups",
+					"ec2:DescribeInstanceStatus",
+					"ec2:DescribeInstanceAttribute",
+					"ec2:DescribeVolumeStatus",
+					"ec2:DescribeInstances",
+					"ec2:GetConsoleOutput",
+					"ec2:DescribeDhcpOptions",
+					"ec2:DescribeCustomerGateways",
+					"ec2:DescribeVpcs",
+					"ec2:DescribeSubnets",
+					"ec2:DescribeRouteTables",
+					"ec2:DescribeVpnConnections",
+					"ec2:DescribeNetworkAcls",
+					"ec2:DescribeInternetGateways",
+					"ec2:DescribeVpnGateways",
+					"elasticache:DescribeCacheClusters",
+					"elasticache:DescribeReservedCacheNodes",
+					"elasticache:DescribeCacheSecurityGroups",
+					"elasticache:DescribeCacheParameterGroups",
+					"elasticache:DescribeCacheParameters",
+					"elasticache:DescribeCacheSubnetGroups",
+					"elasticbeanstalk:DescribeApplications",
+					"elasticbeanstalk:DescribeConfigurationSettings",
+					"elasticbeanstalk:DescribeEnvironments",
+					"elasticbeanstalk:DescribeEvents",
+					"elasticloadbalancing:DescribeLoadBalancers",
+					"elasticloadbalancing:DescribeInstanceHealth",
+					"elasticloadbalancing:DescribeLoadBalancerAttributes",
+					"elasticmapreduce:DescribeJobFlows",
+					"elasticmapreduce:DescribeStep",
+					"elasticmapreduce:DescribeCluster",
+					"elasticmapreduce:ListSteps",
+					"elasticmapreduce:ListInstanceGroups",
+					"elasticmapreduce:ListBootstrapActions",
+					"elasticmapreduce:ListClusters",
+					"glacier:List*",
+					"glacier:DescribeVault",
+					"glacier:GetVaultNotifications",
+					"glacier:DescribeJob",
+					"glacier:GetJobOutput",
+					"iam:Get*",
+					"iam:List*",
+					"kinesis:ListStreams",
+					"kinesis:DescribeStream",
+					"kinesis:GetShardIterator",
+					"kinesis:GetRecords",
+					"rds:DescribeReservedDBInstances",
+					"rds:DescribeDBInstances",
+					"rds:DescribeDBSubnetGroups",
+					"rds:DescribeDBSecurityGroups",
+					"rds:DescribeDBParameterGroups",
+					"rds:DescribeDBSnapshots",
+					"rds:DescribeEvents",
+					"rds:DescribeEventSubscriptions",
+					"rds:DescribeDBEngineVersions",
+					"rds:DescribeOptionGroups",
+					"rds:ListTagsForResource",
+					"redshift:Describe*",
+					"redshift:ViewQueriesInConsole",
+					"route53:ListHealthChecks",
+					"route53:ListHostedZones",
+					"route53:ListResourceRecordSets",
+					"s3:GetACL",
+					"s3:GetBucketLocation",
+					"s3:GetBucketLogging",
+					"s3:GetBucketTagging",
+					"s3:GetBucketWebsite",
+					"s3:GetBucketNotification",
+					"s3:GetLifecycleConfiguration",
+					"s3:GetNotificationConfiguration",
+					"s3:GetObject",
+					"s3:GetObjectMetadata",
+					"s3:List*",
+					"ses:ListIdentities",
+					"ses:GetSendStatistics",
+					"ses:GetIdentityDkimAttributes",
+					"ses:GetIdentityVerificationAttributes",
+					"ses:GetSendQuota",
+					"sdb:ListDomains",
+					"sdb:DomainMetadata",
+					"support:*",
+					"swf:ListClosedWorkflowExecutions",
+					"swf:ListDomains",
+					"swf:ListActivityTypes",
+					"swf:ListWorkflowTypes",
+					"sns:GetSnsTopic",
+					"sns:GetTopicAttributes",
+					"sns:GetSubscriptionAttributes",
+					"sns:ListTopics",
+					"sns:ListSubscriptionsByTopic",
+					"sqs:ListQueues",
+					"sqs:GetQueueAttributes"
+		],
+		"Effect": "Allow",
+		"Resource": "*"
+		}
+		]
+	}""" % dict(Sid=create_sid())
+
+	BAHCrossAccount_CIRT_policy = """{
+			"Version": "2012-10-17",
+			"Statement": [
+					{
+							"Sid": "%(Sid)s",
+							"Effect": "Allow",
+							"Action": [
+									"ec2:*"
+							],
+							"Resource": [
+									"*"
+							]
+					},
+					{
+							"Effect": "Allow",
+							"Action": [
+									"directconnect:*"
+							],
+							"Resource": [
+									"*"
+							]
+					},
+					{
+							"Effect": "Allow",
+							"Action": [
+									"iam:*"
+							],
+							"Resource": [
+									"*"
+							]
+					},
+					{
+							"Effect": "Allow",
+							"Action": [
+									"s3:*"
+							],
+							"Resource": [
+									"*"
+							]
+					},
+					{
+							"Effect": "Allow",
+							"Action": [
+									"glacier:*"
+							],
+							"Resource": [
+									"*"
+							]
+					},
+					{
+							"Effect": "Allow",
+							"Action": [
+									"cloudtrail:*"
+							],
+							"Resource": [
+									"*"
+							]
+					}
+			]
+	}""" % dict(Sid=create_sid())
+
+
+	BAHCrossAccount_CIRT_Trust_policy = """{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Sid": "%(Sid)s",
+				"Effect": "Allow",
+				"Principal": {
+					"AWS": "arn:aws:iam::632121157026:root"
+				},
+				"Action": "sts:AssumeRole"
+			}
+		]
+	}""" % dict(Sid=create_sid())
+
+
+	#
+	# Assocaite Policies with a group
+	#
+
+	try:
+		response = iam.create_group('ProjectAdmin')
+	except boto.exception.BotoServerError as e:
+		if '<Message>Group with name' in str(e) and \
+			' already exists.</Message>' in str(e):
+			log.debug("Group '%s' already exists." % 'ProjectAdmin')
+		else:
+			log.error(read_error(e))
+			return 1
+	except TypeError as e:
+		log.warn('Missing required "Group Name".')
+		
+
+	try:
+		response = iam.put_group_policy('ProjectAdmin', 'ProjectAdmin_NORI_Policy', 
+			ProjectAdmin_policy)
+	except boto.exception.BotoServerError as e:
+		log.error(read_error(e))
+		return 1
+
+
+	
+	try:
+		response = iam.create_group('Cloudcheckr')
+	except boto.exception.BotoServerError as e:
+		if '<Message>Group with name' in str(e) and \
+			' already exists.</Message>' in str(e):
+			log.debug("Group '%s' already exists." % 'ProjectAdmin')
+		else:
+			log.error(read_error(e))
+			return 1
+
+	try:
+		response = iam.put_group_policy('Cloudcheckr', 'CloudcheckrPolicy',
+			cloudcheckr_policy)
+	except boto.exception.BotoServerError as e:
+		log.error(read_error(e))
+		return 1
+
+	 
+#
+# Associate Switch Role Policy with a Role
+#
+
+	try:
+		role = iam.create_role('BAHCrossAccount_CIRT_Role')
+	except boto.exception.BotoServerError as e:
+		if '<Message>Role with name' in str(e) and \
+			' already exists.</Message>' in str(e):
+			log.debug("Role '%s' already exists." % 'ProjectAdmin')
+		else:
+			log.error(read_error(e))
+			return 1
+
+
+
+	try:
+		role = iam.put_role_policy('BAHCrossAccount_CIRT_Role',
+			'BAHCrossAccount_CIRT_Policy', BAHCrossAccount_CIRT_policy)
+	except boto.exception.BotoServerError as e:
+		log.error(read_error(e))
+		return 1
+
+# Updates Trust Relationship 
+	try:
+		role = iam.update_assume_role_policy('BAHCrossAccount_CIRT_Role',
+			BAHCrossAccount_CIRT_Trust_policy)
+	except boto.exception.BotoServerError as e:
+		log.error(read_error(e))
+		return 1
+	 
+#
+# Now create the cloudcheckr user and place him in the cloudcheckr group.
+#
+	try:
+		response = iam.create_user('cloudcheckruser')
+	except boto.exception.BotoServerError as e:
+		if '<Message>User with name' in str(e) and \
+			' already exists.</Message>' in str(e):
+			log.debug("User '%s' already exists." % 'ProjectAdmin')
+			response = iam.get_user('cloudcheckruser')
+		else:
+			log.error(read_error(e))
+			return 1
+
+
+	#user = response.user
+
+	response = iam.add_user_to_group('Cloudcheckr', 'cloudcheckruser')
+
+	response = iam.get_all_access_keys('cloudcheckruser')
+
+	response_data = response.get('list_access_keys_response',{})
+
+	result_data = response_data.get('list_access_keys_result',{})
+
+
+	meta_data = result_data.get('access_key_metadata',[])	 
+
+
+	access_key_id = ''
+	status = 'Inactive'
+
+	if len(meta_data):
+		for meta in meta_data:
+			access_key_id = meta.get('access_key_id','')
+
+			try:
+				iam.delete_access_key(access_key_id,'cloudcheckruser')
+			except boto.exception.BotoServerError as e:
+				log.error(read_error(e))
+				return 1
+
+	#
+	# Create AccessKey/SecretKey pair for cloudcheckr
+	#
+
+	# boto.exception.BotoServerError
+	response = iam.create_access_key('cloudcheckruser')
+	aws_access_key_id = response.access_key_id
+	aws_secret_access_key = response.secret_access_key
+	
+	
+	url = 'https://api.cloudcheckr.com/api/account.json/add_account?' \
+				'access_key=%(access_key)s' \
+				'&account_name=%(name)s' \
+				'&aws_access_key=%(aws_access_key_id)s' \
+				'&aws_secret_key=%(aws_secret_access_key)s' % \
+				dict(access_key=quote(opts.cloud_checker_access_key),
+						 name=quote(PyTis.timestamp()),
+						 aws_access_key_id=quote(aws_access_key_id),
+						 aws_secret_access_key=quote(aws_secret_access_key))
+					
+	try:
+		result = requests.get(url, timeout=10)
+
+	except ConnectionError as c:
+		log.error('The Cloud Checkr API is not responding')
+		return 1
+
+	except MissingSchema as m:
+		log.error('"%s" is not a valid URL. Make sure your CloudCheckr API Key is ' \
+			'valid and was entered correctly.' % url)
+		return 1
+
+	except Timeout as t:
+		log.error('Request to "%s" timed out.' % url)
+		return 1
+
+	else:
+		if result.status_code == 200:
+			response = result.json()
+			print("RESPONSE: %s" % response)
+		else:
+			print("URL: %s" % url)
+			pprint(result)
+			response = result.json()
+			pprint(response)
+
+
+	print( "Access Key: ", repr(aws_access_key_id))
+	print( "Secret Key: ", repr(aws_secret_access_key))
+
+
+#
+# Now log into cloudcheckr and create a new account while I grab a drink or 5.  
+#
+
+
+
+# /home/username/.aws/config
+
+# XXX: STOP HERE
+
+
+def parse_csv(opts):
+	""" This didn't technically need to be a separated function, because it is
+	only called once.  However the documentation and the amount of lines
+	dedicated to this really increases the line count that needs read in the main
+	function.  Placing it hear makes the main function easier to read, and
+	because it is just the CSV parsing code, this function doesn't get to
+	complex.
+
+	So why am I not just splitting the lines on line breaks, then each line on
+	commas?  Because CSV files can get much more complicated, even have comments.
+	We don't want to require the user to give us a "just right, extra special"
+	CSV file where we specify dozens of rules, you can't do this and that.
+	Instead, we want to just be able to interpret whatever is thrown at us, as
+	long as it is indeed a real CSV file.  What if the user had a complex Excel
+	file (*.xlsx) then saved it as a CSV?
+
+	-----------------------------------------------------------------------------
+
+	The documentation below is pulled directly from pylib3.csv to help explain.
+
+  Parses CSV files including all subtleties such as:
+    * commas in fields
+    * double quotes in fields
+    * embedded newlines in fields
+      - Examples of programs that produce such beasts include
+        MySQL and Excel
+
+	For a higher-level, friendlier CSV class with many conveniences, see
+	DataTable (which uses this class for its parsing).
+
+	It would be nice to use the csv module when present, since it is
+	substantially faster. Before that can be done, it needs to support
+	allowComments and stripWhitespace, and pass the TestCSVParser.py test suite.
+
+	"""
+	global errors, log
+	records = []
+	#
+	# This is kinda silly, but the two keys aws_access_key_id and 
+	# aws_secret_access_key are too long.  They make keeping the code under 80 
+	# cols difficult.  I have never done this before, because it is an
+	# unnecessary variable assignment, that will just use a RAM Mem Space for no
+	# great reason.  However, to more easily keep the code readable, I am going
+	# to make an exception.  See the four lines below.
+	#
+	akey = 'aws_access_key_id'
+	skey = 'aws_secret_access_key'
+	log_ak = 'aws_access_key_id_for_logging'
+	log_sk = 'aws_secret_access_key_for_logging'
+	
+	# XXX-TODO: Next version, allow the user to also load in the region from a
+	# CSV file for batch processing in other regions. 
+
+	log.debug("Parsing CSV File: %s" % os.path.abspath(opts.batch_file))
+
+	try:
+		lines = PyTis.parse_csv_file(opts.batch_file, opts.file_has_headers)
+	except PyTis.FileNotFound as e:
+		errors.append(str(e))
+	except PermissionError as e:
+		errors.append(str(e))
+	else:
+		for line in lines:
+			record = {}
+			try:
+				record[akey] = line[opts.aws_access_key_id_position]
+
+				log_akey = '%s%s' % ('*'*(len(record[akey])-4),
+					record[akey][(len(record[akey])-4):])
+
+				record[log_ak] = log_akey
+
+			except IndexError as e:
+				if opts.aws_access_key_id_position != \
+					_aws_access_key_id_positon_default:
+					errors.append("The positon you provided (%s) for the "\
+						"AWS Access Key ID in the CVS File does not exist and caused " \
+						"an IndexError.  Please check the file and try " \
+						"again." % opts.aws_access_key_id_position)
+				else:
+					errors.append("The default positon (%s) for the " \
+					"AWS Access Key ID in the CVS File does not exist and caused an " \
+					"IndexError.  Please check the file and try to provide an " \
+					"accurate position. (Remember, column A is 0, column B is 1 " \
+					"and so on." % _aws_access_key_id_positon_default)
+				#
+				# no point in running any more, we caught errors that are about to be
+				# reported out to the user
+				break 
+			try:
+				record[skey] = line[opts.aws_secret_access_key_position]
+
+				log_skey = '%s%s' % ('*'*(len(record[skey])-4),
+					record[skey][(len(record[skey])-4):])
+
+				record[log_sk] = log_skey
+
+			except IndexError as e:
+				if opts.aws_secret_access_key_position != \
+					_aws_secret_access_key_positon_default:
+					errors.append("The positon you provided (%s) for the "\
+						"AWS Secret Access Key in the CVS File does not exist and caused " \
+						"an IndexError.  Please check the file and try " \
+						"again." % opts.aws_secret_access_key_position)
+				else:
+					errors.append("The default positon (%s) for the " \
+					"AWS Secret Access Key in the CVS File does not exist and " \
+					"caused an IndexError.  Please check the file and try to " \
+					"provide an accurate position. (Remember, column A is 0, " \
+					"column B is 1, column C is 2 and so on." % \
+					_aws_secret_access_key_positon_default)
+				#
+				# no point in running any more, we caught errors that are about to be
+				# reported out to the user
+				break 
+
+		log.debug("RECORD FOUND: aws_access_key_id: %s, " \
+			"aws_secret_access_key: %s" % (log_akey, log_skey))
+
+		records.append(record)
+
+	return records
+
+
+
+def main():
+	"""usage: %prog -c[PATH] -C[PATH] <options>"""
+	global errors, log
+	global _aws_access_key_id_positon_default
+	global _aws_secret_access_key_positon_default
+
+	config_filename = os.path.abspath(os.path.join(PyTis.__configdir__, 
+		'%s.ini' % os.path.basename(os.path.abspath(sys.argv[0]))))
+
+	PyTis.__option_always__ = [True]
+	help_dict = dict(version=__version__,
+						 author=__author__,
+						 created=__created__,
+						 copyright=__copyright__)
+	parser = PyTis.MyParser()
+
+	parser.extra_txt = "\n\n%s\n" % run.__doc__ + """
+
+examples:	
+
+	cc-iam (cloudcheckr IAM)
+SEE ALSO:
+	aws configure
+	aws --version
+	aws-ao (aws account onboarding)
+	aws-sr (aws switch roles)
+	cc-iam (cloudcheckr IAM)
+
+COPYRIGHT:
+	%(copyright)s
+
+AUTHOR:
+	%(author)s
+
+HISTORY:
+	Original Author
+
+VERSION:
+	%(version)s
+""" % help_dict
+
+	# This callback must be set, but we override it anyways with the PyTis
+	# OptionParser
+	parser.formatter.format_description = lambda s:s
+
+	if '--help' in sys.argv:
+		parser.set_description(__doc__)
+		helpishere=True # to determine help mode (short or full)
+	else:
+		helpishere=False # to determine help mode (short or full)
+		parser.set_description('')
+
+
+	# ###########################################################################
+	# I really do not like this way of doing this, I perfer my old method,
+	# however it appears that my OptionParser is working differently in python
+	# version >= 3.  Therefore this is, for the time being, the cleanest and
+	# quickest way I can think of for defining the short help, and long form help
+	# details.
+	# 
+	# The "`$" is used to create a forced line break ("\n"), not normally
+	# permitted by the OptParser.
+	# LONG HELP BELOW
+
+	if helpishere:
+
+		# set verbose help
+		verbose_help = "Be more Verbose (make lots of noise)`$"
+
+		# set aws_access_key_id help
+		aws_access_key_id_help = "Normally, the AWS Access Key ID would be " \
+			"loaded from the .aws/credentials file, however, you may choose to " \
+			"manually override this option by providing the access key id as an " \
+			"argument.`$"
+
+		file_help = "Allows the user to specify a CSV file of " \
+			"AWS Access Key ID's and AWS Secret Access Key's to iterate through " \
+			"as a batch process.`$"
+
+		# set aws_secret_access_key help
+		aws_secret_access_key_help = "Normally, the AWS Access Key ID would " \
+			"be loaded from the .aws/credentials file, however, you may choose to " \
+			"manually override this option by providing the access key id as an " \
+			"argument.`$"
+
+		aws_config_help = 'Although this program can generally auto-guess the ' \
+			'path of the aws config file (usually in /home/{USER}/.aws/config), ' \
+			'if it is located in a random, or unique location, you can specify ' \
+			'that here with the [-a/--aws-config] argument.`$'
+
+		aws_cred_help = 'Although this program can generally auto-guess the ' \
+			'path of the aws credentials file (usually in ' \
+			'/home/{USER}/.aws/config), if it is located in a random, or unique ' \
+			'location, you can specify that here with the [-a/--aws-config] ' \
+			'argument.`$'
+
+		file_has_headers_help = "For use in conjunction with the [-f/--file] " \
+			"option.  The user may choose to pass in a CSV file, to be parsed for " \
+			"AWS Access Key ID's and AWS Secret Access Key's.  If this CSV file " \
+			"has headers, this flag should be used to skip parsing them.`$"
+
+		aws_access_key_id_positon_help = 'Specify the AWS Access Key ID column ' \
+			'within the CSV file.`$'
+
+		aws_secret_access_key_positon_help = 'Specify the AWS Secret Access Key' \
+			'column within the CSV file.`$'
+
+		cloud_checker_access_key_help = 'Administration Access Key for Cloud ' \
+			'Checkr.  The access key allows this program to connect to clould ' \
+			'checkr for us through their unique API and add the newly bootstrapped' \
+			'aws account credentials to cloudcheckr (removing the need for ' \
+			'and individual to have to manually add the aws_access_key_id and ' \
+			'aws_secret_access_key).`$'
+
+	# SHORT HELP BELOW
+	else:
+
+		# set verbose help
+		verbose_help = optparse.SUPPRESS_HELP
+
+		# set aws_access_key_id help
+		aws_access_key_id_help = 'AWS Access Key ID override. ' \
+			'*(use "--help" for more details)'
+
+		file_help = 'Path to CSV file for batch processing. ' \
+			'*(use "--help" for more details)'
+
+		# set aws_secret_access_key help
+		aws_secret_access_key_help = 'AWS Secret Access Key override. ' \
+			'*(use "--help" for more details)'
+
+		aws_config_help = 'Path to awscli config file. *(use "--help" for more ' \
+			'details)'
+
+		aws_cred_help = 'Path to awscli credentials file. *(use "--help" for ' \
+			'more details)'
+
+		file_has_headers_help = 'Specify to skip over headers in  CSV file. '\
+			'*(use "--help" for more details)'
+
+		aws_access_key_id_positon_help = 'Specify the AWS Access Key ID column ' \
+			'within the CSV file. *(use "--help" for more details)'
+
+		aws_secret_access_key_positon_help = 'Specify the AWS Secret Access Key' \
+			'column within the CSV file.  *(use "--help" for more details)'
+
+		cloud_checker_access_key_help = 'Admin Access Key for Cloud Checkr'
+
+	# =========================================================================
+	# OptParser OPTIONS BELOW
+	# runtime setting
+	runtime = optparse.OptionGroup(parser, "-- RUNTIME ARGUMENTS")
+
+	runtime.add_option("-i", "--access-key-id", action="store", type="string",
+		default='', metavar='[STRING]', dest='aws_access_key_id',
+		help=aws_access_key_id_help)
+
+	runtime.add_option("-k", "--cloud-checker-access-key", action="store", 
+		type="string", metavar='[STRING]',
+		default=_cloud_checker_access_key_default, 
+		dest='cloud_checker_access_key', help=cloud_checker_access_key_help)
+
+	runtime.add_option("", "--access-key-id-postion", action="store", type="int",
+		default=_aws_access_key_id_positon_default, metavar='[INT]', 
+		dest='aws_access_key_id_position',
+		help=aws_access_key_id_positon_help)
+
+	runtime.add_option("-r", "--region", action="store", type="string",
+		default='', metavar='[STRING]', dest='aws_region',
+		help=aws_access_key_id_help)
+
+	runtime.add_option("-f", "--file", action="store", type="string",
+		default='', metavar='[PATH]', dest='batch_file',
+		help=file_help)
+
+	runtime.add_option("-H", "--headers", action="store_true",
+		default=False, dest='file_has_headers',
+		help=file_has_headers_help)
+
+
+	runtime.add_option("-s", "--secret-access-key", action="store", 
+		type="string",default='', metavar='[STRING]', dest='aws_secret_access_key',
+		help=aws_secret_access_key_help)
+
+	runtime.add_option("", "--secret-access-key-postion", action="store", 
+		type="int", default=_aws_secret_access_key_positon_default,
+		metavar='[INT]', dest='aws_secret_access_key_position',
+		help=aws_secret_access_key_positon_help)
+
+	runtime.add_option("-p", "--profile", action="store", type="string",
+		default='default', metavar='[PROFILE]', dest='aws_profile',
+		help="If you have multiple profiles, you can configure additional, " \
+		"named profiles by using the -p, --profile option.`$")
+
+	parser.add_option_group(runtime)
+
+
+	# -------------------------------------------------------------------------
+	# variable setting
+	vars = optparse.OptionGroup(parser, "-- CONFIGURATION SETTINGS")
+
+	vars.add_option("-a", "--aws-config", action="store", type="string",
+		default='', metavar='[PATH]', dest='aws_config',
+		help=aws_config_help)
+
+	vars.add_option("-c", "--config-file", action="store", type="string",
+		default='', metavar='[PATH]', dest='config',
+		help="")
+
+	vars.add_option("-C", "--credentials-file", action="store", type="string",
+		default='', metavar='[PATH]', dest='credentials',
+		help=aws_cred_help)
+
+	#help='Optional name to save configuration into a section.  *(use "--help" for more help)')
+
+	parser.add_option_group(vars)
+	# ----------------------------
+	dbgroup = optparse.OptionGroup(parser, "-- DEBUG")
+	dbgroup.add_option("-D", "--debug", action="store_true", default=False, 
+		dest='debug', help="Enable debugging`$")
+
+	dbgroup.add_option("-V", "--verbose", action="store_true", default=True,
+		dest='verbose', help=verbose_help)
+
+
+#	parser.add_option("-l", "--logging", action="store_true", default=False, help="Enable Logging")
+
+	dbgroup.add_option("-q", "--quiet", action="store_true", default=False,
+		dest='quiet', help="be vewwy quiet (I'm hunting wabbits)`$")
+
+	dbgroup.add_option("-v", "--version", action="store_true", default=False,
+		dest='version', help="Display Version`$")
+
+	parser.add_option_group(dbgroup)
+	# ----------------------------
+	# OptParser OPTIONS ABOVE
+	# =========================================================================
+
+
+	#
+	# Now just a few more generic things to setup, (generic as in all of my
+	# scripts have these few remaining steps
+	#
+	(opts, args) = parser.parse_args()
+
+	if opts.debug:
+		main.__doc__ = "%s\n\n	CONFIG FILE: %s" % (main.__doc__, \
+			os.path.abspath(config_filename))
+	else:
+		pass
+
+	parser.set_usage(main.__doc__)
+
+	if opts.quiet: opts.verbose = False
+
+	old_version = opts.version
+	opts.version = True
+	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
+	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
+	opts.version = old_version
+
+	if opts.version:
+		return PyTis.version(__version__)
+
+	# =========================================================================
+	# 
+	# and now to the unique stuff.  First, lets make sure this program can run at
+	# all, do we have the required 3rd party addons and libs installed? (If boto
+	# isn't installed, it will already be added to the errors list from the
+	# import statements above.
+	#
+	
+	try:
+		aws_path = subprocess.check_output(["which", "aws"])
+	except subprocess.CalledProcessError as e:
+		errors.append("This program requires awscli " \
+			"<https://github.com/aws/aws-cli>.\n" \
+			"Please ask your administrator for assistance.")
+
+	#
+	# Now checking CVS batch file arguments and options
+	#
+	if len(args) and opts.batch_file:
+		for arg in args:
+			if os.path.exists(arg) or os.path.exists(os.path.abspath(arg)):
+				errors.append("The CSV batch file may simply be passed in as an "\
+					"argument, but you have already specified the CSV batch file " \
+					"through the [-f/--file] option.  You may do one or the other, " \
+					"but not both.")
+				break
+		else:
+			errors.append("Arguments were passed in, which may normally be " \
+				"parsed and interpreted as accounts for batch processing, however " \
+				"you have already specified a CSV file to parse for batch " \
+				"proecessing via the [-f/--file] option.  Please choose one " \
+				"method, or the other, but you cannot do both at the same time.")
+
+	elif not opts.batch_file and len(args):
+		for arg in args:
+			if os.path.exists(arg) or os.path.exists(os.path.abspath(arg)):
+				opts.batch_file=os.path.abspath(arg)
+			else:
+				errors.append('An argument was passed in, perhaps as an attempt to ' \
+					'load a CSV batch file?  However "%s" does not appear to ' \
+					'exist.' % arg)
+	#
+	# Now lets check the configuration of our 3rd party tools before we begin 
+	# attempting to use them.  Without them, everything else (including parsing a
+	# CSV file), would be a waste of time.
+	#
+
+	if not errors:
+		try:
+			data = check_aws_config(opts,args)
+		except (PyTis.QuitNow,KeyboardInterrupt) as e:
+			log.debug("Keyboard-Interrupt, bye!")
+			if not opts.quiet:
+				log.info("\nbye!")
+			return 0
+		else:
+			log.debug("aws-cli appears to be configured correctly.")
+
+	#
+	# Okay, now if we were given a CSV file to parse, lets do so.
+	#
+	records = []
+	if not errors and opts.batch_file:
+		records = parse_csv(opts)
+
+
+	#
+	# This will be resevered for reading in this program's INI file XXX-FIXME
+	# (I'm not there yet, that is the final automation phase of the strings
+	# throughout the run function).
+	#
+	if not errors and len(args):
+		try:
+			data.update(check_input(opts,args,data))
+		except (PyTis.QuitNow,KeyboardInterrupt) as e:
+			log.debug("Keyboard-Interrupt, bye!")
+			if not opts.quiet:
+				log.info("\nbye!")
+			return 0
+
+	#
+	# And if there were no errors to this point, let us attempt to kick off
+	# running our program with all data obtained.
+	#
+	if not errors and (data or records):
+		try:
+			retval = run(opts, args, data, records)
+		except KeyboardInterrupt as e:
+			log.debug("Keyboard-Interrupt, bye!")
+			if not opts.quiet:
+				log.info("\nbye!")
+			return 0
+		else:
+			if not retval:
+				log.info("Done.")
+			return retval
+	else:
+
+	#
+	# However, if there were errors, lets decide how to present those to the user
+	# and exit.
+	#
+		if errors and len(args):
+			parser.print_usage()
+			log.error(str("\n".join(errors)))
+			return 1
+		elif errors:
+			parser.print_help(errors)
+			return 1
+		else:
+			parser.print_usage()
+			log.info("No arguments provided, please provide at least 1 argument.")
+			return 0
+
+	#
+	# A final, just in case, we should never make it here, but if we do let's
+	# show normalized output.
+	#
+	parser.print_help("ERROR: Unknown, but invalid input.")
+	sys.exit(1)
+
+if __name__ == '__main__':
+		sys.exit(main())
+
+
+

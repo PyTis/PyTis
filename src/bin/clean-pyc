@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+if [ ! "$1" ]; then
+    echo 'Please pass in a path as the only argument'
+else
+    cd $1
+    rm -f `find . -iname '*.pyc'` 
+    echo 'DONE'
+fi

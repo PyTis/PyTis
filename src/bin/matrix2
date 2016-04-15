@@ -1,0 +1,353 @@
+#!/usr/bin/env python
+# encoding=utf-8
+
+"""Matrix Console"""
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import os
+import curses
+import time
+import optparse
+import commands
+import random
+import warnings
+import xml.etree.ElementTree as etree
+import urllib2
+import ConfigParser as configparser
+import locale
+locale.setlocale(locale.LC_ALL, '')
+preferred_encoding = locale.getpreferredencoding()
+# See run() for run-time imports
+
+class Config:
+	"""Configuration/settings manager"""
+	
+	def __init__(self):
+		self.config_path = os.path.expanduser("~/.config/matrix-console.conf")
+		self.cfg = configparser.SafeConfigParser()
+		self.cfg.read(self.config_path)
+
+	def safe_write(self, path):
+		pass
+	
+	def get_urls(self):
+		
+		if self.cfg.has_option("default", "rss-feeds"):
+			l = self.cfg.get("default", "rss-feeds").split(" ")
+			return l
+		else:
+			return ["http://twitter.com/statuses/public_timeline.rss"]
+	
+	def get_break_interval(self):
+		if self.cfg.has_option("default", "break-interval"):
+			return self.cfg.getint("default", "break-interval")
+		else:
+			return 5 * 60
+	
+	def get_fetch_interval(self):
+		if self.cfg.has_option("default", "fetch-interval"):
+			return self.cfg.getint("default", "fetch-interval")
+		else:
+			return 15 * 60
+	
+
+class Code:
+	"""Code fragment"""
+	
+	def __init__(self):
+		self.str = None
+
+class Matrix:
+	"""Matrix renderer"""
+	
+	def __init__(self):
+		self.config = Config()
+		self.stdscr = None
+		self.running = False
+		self.sleep_time = 100 # curses nap time in ms
+#		self.show_hostname = True
+#		self.show_time = True
+#		self.show_uptime = True
+		self.codes = [] # code fragments
+		self.break_interval = self.config.get_break_interval() # seconds
+		self.fetch_interval = self.config.get_fetch_interval() # seconds
+		self.next_break_time = 0 # unix time
+		self.next_fetch_time = 0 # unix time
+		self.break_i = 0 # row counter
+		self.feed_strs = [] # the strings fetched from the internets
+		self.www_access = True # flag
+	
+	def run(self):
+		"""Run"""
+		
+		curses.wrapper(self._run)
+		
+	def _run(self, stdscr):
+		self.stdscr = stdscr
+		curses.use_default_colors()
+		curses.curs_set(0) 
+		curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
+		curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_GREEN)
+		
+		self.NORMAL = curses.color_pair(1)
+		self.HILITE = curses.color_pair(2)
+		self.BRITE = self.NORMAL + curses.A_BOLD
+		self.DIM = self.NORMAL + curses.A_DIM
+		
+		stdscr.bkgdset(" ", self.NORMAL)
+		stdscr.nodelay(1)
+		
+		self.running = True
+		while self.running:
+			if time.time() >= self.next_fetch_time:
+				self.next_fetch_time = time.time() + self.fetch_interval
+				self.fetch_feeds()
+			
+			self.do_iteration()
+			stdscr.refresh()
+			curses.napms(100)
+			
+			try:
+				ch = stdscr.getkey()
+			except:
+				ch = None
+			if ch in ("q", "Q", "x", "X", "f", "F", ):
+				sys.exit(0)
+			
+	
+	def do_iteration(self):
+		"""Do a single iteration"""
+		
+		stdscr = self.stdscr
+		size_row, size_col = self.stdscr.getmaxyx()
+		max_row = size_row - 1
+		max_col = size_col - 1
+		
+		if time.time() >= self.next_break_time:
+			stdscr.move(self.break_i, 0)
+			stdscr.clrtoeol()
+			self.break_i += 1
+			if self.break_i > max_row:
+				self.break_i = 0
+				self.next_break_time = time.time() + self.break_interval
+			return
+		
+		# If cols are not dense enough with active code streams
+		if len(self.codes) < size_col / 20:
+			d = random.randint(0, 10)
+			if d == 0:
+				c = self.Hostname()
+				c.hilite = True
+			elif d == 1:
+				c = self.Time()
+				c.hilite = True
+			elif d == 2:
+				c = self.Uptime()
+				c.hilite = True
+			else:
+				c = self.get_code()
+			self.codes.append(c)
+		
+		# Draw the code streams
+		for code in tuple(self.codes):
+			if code.i >= len(code.str):
+				self.codes.remove(code)
+			
+			# Draw head
+			for hi in range(code.headcount):
+				if hi == 0 and code.i < len(code.str):
+					attr = self.BRITE
+				elif code.hilite:
+					attr = self.NORMAL#self.HILITE
+				else:
+					attr = self.NORMAL
+				
+				row = code.row - hi
+				if row < 0:
+					row = max_row - hi + 1
+				
+				if code.i >= len(code.str):
+					stdscr.addstr(row, code.col, " ", attr)
+				else:
+					stdscr.addstr(row, code.col, 
+						chr(random.randint(33, 126)), attr)
+			
+			code.counter += 1
+			if code.counter > code.rate:
+				# Advance the head
+				if code.headcount >= code.headlength:
+					row = code.row - code.headcount + 1
+					if row < 0:
+						row = max_row - hi + 1
+					stdscr.addstr(row, code.col, 
+						code.str[code.i].encode(preferred_encoding), 
+						self.NORMAL)
+					code.i += 1
+				
+				code.counter = 0
+				code.row += 1
+				if code.row > max_row:
+					code.row = 0
+				if code.headcount < code.headlength:
+					code.headcount += 1
+	
+	def get_code(self):
+		"""Returns the next code"""
+		
+		s = random.choice(self.feed_strs + [None])
+		if s is None:
+			return self.Noise()
+		else:
+			code = self.Code()
+			code.str = s
+		return code
+		
+	
+	def Code(self):
+		"""Code factory"""
+		
+		code = Code()
+		code.col = random.randint(0, self.stdscr.getmaxyx()[1] - 1)
+		code.row = random.randint(0, self.stdscr.getmaxyx()[0] / 2)
+		code.i = 0 # String index
+		code.headcount = 1 # Number of heads drawn
+		code.counter = 0 # Rate counter
+		code.rate = random.randint(1, 6) # Number of iterations before advancing to next char
+		code.headlength = 2 # The length of the head
+		code.hilite = False
+		return code
+	
+	def Noise(self):
+		"""Random ASCII chars"""
+		
+		code = self.Code()
+		code.str = "".join(chr(random.randint(33, 126)) \
+			for i in range(random.randint(2, 30)))
+		return code
+	
+	def Hostname(self):
+		"""Hostname of computer"""
+		
+		code = self.Code()
+		code.str = commands.getoutput("hostname")
+		return code
+	
+	def Time(self):
+		"""Current time"""
+		
+		code = self.Code()
+		code.str = time.ctime()
+		return code
+	
+	def Uptime(self):
+		"""Uptime"""
+		
+		code = self.Code()
+		code.str = commands.getoutput("uptime")
+		return code
+	
+	def fetch_feeds(self):
+		self.feed_strs = []
+		
+		if not self.www_access:
+			return
+		
+		for url in self.config.get_urls():
+			self.stdscr.addstr(". " + url, self.DIM)
+			self.stdscr.refresh()
+			try:
+				f = urllib2.urlopen(url)
+			except:
+				self.stdscr.addstr(" ... url open fail!", self.BRITE)
+				self.stdscr.refresh()
+				curses.napms(2000)
+				continue
+				
+			try:
+				doc = etree.parse(f)
+				for item in doc.getroot().find("channel").findall("item"):
+					title = item.find("title")
+					if title is not None:
+						self.feed_strs.append(title.text)
+			except:
+				self.stdscr.addstr(" ... xml fail!", self.BRITE)
+				self.stdscr.refresh()
+				curses.napms(2000)
+	
+def run():
+	opt = optparse.OptionParser()
+#	opt.add_option("-d", "--debug", dest="debug-mode", action="store_true",
+#		help="Output debug messages")
+	opt.add_option("-g", "--gui", dest="gui",
+		help="Wrap the console in a GUI window: gtk")
+#	opt.add_option("-x", "--xwinid", dest="xwinid", 
+#		help="X Window ID to use")
+#	opt.add_option("-r", "--root", dest="xroot", action="store_true",
+#		help="Use the X root window")
+	opt.add_option("-f", "--fullscreen", dest="fullscreen", 
+		action="store_true",
+		help="Use fullscreen window")
+	opt.add_option("-n", "--no-www", dest="www_access", action="store_false",
+		default=True,
+		help="Don't access the Internet")
+	
+	(options, args) = opt.parse_args()
+	
+	if options.gui == "gtk":
+		import gtk
+		import vte
+		window = gtk.Window()
+		
+#		if options.xwinid:
+#			window.window = gtk.gdk.window_foreign_new(options.xwinid)
+#		if options.xroot:
+#			window.window = gtk.gdk.get_default_root_window()
+		
+		window.connect("delete-event", gtk.main_quit)
+		term = vte.Terminal()
+		term.connect("child-exited", gtk.main_quit)
+		
+		if options.fullscreen:
+			window.fullscreen()
+			
+			# Pygtk faq
+			pix_data = """/* XPM */
+			 static char * invisible_xpm[] = {
+			 "1 1 1 1",
+			 "       c None",
+			 " "};"""
+			color = gtk.gdk.Color()
+			pix = gtk.gdk.pixmap_create_from_data(None, pix_data, 1, 1, 1, 
+				color, color)
+			invisible = gtk.gdk.Cursor(pix, pix, color, color, 0, 0)
+			window.connect("realize", lambda x: window.window.set_cursor(invisible))
+			r = term.match_add(".")
+			term.match_set_cursor(r, invisible)
+		
+		window.add(term)
+		term.fork_command()
+		term.feed_child("python %s;exit\n" % os.path.abspath(sys.argv[0]))
+		window.show_all()
+		gtk.main()
+		
+	else:
+	
+		matrix = Matrix()
+		matrix.www_access = options.www_access
+		matrix.run()
+
+if __name__ == "__main__":
+	run()

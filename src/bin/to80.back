@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+"""===============================================================================
+to80
+====
+
+Just like wordwrap it will reformat text to a maximum width, default of 80.
+
+Examples:
+    to80 file.txt > new.txt 
+        (new.txt is reformatted file.txt with lines up to 80 characters long)
+
+    to80 -w50 file.txt > nex.txt 
+        (new.txt is reformatted file.txt with lines up to 50 characters long)
+
+"""
+
+import optparse
+import os
+import sys
+
+__author__ = 'Josh Lee'
+__created__ = '06:38pm 11 Nov, 2009'
+__copyright__ = 'PyTis.com'
+__version__ = '1.0'
+
+def version():
+    print  __version__
+
+def tolen(s, i=80):
+    """ Reads the input string :s: and reformatts to an specified length :i:
+    """
+
+    lines = []; line = []
+    for f in s.split(' '):
+        if len('%s %s' % (' '.join(line), f)) > i:
+            lines.append(' '.join(line))
+            line = [f]
+        else:
+            line.append(f)
+    if line:
+        lines.append(' '.join(line))
+    return '\n'.join(lines)
+
+def run(opts, args):
+    """ determins if input is a file, or text, then runs tolen
+    """
+
+    if len(args) == 1 and os.path.isfile(os.path.abspath(args[0])) and os.path.exists(os.path.abspath(args[0])):
+        return tolen(open(os.path.abspath(args[0]), 'r').read(-1), opts.width)
+    else:
+        return tolen(" ".join(args), opts.width)
+
+def main():
+    """usage: to80 """
+    parser = optparse.OptionParser(description=__doc__)
+    parser.set_usage(main.__doc__)
+    parser.formatter.format_description = lambda s:s
+
+
+    parser.add_option("-v", "--version", action="store_true",
+                      default=False, 
+                      help="Display Version")
+
+    parser.add_option("-w", "--width", action="store", type='int',
+                      default=80, metavar='[INT]',
+                      help="Set width (default 80)")
+
+    (opts, args) = parser.parse_args()
+
+    # Logging Configuration
+
+    if opts.version:
+        return version()
+
+    try:
+        if len(args) < 1:
+            parser.print_help()
+            print 'ERROR: No file or text provided'
+        else:
+            print run(opts,args)
+    except KeyboardInterrupt, e:
+        print 'bye!'
+        sys.exit(1)
+    sys.exit(0)
+
+if __name__ == '__main__':
+    main()
