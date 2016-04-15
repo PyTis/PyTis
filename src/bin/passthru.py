@@ -1,144 +1,165 @@
 #!/usr/bin/env python
-"""passthru
-========
+"""web-passthru
+============
 """
 
-import optparse
 import os
+import optparse
 import sys
-import pytis as PyTis
 import subprocess
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+#
+# Internal
+#
+try:
+	#import pytis as PyTis # Shared GPL/PPL License
+	from bin import PyTis # Shared GPL/PPL License
+except ImportError as e:
+	# We cannot go any further than this, we can't use the Parser or Logging tool
+	# to display these errors because those very tools are loaded from PyTis.
+	# Therefore, display errors now and exit with an errored exit code.
+	print("This program requires the PyTis Python library to run.")
+	print("You may download the PyTis library, or do an SVN checkout from:")
+	print("<https://sourceforge.net/projects/pytis/>")
+	print("This program should be installed in the bin directory of the PyTis library.")
+	print(str(e))
+	sys.exit(1)
+
 __curdir__ = os.path.abspath(os.path.dirname(__file__))
-__created__ = '07:54pm 03 Mar, 2016'
+__author__ = 'Josh Lee'
+__created__ = '06:50pm 12 Dec, 2015'
+__copyright__ = 'PyTis'
 __version__ = '1.0'
 
-def run(opts,args):
-	"""passthru run doc help"""
-	pass
+
+class SingleThread(PyTis.MyThread):
+
+	def buildNice(self):
+		return ['nice', '-n%s' % self.default_niceness]
+
+
+	def buildIoNice(self):
+		return ['ionice', '-c%s' % self.default_ioniceness_class, '-n%s' % self.default_ioniceness]
+		
+	def relogOpts(self):
+		""" After all config file loading, option parsing and data crunching	has 
+				been completed, ths function will re-log to debug all options gathered,
+				so we	can see what their values are.
+		"""
+
+		self.opts.ip_addresses=PyTis.unique(self.opts.ip_addresses)
+
+		# I want the output alphabatized, so I am going to create a list of tuples,
+		# sort them, no wait, you know what would be faster? to just grab the keys,
+		# sort those, request each value by key.
+		self.log.debug('-'*80) 
+		opt_keys = list(self.opts.__dict__.keys())
+		opt_keys.sort()
+		for opt in opt_keys:
+			value = self.opts.__dict__[opt]
+		#for opt, value in self.opts.__dict__.items():
+			if type(value) == type(str('')):
+				if value.strip() == '_empty_val_trick_':
+					value = ''
+
+			if str(opt) == 'db_password':
+				if self.opts.db_password:
+					value = '*'*96 
+				else:
+					value = 'N/A'
+				
+			self.log.debug("OPTION %s: %s" % (opt,value))
+
+		self.log.debug("%s IP Addresses Collected." % len(self.opts.ip_addresses))
+		self.log.debug('-'*80) 
+
+
+	def run(self):
+		"""
+			Extra help goes here...
+		"""
+		# Call function to generate the NMAP targets list
+		argv=[]
+		[argv.extend(arg.split()) for arg in sys.argv]
+		
+		#cmd_list = self.buildIoNice()
+		#cmd_list.extend(self.buildNice())
+		cmd_list=[]
+		cmd_list.extend(argv)
+
+		#print(repr(cmd_list))
+		#print(repr(cmd_list))
+		self.log.info(repr(cmd_list))
+		subprocess.call(cmd_list)
+
+
+# =============================================================================
+# End MAIN PROGRAM FUNCTION
+# -----------------------------------------------------------------------------
+
+# =============================================================================
+# Begin MAIN 
+# -----------------------------------------------------------------------------
+
 
 def main():
-	"""usage: passthru"""
-	
+	"""usage: web-passthru"""
 
-	filename = os.path.abspath(os.path.join(PyTis.__configdir__, '%s.ini' % os.path.basename(os.path.abspath(sys.argv[0]))))
-	main.__doc__ = "%s\n\n	CONFIG FILE: %s" % (main.__doc__,os.path.abspath(filename))
-
-
-	errors=[]
-	PyTis.__option_always__ = [True]
-	help_dict = dict(version=__version__,
-						 author=__author__,
-						 created=__created__,
-						 copyright=__copyright__)
+	global log
 	parser = PyTis.MyParser()
-
-	parser.extra_txt = "\n\n%s\n" % run.__doc__ + """
-
-examples:	
-	xxx
-
-SEE ALSO:
-	xxx
-
-COPYRIGHT:
-	%(copyright)s
-
-AUTHOR:
-	%(author)s
-
-HISTORY:
-	Original Author
-
-VERSION:
-	%(version)s
-""" % help_dict
-
 	parser.formatter.format_description = lambda s:s
-	parser.set_description(__doc__)
-	parser.set_usage(main.__doc__)
-
-	runtime = optparse.OptionGroup(parser, "-- RUNTIME ARGUMENTS")
-	parser.add_option_group(runtime)
-	# -------------------------------------------------------------------------
-	# variable setting
-	vars = optparse.OptionGroup(parser, "-- CONFIGURATION SETTINGS")
-	parser.add_option_group(vars)
 	# ----------------------------
-	dbgroup = optparse.OptionGroup(parser, "-- DEBUG")
-	dbgroup.add_option("-D", "--debug", action="store_true",
-					 default=False, dest='debug',
-					 help="Enable debugging")
-	helpishere=False
-	for a in sys.argv:
-		if a == '--help':
-			helpishere=True
-			dbgroup.add_option("-V", "--verbose", action="store_true",
-							 default=True, dest='verbose',
-							 help="Be more Verbose (make lots of noise)")
-	if not helpishere:
-		dbgroup.add_option("-V", "--verbose", action="store_true",
-						 default=True, dest='verbose',
-						 help=optparse.SUPPRESS_HELP)
+	dbgroup = optparse.OptionGroup(parser, "-- DEBUG", ' ')
 
-	
+	dbgroup.add_option("-D", "--debug", action="store_true", default=False, 
+		dest='debug', 
+		help=optparse.SUPPRESS_HELP)
 
-	dbgroup.add_option("-q", "--quiet", action="store_true",
-					 default=False, dest='quiet',
-					 help="be vewwy quiet (I'm hunting wabbits)")
+	dbgroup.add_option("-V", "--verbose", action="store_true", default=False,
+		dest='verbose', 
+		help=optparse.SUPPRESS_HELP)
 
-	dbgroup.add_option("-v", "--version", action="store_true",
-					 default=False, dest='version',
-					 help="Display Version")
+	dbgroup.add_option("", "--totaly-verbose", action="store_true",
+		default=False, dest='totally_verbose', 
+		help=optparse.SUPPRESS_HELP)
+
+	dbgroup.add_option("-v", "--version", action="store_true", default=False,
+		dest='version', 
+		help="Display Version`$")
 
 	parser.add_option_group(dbgroup)
 	# ----------------------------
+	# OptParser OPTIONS ABOVE
+	parser._error = parser.error
+	parser.error = lambda x:x
 
 	(opts, args) = parser.parse_args()
-	if opts.quiet: opts.verbose = False
-
-	#if opts.action is None and len(args) and args[0] in ('start','stop','restart','status'):
-	#	opts.action = args[0]
-	#	del args[0]
-
-	old_version = opts.version
-	opts.version = True
+	parser.error = parser._error
 	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
-	
-	opts.version = old_version
 
-	if opts.version:
-		return PyTis.version(__version__)
-
-	#if opts.action and len(args) == 1 and args[0] in 'start stop restart status'.split() and opts.action != args[0]:
-	#	errors.append("Silly human, you provided an action via a flag (%s) and an option on STDIN (%s) and they are different.	Please only provide one action." % (opts.action, args[0]))
-
-	#if len(args) == 1 and args[0] in 'start stop restart status'.split() and opts.action is None:
-	#	opts.action = args[0]
-	#	del args[0]
-
-	if len(args) == 0 and not errors:
-		return parser.print_usage()
-	elif not errors:
-		try:
-			run(opts, args)
-		except KeyboardInterrupt,e:
-			log.debug("Keyboard-Interrupt, bye!")
-			if not opts.quiet:
-				log.info("\nbye!")
-			return
-		else:
-			log.info("Done.")
-			return
+	del sys.argv[0]
+	if not len(args):
+		print("USAGE: web-passthru.py your command -arguments --and-flags")
+		return 0
 	else:
-		parser.print_usage()
-		if errors:
-			log.error(str("\n".join(errors)))
-		return parser.print_help(errors)
+		log.info("web-passthru started at %s" % PyTis.prettyNow())
 
-	parser.print_help("ERROR: Unknown, but invalid input.")
-	sys.exit(0)
+		argv=[]
+		[argv.extend(arg.split()) for arg in sys.argv]
+		
+		cmd_list=[]
+		cmd_list.extend(argv)
+
+		log.info(repr(cmd_list))
+		subprocess.call(cmd_list)
+
+		'''
+		y	= SingleThread()
+		y.run()
+		'''
+		return 0 #os.system(' '.join(sys.argv))
 
 if __name__ == '__main__':
-		main()
+	sys.exit(main())
 
