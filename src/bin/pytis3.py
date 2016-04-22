@@ -72,6 +72,7 @@ __input_options__ = ['y','N']
 # #############################################################################
 class QuitNow(Exception): pass
 class FileNotFound(UserWarning): pass
+class FileExists(UserWarning): pass
 class EmptyTemplate(FileNotFound): pass
 class DuplicateCopyright(UserWarning): pass
 class IdiotError(Exception): pass
