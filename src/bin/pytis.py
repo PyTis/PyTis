@@ -77,6 +77,7 @@ class IdiotError(Exception): pass
 class FutureFeature(Exception): pass
 class EmptyString(Exception): pass
 class NoFiles(Exception): pass
+class ProgrammerError(Exception): pass
 
 class ArgumentError(UserWarning):
 	opt_str=''
@@ -252,7 +253,7 @@ signal.SIGTERM'''
 			'restart','status'):
 				self.action=opts
 			else:
-				raise ProgrammingError("optparse action is missing, to " \
+				raise ProgrammerError("optparse action is missing, to " \
 					"use MyThread.service optparse must have a valid action " \
 					"(start,stop,restart,status)")
 		try:
@@ -1540,26 +1541,49 @@ def filesFromArgs(opts, args):
 		re = '-maxdepth 1'
 	cd=os.curdir
 	files = []
+	cmd=None
 	for arg in args:
-		if ('/' in arg or '\\' in arg):
+		'''
+		if arg.startswith('"') and arg.endswith('"'):
+			arg=arg.strip('"')
+		if arg.startswith("'") and arg.endswith("'"):
+			arg=arg.strip("'")
+		'''
+
+		if os.path.isfile(arg) and os.path.exists(arg):
+			files.append(arg)
+		elif ('/' in arg or '\\' in arg):
 			if (os.path.isfile(os.path.abspath(os.path.join(cd,arg))) and os.path.exists(os.path.abspath(os.path.join(cd,arg)))):
 				files.append(os.path.abspath(os.path.join(cd,arg)))
 				return files
 			elif(os.path.isdir(os.path.abspath(os.path.join(cd,arg))) and os.path.exists(os.path.abspath(os.path.join(cd,arg)))):
+				if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
+					arg = "'%s'" % arg
 				cmd = "find %s %s" % (re,os.path.abspath(arg))
 			else:
+				if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
+					arg = "'%s'" % arg
 				cmd = "find %s %s" % (re,arg)
 		elif arg == '.':
+			if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
+				arg = "'%s'" % arg
 			cmd = "find . * %s" % re
 		else:
-			cmd = "find . %s -type f -iname %s | grep -v .svn" % (re,arg)
-		log.debug("CMD IS: %s" % cmd)
-		cmd_out = os.popen(cmd).readlines(-1)
-		for line in cmd_out:
-			line = line.strip()
-			if line and os.path.abspath(line) not in files \
-				and os.path.isfile(line) and os.path.exists(line):
-				files.append(os.path.abspath(line))
+			if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
+				arg = "'%s'" % arg
+			cmd = "find . %s -type f -iname %s | egrep -v '.svn|.git'" % (re,arg)
+
+		if cmd:
+			log.debug("CMD IS: %s" % cmd)
+
+			cmd_out = os.popen(cmd).readlines(-1)
+			for line in cmd_out:
+				line = line.strip()
+				if line and os.path.abspath(line) not in files \
+					and os.path.isfile(line) and os.path.exists(line):
+					files.append(os.path.abspath(line))
+		cmd=None
+
 	return files
 
 def fileTest(f):
@@ -1594,13 +1618,53 @@ def toContinue():
 		sys.stdout.write("\n")
 	return
 
-def dos2unix(fi):
-	handle = open(fi,'r')
-	contents = handle.read(-1)
-	handle.close()
-	nhandle = open(fi,'wb')
-	nhandle.write(contents.replace("\r$","").replace("\r",''))
-	nhandle.close()
+def dos2unix(thing):
+	"""
+		This will take in 3 types of input, 
+		a list of strings
+		a string
+		or the path to a file to fix.
+
+		If your input is a file path, it will clean up the file (dos2unix)
+		
+		If your input is a string, it will clean the string and return the cleaned
+		input.
+
+		If your input is a list, it will clean each line, and return a new list.
+	"""
+	if type(thing) is type('') and os.path.isfile(thing) and \
+	os.path.exists(thing):
+		try:
+			handle = open(thing,'r')
+			contents = handle.read(-1)
+			handle.close()
+			nhandle = open(thing,'wb')
+			nhandle.write(contents.replace("\r$","").replace("\r",''))
+			nhandle.close()
+		except Exception, e:
+			sys.stderr.write("thing is fpath in dos2unix error here.\n")
+			raise e
+
+	if type(thing) is type(''):
+		try:
+			return thing.replace("\r\n","\n")
+		except Exception, e:
+			sys.stderr.write("thing is string in dos2unix error here.\n")
+			raise e
+
+	if type(thing) is type([]):
+		try:
+			lines = []
+			for line in thing:
+				lines.append(line.replace("\r\n","\n"))
+			return lines 
+		except Exception, e:
+			sys.stderr.write("thing is list in dos2unix error here.\n")
+			raise e
+
+	raise ProgrammerError("This function (PyTis.dos2unix) requires list " \
+		"or string or file path as input but a %s was passed in." % \
+		repr(type(thing)))
 
 def clearScreen():
 	sys.stdout.write("\n")

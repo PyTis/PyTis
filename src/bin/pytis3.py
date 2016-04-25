@@ -79,6 +79,7 @@ class IdiotError(Exception): pass
 class FutureFeature(Exception): pass
 class EmptyString(Exception): pass
 class NoFiles(Exception): pass
+class ProgrammerError(Exception): pass
 
 class ArgumentError(UserWarning):
 	opt_str=''
@@ -256,7 +257,7 @@ signal.SIGTERM'''
 			'restart','status'):
 				self.action=opts
 			else:
-				raise ProgrammingError("optparse action is missing, to " \
+				raise ProgrammerError("optparse action is missing, to " \
 					"use MyThread.service optparse must have a valid action " \
 					"(start,stop,restart,status)")
 		try:
@@ -1621,13 +1622,53 @@ def toContinue():
 		sys.stdout.write("\n")
 	return
 
-def dos2unix(fi):
-	handle = open(fi,'r')
-	contents = handle.read(-1)
-	handle.close()
-	nhandle = open(fi,'wb')
-	nhandle.write(contents.replace("\r$","").replace("\r",''))
-	nhandle.close()
+def dos2unix(thing):
+	"""
+		This will take in 3 types of input, 
+		a list of strings
+		a string
+		or the path to a file to fix.
+
+		If your input is a file path, it will clean up the file (dos2unix)
+		
+		If your input is a string, it will clean the string and return the cleaned
+		input.
+
+		If your input is a list, it will clean each line, and return a new list.
+	"""
+	if type(thing) is type('') and os.path.isfile(thing) and \
+	os.path.exists(thing):
+		try:
+			handle = open(thing,'r')
+			contents = handle.read(-1)
+			handle.close()
+			nhandle = open(thing,'wb')
+			nhandle.write(contents.replace("\r$","").replace("\r",''))
+			nhandle.close()
+		except Exception, e:
+			sys.stderr.write("thing is fpath in dos2unix error here.\n")
+			raise e
+
+	if type(thing) is type(''):
+		try:
+			return thing.replace("\r\n","\n")
+		except Exception, e:
+			sys.stderr.write("thing is string in dos2unix error here.\n")
+			raise e
+
+	if type(thing) is type([]):
+		try:
+			lines = []
+			for line in thing:
+				lines.append(line.replace("\r\n","\n"))
+			return lines 
+		except Exception, e:
+			sys.stderr.write("thing is list in dos2unix error here.\n")
+			raise e
+
+	raise ProgrammerError("This function (PyTis.dos2unix) requires list " \
+		"or string or file path as input but a %s was passed in." % \
+		repr(type(thing)))
 
 def clearScreen():
 	sys.stdout.write("\n")

@@ -169,8 +169,12 @@ VERSION:
 	else: parser.set_description('')
 	runtime = optparse.OptionGroup(parser, "-- RUNTIME ARGUMENTS")
 	
-	runtime.add_option("-r", "--recursive", action="store_true",
-		default=False,
+	runtime.add_option("-R", action="store_true", default=False,
+		metavar='recursive',
+		help="Alias of the [-r/--recursive] flag.")
+             
+	runtime.add_option("-r", "--recursive", action="store_true", default=False,
+		metavar='recursive',
 		help="Default behavior: non-recursive, specify this to traverse " \
 						"into sub-directories")
              

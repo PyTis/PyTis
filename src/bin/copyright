@@ -41,7 +41,7 @@ import configure as pytis_configure # (imports configdir and logdir)
 __author__ = 'Josh Lee'
 __created__ = '06:14pm 09 Sep, 2009'
 __copyright__ = 'PyTis'
-__version__ = '2.0'
+__version__ = '2.2'
 __configdir__ = pytis_configure.copyright_dir # '/root/.mycopyright'
 
 comment_chars = {'php'			:	{'begin'	: '/*',
@@ -55,6 +55,16 @@ comment_chars = {'php'			:	{'begin'	: '/*',
 									'end'	: '*/',
 									'bin'	: None,
 									'ext'	: ['.js']},
+				 'bash'			:	{'begin'	: '#',
+									'middle' : '#',
+									'end'	: '#',
+									'bin'	: 'bash',
+									'ext'	: ['.sh']},
+				 'sh'			:	{'begin'	: '#',
+									'middle' : '#',
+									'end'	: '#',
+									'bin'	: 'sh',
+									'ext'	: ['.sh']},
 				 'ini'			:	{'begin'	: ';',
 									'middle' : ';',
 									'end'	: ';',
@@ -140,6 +150,14 @@ def css(fi,cp):
 	return generic_check(fi,cp,'css')
 
 @check
+def sh(fi,cp):
+	return generic_check(fi,cp,'sh')
+
+@check
+def bash(fi,cp):
+	return generic_check(fi,cp,'bash')
+
+@check
 def ini(fi,cp):
 	return generic_check(fi,cp,'ini')
 
@@ -183,6 +201,101 @@ def javascript(fi,cp):
 		# END HANDLE EMPTY
 
 		else:
+			lines=PyTis.dos2unix(lines)
+			nhandle.write(pcp)
+			nhandle.writelines(lines[0:])
+
+	except Exception, e:
+		print e 
+		# we messed up, restore from backup
+		try:
+			handle.close()
+		except:
+			pass
+		try:
+			nhandle.close()
+		except:
+			pass
+		shutil.move(backup, fi)
+		raise Exception, str(e)
+	else:
+		nhandle.close()
+		os.unlink(backup)
+		return True
+
+@apply
+def sh(fi,cp):
+	global comment_chars
+
+	# create a backup incase we have some error writting the backup
+	backup = os.path.abspath(os.path.join(os.path.dirname(fi),
+											".%s.bak" % os.path.basename(fi)))
+	shutil.copy(fi,backup)
+
+	# get the copyright ready
+	pcp = prettyCopyright(cp,comment_chars['sh'])
+
+	try:
+		handle = open(fi,'r')
+		lines = handle.readlines(-1)
+		handle.close()
+		nhandle = open(fi,'wb')
+
+		# BEGIN HANDLE EMPTY
+		# simplest case, the file is empty.
+		if not lines:
+			nhandle.write(pcp)
+		# END HANDLE EMPTY
+
+		else:
+			lines=PyTis.dos2unix(lines)
+			nhandle.write(pcp)
+			nhandle.writelines(lines[0:])
+
+	except Exception, e:
+		print e 
+		# we messed up, restore from backup
+		try:
+			handle.close()
+		except:
+			pass
+		try:
+			nhandle.close()
+		except:
+			pass
+		shutil.move(backup, fi)
+		raise Exception, str(e)
+	else:
+		nhandle.close()
+		os.unlink(backup)
+		return True
+
+@apply
+def bash(fi,cp):
+	global comment_chars
+
+	# create a backup incase we have some error writting the backup
+	backup = os.path.abspath(os.path.join(os.path.dirname(fi),
+											".%s.bak" % os.path.basename(fi)))
+	shutil.copy(fi,backup)
+
+	# get the copyright ready
+	pcp = prettyCopyright(cp,comment_chars['bash'])
+
+	try:
+		handle = open(fi,'r')
+		lines = handle.readlines(-1)
+		handle.close()
+		nhandle = open(fi,'wb')
+
+		# BEGIN HANDLE EMPTY
+		# simplest case, the file is empty.
+		if not lines:
+			nhandle.write(pcp)
+		# END HANDLE EMPTY
+
+		else:
+			lines=PyTis.dos2unix(lines)
 			nhandle.write(pcp)
 			nhandle.writelines(lines[0:])
 
@@ -229,6 +342,7 @@ def ini(fi,cp):
 		# END HANDLE EMPTY
 
 		else:
+			lines=PyTis.dos2unix(lines)
 			nhandle.write(pcp)
 			nhandle.writelines(lines[0:])
 
@@ -275,6 +389,7 @@ def css(fi,cp):
 		# END HANDLE EMPTY
 
 		else:
+			lines=PyTis.dos2unix(lines)
 			nhandle.write(pcp)
 			nhandle.writelines(lines[0:])
 
@@ -321,6 +436,7 @@ def html(fi,cp):
 		# END HANDLE EMPTY
 
 		else:
+			lines=PyTis.dos2unix(lines)
 
 			# BEGIN HANDLE SHEBANG
 			if '<!DOCTYPE' in lines[0]: # Kinda like the shebang line, 
@@ -388,6 +504,7 @@ def python(fi,cp):
 
 		else:
 
+			lines=PyTis.dos2unix(lines)
 			# BEGIN HANDLE SHEBANG
 			if lines[0].startswith('#!/'): # shebangline
 				nhandle.write(lines[0])
@@ -444,6 +561,7 @@ def php(fi, cp):
 
 		else:
 
+			lines=PyTis.dos2unix(lines)
 			# BEGIN HANDLE SHEBANG
 			if lines[0].startswith('#!/'): # shebangline
 				nhandle.write(lines[0])
@@ -568,6 +686,7 @@ def fileType(fi):
 			for k,v in comment_chars.items():
 				if v['bin'] and v['bin'] in line:
 					return k,v
+
 		return None, None
 
 	try:
@@ -662,8 +781,25 @@ def copyright(opts,args):
 					log.info("User skipped: %s" % os.path.abspath(f))
 					continue # user entered 's' to skip
 				if wantToApply(f):
-					log.info("Copyright Applied.")
-					applyCopyright(f,data,cp)
+					if checkCopyright(f,data,cp):
+						log.info("Copyright Applied.")
+						applyCopyright(f,data,cp)
+					else:
+						msg = "\nThis file appears to already have a copyright, " \
+								"do you wish to add one anyway?\n\t%s" % f
+						print msg
+						log.debug(msg)
+						c = checkFoo()
+						if c == 'n':
+							log.debug('user input no')
+							continue
+						elif c == 'a':
+							log.debug('user input always')
+							force = True
+							applyCopyright(f,data,cp)
+						elif c == 'y':
+							log.debug('user input yes')
+							applyCopyright(f,data,cp)
 				else:
 					log.info("%s skipped." % os.path.abspath(f))
 
@@ -1021,6 +1157,12 @@ HISTORY:
 
 CHANGE LOG:
 	
+	v2.2 MINOR CHANGE
+	Added in "BUGS - KNOWN ISSUES" section.
+
+	v2.1 MINOR CHANGE
+	Added in bash and sh file types.
+
 	v2.0 MAJOR CHANGE
 	Added in the [-p/--preview] Option flag to allow the user to preview the file
 	first, the choose whether or not to apply the template.
@@ -1050,6 +1192,11 @@ EXAMPLES:
 		directory).
 
 	copyright *.* -r (recursively apply default copyright to all files.
+
+BUGS - KNOWN ISSUES:
+	php-cli, php files with a shebang line seem to place the copyright after the
+	shebang line, before the "<?php", this will need fixed, when I have time to
+	get to it.
 
 CREATED:
 	%(created)s
