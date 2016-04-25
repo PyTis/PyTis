@@ -41,7 +41,7 @@ import configure as pytis_configure # (imports configdir and logdir)
 __author__ = 'Josh Lee'
 __created__ = '06:14pm 09 Sep, 2009'
 __copyright__ = 'PyTis'
-__version__ = '2.2'
+__version__ = '2.3'
 __configdir__ = pytis_configure.copyright_dir # '/root/.mycopyright'
 
 comment_chars = {'php'			:	{'begin'	: '/*',
@@ -1176,6 +1176,10 @@ def main():
 		hlp = "%s\n\n%s\n**Current template dir: '%s'**\n%s" % (hlp,
 				'-'*80, __configdir__, '-'*80)
 
+	help_dict = dict(version=__version__,
+						 author=__author__,
+						 created=__created__,
+						 copyright=__copyright__)
 	parser = PyTis.MyParser()
 	parser.extra_txt = """
 CODE:
@@ -1185,16 +1189,25 @@ CODE:
 
 SEE ALSO:
 
+	copytest (soon to be renamed preview)
+
 COPYRIGHT:
+
 	%(copyright)s
 
 AUTHOR:
+
 	%(author)s
 
 HISTORY:
+
 	Original Author
 
 CHANGE LOG:
+
+	v2.3
+	Fixed known issue, PHP shebang bug, see "BUGS - KNOWN ISSUES" section for
+	more information.
 	
 	v2.2 MINOR CHANGE
 	Added in "BUGS - KNOWN ISSUES" section.
@@ -1225,6 +1238,7 @@ CHANGE LOG:
 	SourceForge PyTis SVN comments.
 
 EXAMPLES:	
+
 	copyright --newMyCopyright
 
 	copyright -tMyCopyright *.php (apply MyCopyright to all php files in this 
@@ -1232,19 +1246,27 @@ EXAMPLES:
 
 	copyright *.* -r (recursively apply default copyright to all files.
 
+	copyright -t pytis -p . (Run on all filetypes you can, in this directory,
+		non-recursively, preview files first, appling the pytis template.)
+
+
 BUGS - KNOWN ISSUES:
+
+	-- fixed in v2.3
 	php-cli, php files with a shebang line seem to place the copyright after the
 	shebang line, before the "<?php", this will need fixed, when I have time to
-	get to it.
+	get to it. 
 
 CREATED:
+
 	%(created)s
 
 VERSION:
+
 	%(version)s
 
+"""  % help_dict
 
- """ 
 	parser.set_description(hlp)
 	parser.set_usage(main.__doc__)
 	parser.formatter.format_description = lambda s:s
