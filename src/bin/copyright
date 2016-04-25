@@ -592,8 +592,20 @@ def php(fi, cp):
 			# BEGIN HANDLE SHEBANG
 			if lines[0].startswith('#!/'): # shebangline
 				nhandle.write(lines[0])
-				nhandle.write(pcp)
-				nhandle.writelines(lines[1:])
+				# prevent IndexError # strip \n and \S|\s|\t|\w
+				if len(lines)>2 and lines[1] and lines[1].lower().strip() in \
+				("<?","<?\n","<?php","<?php\n"):
+					nhandle.write(lines[1])
+					nhandle.write(pcp)
+					nhandle.writelines(lines[2:])
+				else:
+					nhandle.write("<?php\n")
+					nhandle.write(pcp)
+					if len(lines) <= 2:
+						nhandle.write("?>")
+					else:
+						nhandle.write("?>\n")
+					nhandle.writelines(lines[1:])
 			# END HANDLE SHEBANG
 			
 			# BEGIN HANDLE FILE STARTS IN HTML, or something other than PHP
