@@ -224,100 +224,6 @@ def javascript(fi,cp):
 		return True
 
 @apply
-def sh(fi,cp):
-	global comment_chars
-
-	# create a backup incase we have some error writting the backup
-	backup = os.path.abspath(os.path.join(os.path.dirname(fi),
-											".%s.bak" % os.path.basename(fi)))
-	shutil.copy(fi,backup)
-
-	# get the copyright ready
-	pcp = prettyCopyright(cp,comment_chars['sh'])
-
-	try:
-		handle = open(fi,'r')
-		lines = handle.readlines(-1)
-		handle.close()
-		nhandle = open(fi,'wb')
-
-		# BEGIN HANDLE EMPTY
-		# simplest case, the file is empty.
-		if not lines:
-			nhandle.write(pcp)
-		# END HANDLE EMPTY
-
-		else:
-			lines=PyTis.dos2unix(lines)
-			nhandle.write(pcp)
-			nhandle.writelines(lines[0:])
-
-	except Exception, e:
-		print e 
-		# we messed up, restore from backup
-		try:
-			handle.close()
-		except:
-			pass
-		try:
-			nhandle.close()
-		except:
-			pass
-		shutil.move(backup, fi)
-		raise Exception, str(e)
-	else:
-		nhandle.close()
-		os.unlink(backup)
-		return True
-
-@apply
-def bash(fi,cp):
-	global comment_chars
-
-	# create a backup incase we have some error writting the backup
-	backup = os.path.abspath(os.path.join(os.path.dirname(fi),
-											".%s.bak" % os.path.basename(fi)))
-	shutil.copy(fi,backup)
-
-	# get the copyright ready
-	pcp = prettyCopyright(cp,comment_chars['bash'])
-
-	try:
-		handle = open(fi,'r')
-		lines = handle.readlines(-1)
-		handle.close()
-		nhandle = open(fi,'wb')
-
-		# BEGIN HANDLE EMPTY
-		# simplest case, the file is empty.
-		if not lines:
-			nhandle.write(pcp)
-		# END HANDLE EMPTY
-
-		else:
-			lines=PyTis.dos2unix(lines)
-			nhandle.write(pcp)
-			nhandle.writelines(lines[0:])
-
-	except Exception, e:
-		print e 
-		# we messed up, restore from backup
-		try:
-			handle.close()
-		except:
-			pass
-		try:
-			nhandle.close()
-		except:
-			pass
-		shutil.move(backup, fi)
-		raise Exception, str(e)
-	else:
-		nhandle.close()
-		os.unlink(backup)
-		return True
-
-@apply
 def ini(fi,cp):
 	global comment_chars
 
@@ -473,6 +379,127 @@ def html(fi,cp):
 		nhandle.close()
 		os.unlink(backup)
 		return True
+
+@apply
+def bash(fi,cp):
+	global comment_chars
+
+	# create a backup incase we have some error writting the backup
+	backup = os.path.abspath(os.path.join(os.path.dirname(fi),
+											".%s.bak" % os.path.basename(fi)))
+	shutil.copy(fi,backup)
+	
+	# little fix for encoding bug,...
+	cp = cp.replace("\xa9", "(c)")
+
+
+	# get the copyright ready
+	pcp = prettyCopyright(cp,comment_chars['bash'])
+
+	try:
+		handle = open(fi,'r')
+		lines = handle.readlines(-1)
+		handle.close()
+		nhandle = open(fi,'wb')
+
+		# BEGIN HANDLE EMPTY
+		# simplest case, the file is empty.
+		if not lines:
+			nhandle.write(pcp)
+		# END HANDLE EMPTY
+
+		else:
+
+			lines=PyTis.dos2unix(lines)
+			# BEGIN HANDLE SHEBANG
+			if lines[0].startswith('#!/'): # shebangline
+				nhandle.write(lines[0])
+				nhandle.write(pcp)
+				nhandle.writelines(lines[1:])
+			# END HANDLE SHEBANG
+
+			else:
+				nhandle.write(pcp)
+				nhandle.writelines(lines[0:])
+
+	except Exception, e:
+		print e 
+		# we messed up, restore from backup
+		try:
+			handle.close()
+		except:
+			pass
+		try:
+			nhandle.close()
+		except:
+			pass
+		shutil.move(backup, fi)
+		raise Exception, str(e)
+	else:
+		nhandle.close()
+		os.unlink(backup)
+		return True
+
+@apply
+def sh(fi,cp):
+	global comment_chars
+
+	# create a backup incase we have some error writting the backup
+	backup = os.path.abspath(os.path.join(os.path.dirname(fi),
+											".%s.bak" % os.path.basename(fi)))
+	shutil.copy(fi,backup)
+	
+	# little fix for encoding bug,...
+	cp = cp.replace("\xa9", "(c)")
+
+
+	# get the copyright ready
+	pcp = prettyCopyright(cp,comment_chars['sh'])
+
+	try:
+		handle = open(fi,'r')
+		lines = handle.readlines(-1)
+		handle.close()
+		nhandle = open(fi,'wb')
+
+		# BEGIN HANDLE EMPTY
+		# simplest case, the file is empty.
+		if not lines:
+			nhandle.write(pcp)
+		# END HANDLE EMPTY
+
+		else:
+
+			lines=PyTis.dos2unix(lines)
+			# BEGIN HANDLE SHEBANG
+			if lines[0].startswith('#!/'): # shebangline
+				nhandle.write(lines[0])
+				nhandle.write(pcp)
+				nhandle.writelines(lines[1:])
+			# END HANDLE SHEBANG
+
+			else:
+				nhandle.write(pcp)
+				nhandle.writelines(lines[0:])
+
+	except Exception, e:
+		print e 
+		# we messed up, restore from backup
+		try:
+			handle.close()
+		except:
+			pass
+		try:
+			nhandle.close()
+		except:
+			pass
+		shutil.move(backup, fi)
+		raise Exception, str(e)
+	else:
+		nhandle.close()
+		os.unlink(backup)
+		return True
+
 
 @apply
 def python(fi,cp):
