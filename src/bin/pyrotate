@@ -9,19 +9,22 @@ try:
 except:
 	gzip = None
 
+import grp
+import pwd
 import optparse
 import shutil
 import os
 import glob
 import sys
 import pytis as PyTis
+
 PyTis.__nonprocess__=True
 
 __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __created__ = '06:27pm 05 May, 2016'
 __author__ = 'Josh Lee'
 __copyright__ = 'PyTis.com'
-__version__ = '1.0'
+__version__ = '1.5'
 
 def run(opts,args):
 	"""pyrotate run doc help"""
@@ -29,40 +32,68 @@ def run(opts,args):
 	for path in args:
 		base = os.path.basename(path)
 		fpath = os.path.abspath(path)
+		stat_info = os.stat(fpath)
+		uid = stat_info.st_uid
+		gid = stat_info.st_gid
+		user = pwd.getpwuid(uid)[0]
+		group = grp.getgrgid(gid)[0]
+		logmode = oct(os.stat(fpath).st_mode & 0777)
+		mode = os.stat(fpath).st_mode
+
 		matches = glob.glob("%s*" % fpath)
 		matches.sort()
 		log.debug("MATCHES: %s" % repr(matches))
 		while len(matches)>0:
-			moveme = str(matches.pop())
-			number = moveme.replace(fpath,'').replace('.gz','').replace('.','')
+			movefrom = str(matches.pop())
+
+			number = movefrom.replace(fpath,'').replace('.gz','').replace('.','')
 			next_number = None
 			if number:
 				next_number = str(int(number)+1)
-			
+			moveto = '%s.%s.gz' % (base, next_number)	
+
 			if number and int(number) > 1:
-				log.debug('move: %s to: %s.%s.gz' % (moveme, base, next_number))
-				shutil.move(moveme,'%s.%s.gz' % (base, next_number))
+				log.debug('move: %s to: %s' % (movefrom, moveto))
+				shutil.move(movefrom,moveto)
+				log.debug("chown'ed: %s to user: %s, group: %s" % (moveto,user,group))
+				os.chown(moveto, uid, gid)
+				log.debug("chmod'ed: %s to %s" % (moveto,logmode))
+				os.chmod(moveto,mode)
 			elif number and int(number)==1:
 				if gzip is None:
-					log.debug('os.popen(command="gzip %s")' % moveme)
-					os.popen('gzip %s' % moveme)
-					log.debug('move: %s to: %s.%s.gz' % (moveme, base, next_number))
-					shutil.move('%s.gz' % moveme,'%s.%s.gz' % (base, next_number))
+					log.debug('os.popen(command="gzip %s")' % movefrom)
+					os.popen('gzip %s' % movefrom)
+					log.debug('move: %s to: %s' % (movefrom, moveto))
+					shutil.move('%s.gz' % movefrom,moveto)
 				else:
-					log.debug('gzip w/Python %s to: %s.%s.gz'%(moveme,base,next_number))
+					log.debug('gzip w/Python %s to: %s'%(movefrom,moveto))
 
-					with open(moveme, 'rb') as f_in, gzip.open('%s.%s.gz' % (base, \
-					next_number), 'wb') as f_out:
+					with open(movefrom, 'rb') as f_in, gzip.open(moveto, 'wb') as f_out:
 						shutil.copyfileobj(f_in, f_out)
+
+				log.debug("chown'ed: %s to user: %s, group: %s" % (moveto,user,group))
+				os.chown(moveto, uid, gid)
+				log.debug("chmod'ed: %s to %s" % (moveto,logmode))
+				os.chmod(moveto,mode)
+
 			else:
-				log.debug("move: %s to: %s.1" % (moveme,moveme))
-				shutil.move(moveme, "%s.1"%moveme)
+				log.debug("move: %s to: %s.1" % (movefrom,movefrom))
+				shutil.move(movefrom, "%s.1"%movefrom)
+				log.debug("chown'ed: %s to user: %s, group: %s" % ("%s.1"%movefrom,
+					user,group))
+				os.chown("%s.1"%movefrom, uid, gid)
+				log.debug("chmod'ed: %s to %s" % ("%s.1"%movefrom,logmode))
+				os.chmod("%s.1"%movefrom,mode)
 
 		log.debug("truncate: %s" % fpath)
 		handle = open(fpath,'wb')
 		handle.truncate()
 		handle.write('')
 		handle.close()
+		log.debug("chown'ed: %s to user: %s, group: %s" % (fpath,user,group))
+		os.chown(fpath, uid, gid)
+		log.debug("chmod'ed: %s to %s" % (fpath,logmode))
+		os.chmod(fpath,mode)
 
 
 def main():
@@ -122,6 +153,23 @@ KNOWN ISSUES:
 
 HISTORY:
 	Original Author
+
+CHANGE LOG:
+	v1.5 MINOR CHANGE
+		Issue: Special logs of mine were owned by the user www-data and group
+		postgres.  These had to maintain their state, but after I ran this program,
+		the new file was only owned by the current user and group.
+
+		Prior to this change, the the current user and group would then own the
+		new, truncated log file.  Now the UID, GID, and MODE is copied prior to
+		rotation, then applied as needed.  This was a much needed fix, as if I ran
+		this as root, the new file would then be owned by 1000:1000 (root:root) and
+		chmod 0644.  This cuased major problems with apache and postgres logs, as
+		the apache logs needed to be owned by www-data.  
+		 
+
+CREATED:
+	%(created)s
 
 VERSION:
 	%(version)s
