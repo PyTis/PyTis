@@ -38,6 +38,7 @@ import pydoc
 import atexit
 import signal
 import logging
+import datetime
 import optparse
 import resource
 import itertools
@@ -52,6 +53,7 @@ from pprint import pprint
 # internal (mine/yours/ours) 
 from pylib import configobj as COBJ
 from pylib import parse
+from pylib.util.dicts import odict
 import configure as pytis_configure # (imports configdir and logdir)
 #from pylib import pyservice
 
@@ -62,22 +64,87 @@ __configdir__ = pytis_configure.configdir # '/root/etc'
 __logdir__ = pytis_configure.logdir # '/root/log'
 __version__ = 4.1
 
+
+
+__change_log__ = """
+
+4.2:
+  created new class object ConfigField
+  added class method to ConfigFile.validate
+  added class method to ConfigFile.validate_obj
+  added new Class ConfigurationError(Exception)
+
+4.1.55
+  added new function microtime
+
+4.1.53
+  added new Classes:
+    DieNow(Exception)
+    ProgrammerError(Exception)
+  Fixed KeyboardInterrupt Error in Man Page --help pager
+  added pause/Pause/unPause feature to custom logger (MyLogger)
+  added mbool config file boolean evaluator
+  added in tolen function, from the to80 script
+
+4.1.37
+  Added in ability to read ini files.
+
+XXX-TODO:
+  gothrough sourceforge and continue creating the changelog.
+
+
+
+Forward...
+
+For years I have insisted that there only be one library, PyTis.  However I can
+foresee the next release being the game changer.  It will contain my old trusty
+python-zs library from Zertis LLC and KCG (The Koar Consulting Group, LLC).
+
+This will give me to use the greatest two functions ever written.  Sync and
+Snatch.  They are practically A.I. they are so intelligent.  They are two of
+1.5 gigs of previously written library code that I should probably just start
+using, rather than re-invent the wheel.  I do plan on slowly importing it
+though, and only bringing in what I need.
+
+DataSource, many of these programs use similar datasources, that currently, are
+ini files.  While that is great, eventually, I will want to control them with a
+gui.  Which likely means having a site that allows me to setup variabls that
+are stored in the database.  Whether it be PostgreSQL, MySQL, SQLite3, Mongo,
+or INI, I would like these scripts to be able to run.  That is the point in
+adding in the extrapolation layer of a data source.  While I could do that now,
+i am trying to have some self control, and only do what is needed to get these
+backup programs, well, back up, and running.  Next time though, I will put the
+datasoucre in place.  It is fine that I am writing all of this ini file stuff,
+because if the DS is to come from an INI file, then we will still have a use
+for our code.
+
+
+
+
+
+
+"""
+
 __option_always__ = [False]
 __input_options__ = ['y','N']
 
 # #############################################################################
 # Error Classes Below
 # #############################################################################
+class DieNow(Exception): pass # Egregious Error has occured, must exit now.
+class NoFiles(Exception): pass
 class QuitNow(Exception): pass
-class FileNotFound(UserWarning): pass
+class IdiotError(Exception): pass
 class FileExists(UserWarning): pass
+class EmptyString(Exception): pass
+class FileNotFound(UserWarning): pass
+class FutureFeature(Exception): pass
 class EmptyTemplate(FileNotFound): pass
+class ProgrammerError(Exception): pass
+class ConfigurationError(Exception): pass
 class DuplicateCopyright(UserWarning): pass
 class IdiotError(Exception): pass
-class FutureFeature(Exception): pass
-class EmptyString(Exception): pass
-class NoFiles(Exception): pass
-class ProgrammerError(Exception): pass
+
 
 class ArgumentError(UserWarning):
 	opt_str=''
@@ -124,14 +191,24 @@ class MyThread(object):
 	_parent = None
 	_opts = None 
 	action = None
-	default_frequency = 1
-	running = False
-	default_ioniceness = 4
-	_ioniceness = None
-	default_ioniceness_class = 2
-	_ioniceness_class = None
+
+	# -20 (most favorable to the process) to 19 (least favorable to the process)
+	# default 10
 	default_niceness = 10 
 	_niceness = None
+
+	# 0 for none, 1 for real time, 2 for best-effort, 3 for idle
+	default_ioniceness_class = 2
+	_ioniceness_class = None # was ioclass in pluto's (sf.net) pytis pre-merger
+
+	# (0-7) with lower number being higher priority (only used when
+	# ioniceness_class is 1 or 2)
+	default_ioniceness = 4
+	_ioniceness = None
+
+
+	default_frequency = 1
+	running = False
 
 	def set_opts(self, opts):
 		self._opts = opts
@@ -167,13 +244,24 @@ class MyThread(object):
 		return self._parent
 	parent = property(get_parent, set_parent)
 
+	# IO Niceness Class (0,1,2,3)
 	def set_ioniceness_class(self, ioniceness_class):
 		self._ioniceness_class = ioniceness_class
 	def get_ioniceness_class(self):
-		if not self._ioniceness_class: self.ioniceness_class = self.default_ioniceness_class
+		if not self._ioniceness_class:
+			try: 
+				self._ioniceness_class = opts.ioniceness_class
+			except AttributeError,e: 
+			# could set to default here, but that happens anyways right below 
+				pass 
+			# if there still is not one, perhaps opts.ioniceness_class was none
+			if not self._ioniceness_class: 
+				self.ioniceness_class = self.default_ioniceness_class 
 		return self._ioniceness_class
 	ioniceness_class = property(get_ioniceness_class, set_ioniceness_class)
 
+
+	# IO Niceness (Classdata 0-7)
 	def set_ioniceness(self, ioniceness):
 		self._ioniceness = ioniceness
 	def get_ioniceness(self):
@@ -261,6 +349,16 @@ signal.SIGTERM'''
 		except AttributeError,e:
 			self.niceness = self.default_niceness
 
+		try:
+			self.ioniceness_class = opts.ioniceness_class
+		except AttributeError,e:
+			self.ioniceness_class = self.default_ioniceness_class
+
+		try:
+			self.ioniceness = opts.ioniceness
+		except AttributeError,e:
+			self.ioniceness = self.default_ioniceness
+  
 		try:
 			self.frequency = int(opts.frequency)
 		except (AttributeError, NameError, ValueError), e:
