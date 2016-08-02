@@ -127,3 +127,10 @@ VERSION(s):
 
 May vary, I will get this all under control soon though.
 
+NICENESS:
+--
+
+It appears that the only file that used "ioclass" instead of "ioniceness_class"
+is pysync, after fixing the merger between pytis on pluto from sourceforge, and
+GitHub from work, I also need to remember to push these changes to pytis3.py.
+
