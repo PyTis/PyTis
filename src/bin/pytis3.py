@@ -274,7 +274,7 @@ class MyThread(object):
 		if not self._ioniceness_class:
 			try: 
 				self._ioniceness_class = opts.ioniceness_class
-			except AttributeError,e: 
+			except AttributeError as e: 
 			# could set to default here, but that happens anyways right below 
 				pass 
 			# if there still is not one, perhaps opts.ioniceness_class was none
@@ -376,12 +376,12 @@ signal.SIGTERM'''
 
 		try:
 			self.ioniceness_class = opts.ioniceness_class
-		except AttributeError,e:
+		except AttributeError as e:
 			self.ioniceness_class = self.default_ioniceness_class
 
 		try:
 			self.ioniceness = opts.ioniceness
-		except AttributeError,e:
+		except AttributeError as e:
 			self.ioniceness = self.default_ioniceness
 	
 		try:
@@ -1027,7 +1027,7 @@ class ConfigFile(COBJ.ConfigObj):
 	
 		try:
 			opt_val = self.opts[key]
-		except KeyError,e:
+		except KeyError as e:
 			# doesn't even have the attribute in options, the look to config
 			dig_config=True
 		else:
@@ -1086,14 +1086,14 @@ class ConfigFile(COBJ.ConfigObj):
 		if dig_config or not key in self.opts.keys():
 			try:
 				self.config[section_name]
-			except KeyError, e:
+			except KeyError as e:
 				raise EmptyString('Section "%s" provided, and could not be found in ' \
 				'the config file.' % section_name)
 		
 			# LOADING
 			try:
 				sectional_value = self.config[section_name][key]
-			except KeyError,e:
+			except KeyError as e:
 				if section_name and field.required:
 					log.warn('"%s" not found under section: %s, looking into global ' \
 					'section.' % (field.title,section_name))
@@ -1104,7 +1104,7 @@ class ConfigFile(COBJ.ConfigObj):
 		
 			try:
 				global_value = self.config[key]
-			except KeyError,e:
+			except KeyError as e:
 				if trim(sectional_value) and field.required and section_name:
 					# there is a value, it is required, and there is a section
 					pass
@@ -1132,7 +1132,7 @@ class ConfigFile(COBJ.ConfigObj):
 						sectional_value = mbool(sectional_value,False)
 					else:
 						sectional_value = field.cast(sectional_value)
-				except (ValueError, TypeError), e:
+				except (ValueError, TypeError) as e:
 					raise ConfigurationError('Wrong type of value stored for "%s" in '
 					'section "%s", it must be a: %s.' % (field.title, section_name,
 					str(field.cast)))
@@ -1143,7 +1143,7 @@ class ConfigFile(COBJ.ConfigObj):
 						sectional_value = mbool(global_value,False)
 					else:
 						global_value = field.cast(global_value)
-				except (ValueError, TypeError), e:
+				except (ValueError, TypeError) as e:
 					raise ConfigurationError('Wrong type of value stored for "%s", ' \
           'it must be a: %s.' % (field.title, str(field.cast)))
 
@@ -1156,7 +1156,7 @@ class ConfigFile(COBJ.ConfigObj):
 					sectional_value = mbool(found_value,False)
 				else:
 					found_value = field.cast(found_value)
-			except (ValueError, TypeError), e:
+			except (ValueError, TypeError) as e:
 				raise ConfigurationError('Wrong type of value passed in STDIN as an ' \
 				'argument for "%s", it must be a: %s.' % (field.title,str(field.cast)))
 	
@@ -1341,7 +1341,7 @@ class ConfigFile(COBJ.ConfigObj):
 						for config_name in field_keys:
 							try:
 								value = self.validate_opt(config_name,None)
-							except (EmptyString, ConfigurationError), er:
+							except (EmptyString, ConfigurationError) as er:
 								conjoin(er,errors)
 								#[log.error(e) for e in errors if e]
 								#sys.exit(1)
@@ -1365,7 +1365,7 @@ class ConfigFile(COBJ.ConfigObj):
 				for config_name in field_keys:
 					try:
 						value = self.validate_opt(config_name,section_name)
-					except (EmptyString, ConfigurationError), er:
+					except (EmptyString, ConfigurationError) as er:
 						conjoin(er,errors)
 						#[log.error(e) for e in errors if e]
 						#sys.exit(1)
@@ -1395,7 +1395,7 @@ class ConfigFile(COBJ.ConfigObj):
 			for config_name in field_keys:
 				try:
 					value = self.validate_opt(config_name,opts_section_name)
-				except (EmptyString, ConfigurationError), er:
+				except (EmptyString, ConfigurationError) as er:
 					conjoin(er,errors)
 				else:
 					log_value = value
@@ -1468,7 +1468,7 @@ class ConfigFile(COBJ.ConfigObj):
 			section_name=section_name.strip()
 			try:
 				config = self.config[section_name]
-			except KeyError, e:
+			except KeyError as e:
 				self.config[section_name] = {}
 				config = self.config[section_name]
 		else:
@@ -1480,7 +1480,7 @@ class ConfigFile(COBJ.ConfigObj):
 			for config_name, field in self.field_settings.items():
 				try:
 					 value = self.validate_opt(config_name,section_name)
-				except (EmptyString, ConfigurationError), er:
+				except (EmptyString, ConfigurationError) as er:
 					conjoin(er,errors)
 				else:
 					if not field.prompt or (field.prompt and getInputYN("Are you sure you wish to save the %s?" % field.title,
@@ -1536,7 +1536,7 @@ class ConfigFile(COBJ.ConfigObj):
 		try:
 			if opts.debug:
 				log.debug("Saving options to: '%s'" % self.filename)
-		except (AttributeError, NameError), e:
+		except (AttributeError, NameError) as e:
 			pass
 
 
@@ -2012,7 +2012,7 @@ def column_from_csv_file(fname, headers=False, col=0):
 	lines=parse_csv_file(fname, headers) 
 	return list(itertools.zip_longest(*lines))[col]
 	ret= list(itertools.zip_longest(*lines))[col]
-	print ret
+	print(ret)
 	return ret
 		
 def parse_csv_file(fname, headers=False):
@@ -2688,7 +2688,8 @@ def relative_date(date=datetime.datetime.now(),years=None,months=None,weeks=None
 		return datetime.date(year,date.month,day)
 	elif months or months==0:
 		acceptable_date = datetime.datetime(date.year,date.month,1)
-		while int(months) <> 0:
+		#while int(months) <> 0:
+		while int(months) != 0:
 			acceptable_date = acceptable_date-datetime.timedelta(days=20)
 			acceptable_date = datetime.datetime(acceptable_date.year,acceptable_date.month,1)
 			if months < 0: months=months+1
@@ -2738,7 +2739,7 @@ def die(string):
 	if log:
 		log.error(string)
 	else:
-		print string
+		print(string)
 	sys.exit()
 
 def protect(s,trim_len=4):
