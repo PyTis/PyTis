@@ -203,6 +203,9 @@ def conjoin(unknown,errors=[]):
 # #############################################################################
 
 # ============================================================================#
+class NullLogHandler(logging.Handler):
+	def emit(self, record): pass
+
 #class MyThread(threading.Thread):
 class MyThread(object):
 
@@ -896,6 +899,12 @@ class ConfigFile(COBJ.ConfigObj):
 			self.set_exists()
 		return self._exists
 	exists = property(get_exists, set_exists)
+
+	def set_field_settings(self, field_settings={}):
+		self._field_settings = field_settings
+	def get_field_settings(self):
+		return self._field_settings
+	field_settings = property(get_field_settings, set_field_settings)
 
 	def set_fields(self, fields):
 		self._fields = fields
@@ -2325,7 +2334,7 @@ def set_logging(opts, name, quiet=False, __logdir__=__logdir__):
 			value = protect(value)
 
 		log.debug("OPTION %s: %s" % (opt,value))
-	log.debug('-'*80) 
+	log.debug('-'*80)
 
 	if not totally_verbose:
 		sys.stdout = sys.__stdout__
@@ -2382,59 +2391,63 @@ def testFind(path):
 	pprint(f)
 	return f
 
+def filesFromPath(path, cd=os.curdir, recursive=False):
+	""" allows me to call once per path (with or without wildcards)
+	"""
+	global log
+	arg=path
+	files = []
+	cmd = None
+	if recursive:
+		re = ''
+	else:
+		re = '-maxdepth 1'
+
+
+	if os.path.isfile(arg) and os.path.exists(arg):
+		files.append(arg)
+	elif ('/' in arg or '\\' in arg):
+		if (os.path.isfile(os.path.abspath(os.path.join(cd,arg))) and os.path.exists(os.path.abspath(os.path.join(cd,arg)))):
+			files.append(os.path.abspath(os.path.join(cd,arg)))
+			return files
+		elif(os.path.isdir(os.path.abspath(os.path.join(cd,arg))) and os.path.exists(os.path.abspath(os.path.join(cd,arg)))):
+			if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
+				arg = "'%s'" % arg
+			cmd = "find %s %s" % (re,os.path.abspath(arg))
+		else:
+			if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
+				arg = "'%s'" % arg
+			cmd = "find %s %s" % (re,arg)
+	elif arg == '.':
+		if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
+			arg = "'%s'" % arg
+		cmd = "find . * %s" % re
+	else:
+		if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
+			arg = "'%s'" % arg
+		cmd = "find . %s -type f -iname %s | egrep -v '.svn|.git'" % (re,arg)
+
+	if cmd:
+		log.debug("CMD IS: %s" % cmd)
+		cmd_out = os.popen(cmd).readlines(-1)
+		for line in cmd_out:
+			line = line.strip()
+			if line and os.path.abspath(line) not in files \
+				and os.path.isfile(line) and os.path.exists(line):
+				files.append(os.path.abspath(line))
+	return files
+	
+
 def filesFromArgs(opts, args):
 	""" 
 	XXX:TODO unix only, need to make this so it would work on windows.
 	XXX:TODO this thing needs sserious work, with recursive an no . in filenames
 	import glob
 	"""
-	if opts.recursive:
-		re = ''
-	else:
-		re = '-maxdepth 1'
-	cd=os.curdir
+	global log
 	files = []
-	cmd=None
 	for arg in args:
-		'''
-		if arg.startswith('"') and arg.endswith('"'):
-			arg=arg.strip('"')
-		if arg.startswith("'") and arg.endswith("'"):
-			arg=arg.strip("'")
-		'''
-
-		if os.path.isfile(arg) and os.path.exists(arg):
-			files.append(arg)
-		elif ('/' in arg or '\\' in arg):
-			if (os.path.isfile(os.path.abspath(os.path.join(cd,arg))) and os.path.exists(os.path.abspath(os.path.join(cd,arg)))):
-				files.append(os.path.abspath(os.path.join(cd,arg)))
-				return files
-			elif(os.path.isdir(os.path.abspath(os.path.join(cd,arg))) and os.path.exists(os.path.abspath(os.path.join(cd,arg)))):
-				if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
-					arg = "'%s'" % arg
-				cmd = "find %s %s" % (re,os.path.abspath(arg))
-			else:
-				if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
-					arg = "'%s'" % arg
-				cmd = "find %s %s" % (re,arg)
-		elif arg == '.':
-			if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
-				arg = "'%s'" % arg
-			cmd = "find . * %s" % re
-		else:
-			if '*' in arg and (not arg.startswith('"') or not arg.startswith("'")):
-				arg = "'%s'" % arg
-			cmd = "find . %s -type f -iname %s | egrep -v '.svn|.git'" % (re,arg)
-
-		if cmd:
-			log.debug("CMD IS: %s" % cmd)
-			cmd_out = os.popen(cmd).readlines(-1)
-			for line in cmd_out:
-				line = line.strip()
-				if line and os.path.abspath(line) not in files \
-					and os.path.isfile(line) and os.path.exists(line):
-					files.append(os.path.abspath(line))
-		cmd=None
+		files.extend(filesFromPath(arg,opts.recursive))
 	return files
 
 def fileTest(f):
@@ -2739,12 +2752,12 @@ def trim(item):
 			item = ''
 	return item
 
-def die(string):
+def die(string=None):
 	global log
-	if log:
+	if log and string:
 		log.error(string)
-	else:
-		print string
+	elif string:
+		print(string)
 	sys.exit()
 
 def protect(s,trim_len=4):
@@ -2753,6 +2766,8 @@ def protect(s,trim_len=4):
 	example: protect('my password', 0) >> '**********'
 	"""
 	global log
+	if type(s) is type(None):
+		return "''"
 	if len(s) == 0:
 		return "''"
 		#return '*'*8
@@ -2783,6 +2798,62 @@ def simpleEncode(s=''):
 	return (b64.b64encode(bencoded_txt).decode('ascii'))
 
 ireplace=lambda f,r,s: re.sub(r'(?i)%s'%str(f),str(r),str(s))
+
+def sendEmail(body, subject, to, mfrom, cc, host=None, local_hostname=None,
+	port=25, timeout=20):
+	global log
+
+	from email.mime.text import MIMEText
+	import smtplib
+	import socket
+
+	msg=MIMEText(body)
+	msg['Subject'] = subject
+
+	if type(to) is type([]) or type(to) is type(()):
+		to=';'.join(to)
+	else:
+		to=';'.join(to.split(','))
+
+	msg['To'] = to 
+
+	msg['From'] = mfrom
+
+	if cc: msg['CC'] = cc
+
+	if local_hostname is None: local_hostname = os.uname()[1]
+
+	if host is None:
+		host_attempts = ['localhost','127.0.0.1']
+	elif host.lower() == 'localhost':
+		host_attempts = ['localhost','127.0.0.1']
+	else:
+		host_attempts = [host]
+
+	for host in host_attempts:
+		log.debug("smtplib.SMTP(host='%s',port=%s," \
+			"local_hostname='%s',timeout=%s) - %s" % (host,port,
+			local_hostname, str(long(timeout)), subject))
+		try:
+			s = smtplib.SMTP(host=host,port=port,
+				local_hostname=local_hostname,timeout=timeout)
+			s.sendmail(msg['From'],msg['To'],msg.as_string())
+			s.quit()
+
+			log.debug('smtplib Instantiated with no errors - %s' % subject)
+
+		except socket.error as e:
+			log.debug('socket.error caught, continuing: %s - %s' % (str(e), subject))
+			return False
+		else:
+			log.debug('To: %s, CC: %s, FROM: %s; s.sendmail successfull - %s' % \
+				(msg['To'], msg['CC'], msg['From'], subject))
+			return True
+	else:
+		log.error("Incorrect mail host and/or local_hostname " \
+		"provided, sendmail failed - %s " % subject)
+		return False
+
 
 def main(): #global __version__
 	hello()

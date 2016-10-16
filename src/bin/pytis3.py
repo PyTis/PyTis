@@ -203,6 +203,9 @@ def conjoin(unknown,errors=[]):
 # #############################################################################
 
 # ============================================================================#
+class NullLogHandler(logging.Handler):
+	def emit(self, record): pass
+
 #class MyThread(threading.Thread):
 class MyThread(object):
 
@@ -2734,11 +2737,11 @@ def trim(item):
 			item = ''
 	return item
 
-def die(string):
+def die(string=None):
 	global log
-	if log:
+	if log and string:
 		log.error(string)
-	else:
+	elif string:
 		print(string)
 	sys.exit()
 
@@ -2779,6 +2782,62 @@ def simpleEncode(s=''):
 	return (b64.b64encode(bencoded_txt).decode('ascii'))
 
 ireplace=lambda f,r,s: re.sub(r'(?i)%s'%str(f),str(r),str(s))
+
+def sendEmail(body, subject, to, mfrom, cc, host=None, local_hostname=None,
+	port=25, timeout=20):
+	global log
+
+	from email.mime.text import MIMEText
+	import smtplib
+	import socket
+
+	msg=MIMEText(body)
+	msg['Subject'] = subject
+
+	if type(to) is type([]) or type(to) is type(()):
+		to=';'.join(to)
+	else:
+		to=';'.join(to.split(','))
+
+	msg['To'] = to 
+
+	msg['From'] = mfrom
+
+	if cc: msg['CC'] = cc
+
+	if local_hostname is None: local_hostname = os.uname()[1]
+
+	if host is None:
+		host_attempts = ['localhost','127.0.0.1']
+	elif host.lower() == 'localhost':
+		host_attempts = ['localhost','127.0.0.1']
+	else:
+		host_attempts = [host]
+
+	for host in host_attempts:
+		log.debug("smtplib.SMTP(host='%s',port=%s," \
+			"local_hostname='%s',timeout=%s) - %s" % (host,port,
+			local_hostname, str(long(timeout)), subject))
+		try:
+			s = smtplib.SMTP(host=host,port=port,
+				local_hostname=local_hostname,timeout=timeout)
+			s.sendmail(msg['From'],msg['To'],msg.as_string())
+			s.quit()
+
+			log.debug('smtplib Instantiated with no errors - %s' % subject)
+
+		except socket.error as e:
+			log.debug('socket.error caught, continuing: %s - %s' % (str(e), subject))
+			return False
+		else:
+			log.debug('To: %s, CC: %s, FROM: %s; s.sendmail successfull - %s' % \
+				(msg['To'], msg['CC'], msg['From'], subject))
+			return True
+	else:
+		log.error("Incorrect mail host and/or local_hostname " \
+		"provided, sendmail failed - %s " % subject)
+		return False
+
 
 def main(): #global __version__
 	print("PyTis toolkit library, version: %s" % str(__version__))
