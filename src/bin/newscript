@@ -60,6 +60,38 @@ def generate(opts, script):
 _script = '''#!/usr/bin/env python
 """%(name)s
 %(=)s
+
+NAME:
+  %(name)s
+
+SYNOPSIS:
+	%(name)s [--options] [-H] [-V] [-D]
+
+DESCRIPTION:
+
+CODE:
+
+EXAMPLES:	
+
+SEE ALSO:
+
+COPYRIGHT:
+	%%(copyright)s
+
+AUTHOR:
+	%%(author)s
+
+HISTORY:
+	Original Author
+
+CHANGE LOG:
+
+CREATED:
+	%%(created)s
+
+VERSION:
+	%%(version)s
+
 """
 
 import optparse
@@ -133,6 +165,15 @@ VERSION:
 			dbgroup.add_option("-V", "--verbose", action="store_true",
 							 default=True, dest='verbose',
 							 help="Be more Verbose (make lots of noise)")
+
+
+	# This is a little trick to tell if the user entered the -V/--verbose flag.
+	# We want verbosity on by default, but we also want to know if the user
+	# entered it for debug items, and providing end messages vs informed output.
+	dbgroup.add_option("", "--totaly-verbose", action="store_true",
+		default=False, dest='totally_verbose', 
+		help=optparse.SUPPRESS_HELP)
+
 	if not helpishere:
 		dbgroup.add_option("-V", "--verbose", action="store_true",
 						 default=True, dest='verbose',
@@ -152,6 +193,7 @@ VERSION:
 	# ----------------------------
 
 	(opts, args) = parser.parse_args()
+	if opts.verbose: opts.totally_verbose = True
 	if opts.quiet: opts.verbose = False
 
 	#if opts.action is None and len(args) and args[0] in ('start','stop','restart','status'):
