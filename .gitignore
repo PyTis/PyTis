@@ -3,4 +3,5 @@
 *.swo
 *.svn*
 aws-*
+bin/cloud-checkr-verify*
 
