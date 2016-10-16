@@ -25,6 +25,36 @@ SYNOPSIS:
 	wget-diff [--options] [-H] [-V] [-D]
 
 DESCRIPTION:
+	Outstanding program that can run as a scheduled cron job and notify you when
+	a site chagnes.  Currently this may be ran on demand, or via a cron job, in
+	the future, I'd like to get this to run as a deamon as well.  
+
+CONFIGURING ACTIONS:
+	There are 3 (three) methods for notifying the user, when a diff is found.
+
+		1. runcommand: will execute provided string on the command line.
+
+		2. runsql: User can provide the driver (postgresql or mysql) and connection
+		settings, as well as an sql query to execute.
+
+		3. email: User can provide To, CC, Subject, Body, and From address.  The
+		diff is added under the body provided.  will execute a single l
+
+	INI EXAMPLES:
+	action = email - works, needs documented
+
+	action = runcommand - works, needs documented
+
+	action = runsql - not yet coded, will be coded to work for mysql, mssql, 
+		and postgresql
+
+	Multiple actions may be configured within a single section as such:
+
+		action = email, runcommand
+
+		OR
+
+		action = email, runcommand, runsql
 
 CODE:
 
@@ -32,20 +62,88 @@ CODE:
 
 import cStringIO
 from difflib import unified_diff
+import time
 import os, optparse
-import shutil, sys
+import sys
 import subprocess
-import smtplib
-from email.mime.text import MIMEText
 import urllib
 from urllib2 import urlopen
 from threading import Timer
 import socket
 import urllib2
-import socket
 
-class MyException(Exception):
-    pass
+
+def handler(fh):
+	fh.close()
+
+def download(url):
+	timeout = 10.0
+	try:
+		fh = urlopen(url, timeout = timeout)
+	except urllib2.URLError, e:
+		# For Python 2.6
+		if isinstance(e.reason, socket.timeout):
+			log.error("Socket timeout")
+			return
+		else:
+			# reraise the original error
+			raise
+	except socket.timeout, e:
+		# For Python 2.7
+		log.error("Socket timeout")
+		return
+
+	t = Timer(timeout, handler,[fh])
+	t.start()
+	data = fh.read()
+	t.cancel()
+	return data
+
+def write_file(fpath, data):
+	global log
+	if not data or not data.strip(): return
+
+	try: 
+		handle = open(fpath,'wb')
+	except (IOError, OSError) as e:
+		log.error("An error occurred opening %s to write to." % fpath)
+		# skip ahead to next url, cannot do anything if we can't open to 
+		# write to fpath.
+		try: 
+			handle.close()
+		except: 
+			log.error("can't close data file, had open error: %s"%fpath)
+		else:
+			log.error("closed data file, had open error: %s"%fpath)
+		raise PyTis.IdiotError()
+
+	else:
+
+		try: 
+			handle.truncate()
+			handle.seek(0)
+			handle.write(data)
+		except (IOError, OSError) as e:
+			log.error("An error occurred writing to %s" % fpath)
+			# skip ahead to next url, cannot do anything if we can't open to 
+			# write to fpath.
+			try: 
+				handle.close()
+			except: 
+				log.error("can't close data file, had write error: %s"%fpath)
+			else:
+				log.error("closed data file, had write error: %s"%fpath)
+			log.error("Calling continue from write data exception.")
+			raise PyTis.IdiotError()
+
+		else:
+			try: 
+				handle.close()
+			except: 
+				log.error("can't close data file: %s" % fpath)
+			else:
+				return True
+
 
 # This program needs to import PyTis v3, which imports stuff from the
 # sub-package pylib3, this program also needs to import from the sub-package
@@ -81,7 +179,7 @@ __author__ = 'Josh Lee'
 __created__ = '11:48am 12 May, 2008'
 __copyright__ = 'PyTis.com'
 __curdir__ = os.path.abspath(os.path.dirname(__file__))
-__version__ = '2.0'
+__version__ = '0.95'
 
 __configdir__=os.path.abspath(os.path.join(PyTis.__configdir__,'.%s'%os.path.basename(sys.argv[0])))
 
@@ -127,7 +225,7 @@ def check_ini(opts,config):
 			f_int_rep=i
 			while str(f_int_rep) in [str(key) for key in files.keys()]: f_int_rep+=1
 			config['cache'][str(f_int_rep)]=url
-			config['cache_date'][str(f_int_rep)]=()
+			config['cache_dates'][str(f_int_rep)]=()
 			config.save()
 
 		elif url in files.values():
@@ -156,43 +254,55 @@ def check_ini(opts,config):
 				# BEGIN SQL -----------------------------------------------------------
 
 				if action == 'runsql':
-					sql = section.get('sql')
+					sqlsection = section.get('sql')
+					if not sqlsection:
+						log.error("No sql configuration provided for %s and 'runsql' " \
+							"was specified as the action." % url)
+						return 1
+
+					sql = sqlsection.get('sql')
 					if not sql:
 						log.error("No sql statement provided for %s and 'runsql' " \
 							"was specified as the action." % url)
 						return 1
 
-					driver = section.get('driver')
+					driver = sqlsection.get('driver')
 					if not driver:
 						log.error("No driver provided for %s and 'rundriver' " \
 							"was specified as the action (postgresql or mysql)." % url)
 						return 1
 
-					host = section.get('host')
+					host = sqlsection.get('host')
 					if not host:
 						log.error("No host provided for %s and 'runhost' " \
 							"was specified as the action." % url)
 						return 1
 
-					port = section.get('port')
+					port = sqlsection.get('port')
 					if not port:
 						log.error("No port provided for %s and 'runport' " \
 							"was specified as the action." % url)
 						return 1
 
-					user = section.get('user')
+					user = sqlsection.get('port')
+					if not port:
+						log.error("No port provided for %s and 'runport' " \
+							"was specified as the action." % url)
+						return 1
+
+					user = sqlsection.get('user')
 					if not user:
 						log.error("No user provided for %s and 'runuser' " \
 							"was specified as the action." % url)
 						return 1
 
-					password = section.get('password')
+					password = sqlsection.get('password')
 					if not password:
 						log.error("No password provided for %s and 'runpassword' " \
 							"was specified as the action." % url)
 						return 1
 
-					database = section.get('database')
+					database = sqlsection.get('database')
 					if not database:
 						log.error("No database provided for %s and 'rundatabase' " \
 							"was specified as the action." % url)
@@ -220,6 +330,19 @@ def check_ini(opts,config):
 						log.error("Body missing for %s and 'Email' was " \
 							"specified as the action." % url)
 						return 1
+
+					host = section.get('host',None)
+					if host is None:
+						log.debug('The mail host has not been provided in the ' \
+						'configuration ini file, assuming "localhost."  If localhost ' \
+						'fails, will attempt "127.0.0.1."')
+						section['host']='localhost'
+
+					local_hostname = section.get('local_hostname',None)
+					if local_hostname is None:
+						log.debug('The mail local hostname has not been provided in the ' \
+						'configuration ini file, assuming "%s" from uname.')
+						section['local_hostname'] = os.uname()[1]
 
 					subject = section.get('subject')
 					if subject is None:
@@ -289,7 +412,7 @@ def run(opts,config):
 		fname='.cache-%s'%f_int_rep
 		fpath=os.path.abspath(os.path.join(__configdir__,fname))
 		
-		log.debug('processing section: %s, #%s' % (url,i))
+		log.debug('processing section: %s' % (url))
 		section = config[url]
 		actions = section.get('action',None)
 		
@@ -310,7 +433,7 @@ def run(opts,config):
 				try:
 					old_handle = open(fpath,'r')
 					old_data = old_handle.read(-1)
-					if not old_data:  old_data = None
+					#if not old_data:  old_data = None
 				except (IOError, OSError) as e:
 					log.error("Could not read old cache file for: %s" % url)
 					log.error("Assuming corrupt data and assuming DIFF exists!")
@@ -322,65 +445,128 @@ def run(opts,config):
 				#first time to create and cache data
 				old_data = None
 
-
-			try: 
-				handle = open(fpath,'wb+')
+			try:
 				new_data = urllib.urlopen(url).read()
-				
-				# n N o N
-				# n - o N
-				# n N o -
-				# n - o -
-				if new_data is None and old_data is None:
-					log.error("Cannot wget site: %s" % url)
-					trigger = False
-					continue # continue on to the next URL
-				elif new_data is not None and old_data is None:
-					trigger = False
-					# Site was not ever cached before, this is the first time, just save it
-					handle.write(new_data)
-					config['cache_dates'][str(f_int_rep)] = (pretty_now,pretty_now)
-					config.save()
+			except IOError as e:
+				log.debug("First attempt failed at opening: %s" % url)
+				time.sleep(2)
+				try:
+					new_data = urllib.urlopen(url).read()
+				except IOError as e:
+					log.error("Two attempts failed at opening: %s" % url)
+					try:
+						new_data = download(url)
+					except Exception as e:
+						log.error("Third attempt failed at opening: %s" % url)
+						log.error(str(e))
 
-				elif new_data is None and old_data is not None:
-					# site cannot be cached at this time, was in the past, just move on
-					log.error("Cannot wget site: %s" % url)
+						if not opts.dry_run: 
+
+							body = PyTis.to80("WARNING! wget-diff failure.\n\nwget " \
+								"failure notice, 3rd and final attempt failed to query " \
+								"URL: %s on %s." % (url, pretty_now))
+
+							PyTis.sendEmail(body, "wget failure notice", section.get('to'),
+								section.get('from'), section.get('cc'), 
+								host=section.get('host'), 
+								local_hostname=section.get('local_hostname'), port=25, 
+								timeout=20)
+
+						continue
+					else:
+						if new_data is None:
+							log.error("Third and final attempt failed.")
+
+							if not opts.dry_run: 
+
+								body = PyTis.to80("WARNING! wget-diff failure.\n\nwget " \
+									"failure notice, 3rd and final attempt failed to query " \
+									"URL: %s on %s." % (url, pretty_now))
+								
+								PyTis.sendEmail(body, "wget failure notice", section.get('to'),
+									section.get('from'), section.get('cc'), 
+									host=section.get('host'), 
+									local_hostname=section.get('local_hostname'), port=25, 
+									timeout=20)
+
+
+							continue
+						else:
+							log.debug("Third attempt succesful at opening: %s" % url)
+
+				else:
+					log.debug("Second attempt successful at opening: %s" % url)
+			else:
+				log.debug("First attempt successful at opening: %s" % url)
+
+			
+			# n N o N
+			# n - o N
+			# n N o -
+			# n - o -
+			if new_data is None and old_data is None:
+				log.error("Cannot wget site: %s" % url)
+				trigger = False
+				continue # continue on to the next URL
+
+			elif new_data is not None and old_data is None:
+				if not new_data.strip():
+					log.error("x"*80)
+					log.error("SUPER ERROR, NEW DATA IS EMPTY STRING")
+				trigger = False
+				# Site was not ever cached before, this is the first time, just save it
+				log.info("Site was not ever cached before, this is the first " \
+					"time, saving.")
+				if not opts.dry_run: 
+					try:
+						write_file(fpath, new_data)
+					except PyTis.IdiotError as e:
+						continue
+
+				config['cache_dates'][str(f_int_rep)] = (pretty_now,pretty_now)
+				config.save()
+
+			elif new_data is None and old_data is not None:
+				# site cannot be cached at this time, was in the past, just move on
+				log.error("Cannot wget site: %s, last cached: %s" % \
+					(url,config['cache_dates'][str(f_int_rep)][1]))
+				trigger = False
+			else:
+				log.info("wget successfull of: %s caching on: %s"%(url,pretty_now))
+
+				if new_data == old_data:
+					# Nothing has changed.
+					log.info("no change in: %s" % url)
 					trigger = False
 				else:
-					if new_data == old_data:
-						# Nothing has changed.
-						log.debug("no change in: %s" % url)
-						trigger = False
-					else:
-						# the file has changed!
-						# grab the dates before changing them
-						first_saved,last_changed = config['cache_dates'][str(f_int_rep)]
-						# now update the last updated date
-						config['cache_dates'][str(f_int_rep)]=(config['cache_dates'][str(f_int_rep)][0],pretty_now)
-						config.save()
-
-						trigger = True 
-						# XXX-TODO capture diff first, then write new data.
-						for line in unified_diff(old_data.split("\n"), new_data.split("\n"), lineterm=""):
-							true_diff.write(line)
-							true_diff.write("\n")
+					# the file has changed!
+					# grab the dates before changing them
+					first_saved,last_changed = config['cache_dates'][str(f_int_rep)]
+					# now update the last updated date
+					config['cache_dates'][str(f_int_rep)]=(config['cache_dates'][str(f_int_rep)][0],pretty_now)
+					config.save()
 						
-						handle.write(new_data)
+					trigger = True 
+					log.info("%s, first cached on: %s, last updated on: %s has since " \
+						"changed." % (url, first_saved,last_changed))
+					if not opts.dry_run: 
+						try:
+							write_file(fpath, new_data)
+						except PyTis.IdiotError as e:
+							continue
 
-						log.debug("%s, first cached on: %s, last updated on: %s has since " \
-							"changed." % (url, first_saved,last_changed))
-						log.debug("Re-caching %s as of today: %s."%(url,pretty_now))
-						log.info("DIFF %s: " % url)
-						log.info("%s" % true_diff.getvalue())
+			if (trigger and not opts.dry_run) or (trigger and opts.dry_run and \
+			opts.debug):
 
+				# XXX-TODO capture diff first, then write new data.
+				for line in unified_diff(old_data.split("\n"), new_data.split("\n"), lineterm=""):
+					true_diff.write(line)
+					true_diff.write("\n")
 
-			except (IOError, OSError) as e:
-				log.error("Could not write to cache file: %s for site: %s  !!!" % \
-					(fpath, url))
-			finally:
-				handle.close()
+				log.debug("Re-caching %s as of today: %s."%(url,pretty_now))
+				log.info("DIFF: %s" % url)
+				#log.info("%s" % true_diff.getvalue())
 
-			if trigger:
 				for action in actions:
 				# #####################################################################
 				# BEGIN SQL -----------------------------------------------------------
@@ -422,25 +608,17 @@ def run(opts,config):
 					if action == 'email':
 
 						body = section.get('body')
-						if not true_diff.getvalue(): true_diff.write("no diff available\n")
+						if not true_diff.getvalue():
+							true_diff.write("no diff available\n")
+
 						body = "%s\n\nURL: %s has changed on %s.\n\nDIFF of %s -\n\n%s" % \
 							(body, url, pretty_now, url, true_diff.getvalue())
 
-						temptexfile = cStringIO.StringIO()
-
-						temptexfile.write(body)
-						msg=MIMEText(temptexfile.read())
-						temptexfile.close()
-
-						msg['Subject']= section.get('subject')
-						msg['From']   = section.get('from')
-						msg['To']     = section.get('to')
-						if section.get('cc'):
-							msg['CC']   = section.get('cc')
-
-						s = smtplib.SMTP('localhost')
-						s.sendemail(msg['From'],msg['To'],msg.as_string())
-						
+						PyTis.sendEmail(body, section.get('subject'), section.get('to'),
+							section.get('from'), section.get('cc'), 
+							host=section.get('host'), 
+							local_hostname=section.get('local_hostname'), port=25, 
+							timeout=20)
 
 				# END EMAIL -----------------------------------------------------------
 
@@ -464,8 +642,12 @@ def main():
 	parser.extra_txt = "\n\n%s\n" % run.__doc__ + """
 
 EXAMPLES:	
+	wget-dff
 
 SEE ALSO:
+	wget -- built-in
+	diff -- built-in
+	pg_diff -- pytis 
 
 COPYRIGHT:
 	%(copyright)s
@@ -475,11 +657,23 @@ AUTHOR:
 
 CHANGE LOG:
 
+	v0.95 MINOR CHANGE
+		Ran importnanny and removed un-needed imports.
+
+	v0.91 MINOR CHANGE
+		Added in documentation around dry-run and actions, and tweaked verbose and 
+		quiet optional flag defaults for dry-run.
+
 CREATED:
 	%(created)s
 
 HISTORY:
 	Original Author
+
+TODO:
+	action=runsql - This is not yet coded, will be coded to work for mysql,
+	mssql, and postgresql.  Completing this will bring wget-diff to 100%, and
+	thus, version 1.
 
 VERSION:
 	%(version)s
@@ -489,11 +683,37 @@ VERSION:
 	if '--help' in sys.argv:
 		parser.set_description(__doc__)
 		helpishere=True # to determine help mode (short or full)
+		# "Only tell the user    "
+		dry_run_help = 'Enable the dry-run flag (-d/--dry-run) in order to test ' \
+			'what this script would do, if ran normally.  Dry Run does not ' \
+			' re-cache, send emails, run commands, or run sql statements (see ' \
+			'"Configuring Actions" section of full help text), and thus in ' \
+			'repitition would continue to report that a file has changed.  ' \
+			'If the file has changed since the previous non-dry-run caching of ' \
+			'said URL, output will reflect such.  If a URL has not changed since ' \
+			'the last cached URL, then the output will state there is no change. ' \
+			'Dry Run [-d/--dry-run] is great for when an adminstrator (or user) ' \
+			'wishes to just test and see if anything has changed, without any ' \
+			'actions taking place.  Generally the actions are fired off when ' \
+			'this program is callef rom the cron jobs.`$' \
+			'Lastly, using the [-d/--dry-run] flag, implies verbosity, and unless ' \
+			'the [-q/--quiet] flag is provided, this program will default to ' \
+			'verbose mode.`$'
 	else:
-		helpishere=False # to determine help mode (short or full)
+
 		parser.set_description('')
+		helpishere=False # to determine help mode (short or full)
+		dry_run_help = 'Reports changes as STDOUT, without executing any '\
+			'configured actions, or caching.  Implies "verbosity."' \
+			' *(use "--help" for more details)`$'
 
 	runtime = optparse.OptionGroup(parser, "-- RUNTIME ARGUMENTS")
+
+	runtime.add_option("-d", "--dry-run", action="store_true", #type="bool",
+		default=False, dest='dry_run',
+		help=dry_run_help)
+		#help=optparse.SUPPRESS_HELP)
+
 	parser.add_option_group(runtime)
 	# -------------------------------------------------------------------------
 	# variable setting
@@ -507,7 +727,7 @@ VERSION:
 	dbgroup = optparse.OptionGroup(parser, "-- DEBUG")
 	dbgroup.add_option("-D", "--debug", action="store_true",
 					 default=False, dest='debug',
-					 help="Enable debugging")
+					 help="Enable debugging`$")
 
 
 	# This is a little trick to tell if the user entered the -V/--verbose flag.
@@ -519,11 +739,13 @@ VERSION:
 
 	dbgroup.add_option("-V", "--verbose", action="store_true",
 					 default=False, dest='verbose',
-					 help="Be more Verbose (make lots of noise)")
+					 help="Be more Verbose (make lots of noise).  Off by default, " \
+					 "unless in dry-run.`$")
 
 	dbgroup.add_option("-q", "--quiet", action="store_true",
 					 default=False, dest='quiet',
-					 help="be vewwy quiet (I'm hunting wabbits)")
+					 help="be vewwy quiet (I'm hunting wabbits).  On by default, " \
+					 "unless in dry-run.`$")
 
 	dbgroup.add_option("-v", "--version", action="store_true",
 					 default=False, dest='version',
@@ -536,12 +758,11 @@ VERSION:
 	if opts.verbose: 
 		opts.totally_verbose = True
 	if opts.quiet: opts.verbose = False
-	if not opts.quiet:
-		opts.verbose = True
 
-	#if opts.action is None and len(args) and args[0] in ('start','stop','restart','status'):
-	#	opts.action = args[0]
-	#	del args[0]
+	if opts.dry_run and not opts.quiet: opts.verbose = True
+
+	#if not opts.quiet: opts.verbose = True # Defaults to Verbose
+	if not opts.verbose: opts.quiet = True # Defaults to Quiet 
 
 	if opts.debug:
 		main.__doc__ = "%s\n\n	CONFIG FILE: %s" % (main.__doc__, \
@@ -560,6 +781,10 @@ VERSION:
 		return PyTis.version(__version__)
 
 	if not test_config_exists(__configdir__) or opts.setup:
+		if not opts.setup:
+			log.info("wget-diff config file missing, running Setup now.")
+		else:
+			log.info("Running Setup not to create wget-diff config file.")
 		try:
 			setup_config(__configdir__)
 		except KeyboardInterrupt,e:
