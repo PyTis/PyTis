@@ -3,5 +3,12 @@
 *.swo
 *.svn*
 aws-*
+cc-iam*
+bin/aws-*
+bin/cc-iam
+bin/cc-iam*
+bin/cloud-checkr-verify
 bin/cloud-checkr-verify*
+src/bin/CC_IAM_FullPolicy.json
+src/bin/CC_IAM_FullPolicy.json*
 
