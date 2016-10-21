@@ -2254,9 +2254,15 @@ def wrap(text, width=79):
 	and most spaces in the text. Expects that existing line
 	breaks are posix newlines (\n).
 	"""
-	return functools.reduce(lambda line, word, width=width: '%s%s%s' % (line,
-	' \n'[(len(line)-line.rfind('\n')-1 + len(word.split('\n',1)[0]) >= width)],
-	word), text.split(' '))
+	if python_version >= 3.0:
+		return functools.reduce(lambda line, word, width=width: '%s%s%s' % (line,
+		' \n'[(len(line)-line.rfind('\n')-1 + len(word.split('\n',1)[0])>=width)],
+		word), text.split(' '))
+	else:
+		return reduce(lambda line, word, width=width: '%s%s%s' % (line,
+		' \n'[(len(line)-line.rfind('\n')-1 + len(word.split('\n',1)[0])>=width)],
+		word), text.split(' '))
+
 
 def fixWidth(st):
 	buf = list(st.split(" "))
