@@ -2817,7 +2817,7 @@ def sendEmail(body, subject, to, mfrom, cc, host=None, local_hostname=None,
 	for host in host_attempts:
 		log.debug("smtplib.SMTP(host='%s',port=%s," \
 			"local_hostname='%s',timeout=%s) - %s" % (host,port,
-			local_hostname, str(long(timeout)), subject))
+			local_hostname, str(int(timeout)), subject))
 		try:
 			s = smtplib.SMTP(host=host,port=port,
 				local_hostname=local_hostname,timeout=timeout)
