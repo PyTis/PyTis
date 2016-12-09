@@ -524,6 +524,14 @@ class Section(dict):
         self.extra_values = []
         self._created = False
 
+    def __getattr__(self, attr):
+      try:
+        return dict.__getattr__(self,attr)
+      except AttributeError:
+        try:
+          return self[attr]
+        except KeyError:
+          raise AttributeError(attr)
 
     def _interpolate(self, key, value):
         try:

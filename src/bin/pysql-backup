@@ -310,8 +310,8 @@ def run(cfile, opts):
 
 			section = cfile.config[section_name]
 
-
 			target = section.target or os.getcwd()
+
 			try:
 				test_target(target)
 			except PyTis.DieNow, e:
@@ -637,7 +637,8 @@ VERSION:
 	vars.add_option("-N", "--section", action="store",
 										metavar="[LOAD/SAVE-AS SECTION NAME]",
 										type='string',
-										dest='section_name',
+										dest='section',
+										#dest='section_name',
 										default=None, 
 										help='Name to save configuration into a section. '
 										' OR '

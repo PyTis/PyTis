@@ -352,6 +352,15 @@ class Section(dict):
         for entry in indict:
             self[entry] = indict[entry]
 
+    def __getattr__(self, attr):
+      try:
+        return dict.__getattr__(self,attr)
+      except AttributeError:
+        try:
+          return self[attr]
+        except KeyError:
+          raise AttributeError, attr
+
     def _interpolate(self, value):
         """Nicked from ConfigParser."""
         depth = MAX_INTERPOL_DEPTH
