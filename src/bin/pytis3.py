@@ -2738,21 +2738,12 @@ def trim(item):
 	return item
 
 def die(string=None):
-<<<<<<< HEAD
   global log
   if log and string:
     log.error(string)
   elif string:
     print(string)
   sys.exit()
-=======
-	global log
-	if log and string:
-		log.error(string)
-	elif string:
-		print(string)
-	sys.exit()
->>>>>>> b03d814527d911ec459bb47a7a9124c0eb5cd70c
 
 def protect(s,trim_len=4):
 	""" padd a password and only show the remaining "trim_len" 
