@@ -2734,13 +2734,13 @@ def trim(item):
 			item = ''
 	return item
 
-def die(string):
-	global log
-	if log:
-		log.error(string)
-	else:
-		print(string)
-	sys.exit()
+def die(string=None):
+  global log
+  if log and string:
+    log.error(string)
+  elif string:
+    print(string)
+  sys.exit()
 
 def protect(s,trim_len=4):
 	""" padd a password and only show the remaining "trim_len" 
