@@ -6,11 +6,36 @@ Pass in the old file first and the newer file second.
 - means subtract
 
 """
+errors=[]
 
-import sys
-import datetime
-import re
+#
+# Built-In
+#
+
+
+import os, sys, re
 import optparse
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
+
+# 
+# Internal
+#
+try:
+	#import pytis as PyTis # Shared GPL/PPL License
+	from bin import PyTis # Shared GPL/PPL License
+	from pylib import configobj as COBJ
+
+except ImportError as e:
+	# We cannot go any further than this, we can't use the Parser or Logging tool
+	# to display these errors because those very tools are loaded from PyTis.
+	# Therefore, display errors now and exit with an errored exit code.
+	print("This program requires the PyTis python library to run.")
+	print("You may download the PyTis library, or do an SVN checkout from:")
+	print("<https://sourceforge.net/projects/pytis/>")
+	print("This program should be installed in the bin directory of the PyTis library.")
+	print(str(e))
+	sys.exit(1)
 
 COM_RE = re.compile('^-- (.+)$')
 
@@ -131,7 +156,7 @@ def main():
     from_map = parse_sql_dump(open(cmd[0]), opts)
     to_map = parse_sql_dump(open(cmd[1]), opts)
 
-    print '# %s' % datetime.datetime.now()
+    print '# %s' % PyTis.prettyNow()
     print '# - : %s' % cmd[0]
     print '# + : %s' % cmd[1]
 

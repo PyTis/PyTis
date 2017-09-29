@@ -10,7 +10,7 @@ __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __author__ = 'Josh Lee'
 __created__ = '08:56pm 10 Oct, 2009'
 __copyright__ = 'PyTis.com'
-__version__ = '3.0'
+__version__ = '3.1'
 
 
 def replace_insensitive(string, target, replacement):
@@ -24,26 +24,33 @@ def replace_insensitive(string, target, replacement):
 
 def _jog(re, force, ingorecase, ftype, backups, fstring, rstring):
 
-	if ingorecase:
-		cmd = "find . %s -type f -iname '%s'"
+	if os.path.isfile(os.path.abspath(ftype)) and \
+	os.path.exists(os.path.abspath(ftype)):
+		files = [ftype]
+
 	else:
-		cmd = "find . %s -type f -name '%s'"
-	command = cmd % (re,
-					ftype)
-	cmd_out = os.popen(command).readlines(-1)
-	#files = [line.strip() for line in cmd_out if line.strip()]
-	files = []
-	for line in cmd_out:
-		line = line.strip()
-		if line:
-			if ingorecase:
-				if line.lower().find(fstring.lower()) > -1:
-					if line not in files:
-						files.append(line)
-			else:
-				if line.find(fstring) > -1:
-					if line not in files:
-						files.append(line)
+		if ingorecase:
+			cmd = "find . %s -type f -iname '%s'"
+		else:
+			cmd = "find . %s -type f -name '%s'"
+
+		command = cmd % (re, ftype)
+
+		cmd_out = os.popen(command).readlines(-1)
+		cmd_out.sort()
+		#files = [line.strip() for line in cmd_out if line.strip()]
+		files = []
+		for line in cmd_out:
+			line = line.strip()
+			if line:
+				if ingorecase:
+					if line.lower().find(fstring.lower()) > -1:
+						if line not in files:
+							files.append(line)
+				else:
+					if line.find(fstring) > -1:
+						if line not in files:
+							files.append(line)
 
 	if not files:
 		return False
@@ -75,9 +82,9 @@ def _jog(re, force, ingorecase, ftype, backups, fstring, rstring):
 				shutil.copy(new,bak)
 
 
-def jog(opts, fstring, rstring, ftype):
+def jog(opts, fstring, rstring, *ftype):
 	re = ''
-	if opts.iterate:
+	if opts.recursive:
 		re = '-maxdepth 1'
 
 	try:
@@ -99,6 +106,7 @@ def jog(opts, fstring, rstring, ftype):
 				files = list(ftype)
 				for ftype in files:
 					_jog(re, opts.force, opts.case, ftype, opts.backup, fstring, rstring)
+
 	except PyTis.QuitNow, e:
 		print 'aborted...', str(e)
 		return False
@@ -176,9 +184,40 @@ Also has some nice options and can additinally do file names or portions
 of file names.
 	"""
 	global log
+	help_dict = dict(version=__version__,
+						 author=__author__,
+						 created=__created__,
+						 copyright=__copyright__)
 	parser = PyTis.MyParser()
 	parser.extra_txt = """
-examples:  
+
+COPYRIGHT:
+
+	%(copyright)s
+
+AUTHOR:
+
+	%(author)s
+
+HISTORY:
+
+	Original Author
+
+CHANGE LOG:
+	v3.2 MAJOR CHANGES
+		Many changes to the help text and documentation.
+
+	v3.1 MINOR CHANGES
+		I enhanced the way that files are found, when replacing within a file name,
+		not replacing the contents of a file ( utilized when using the [-n/--name]
+		argument).  Now you can pipe in files, not speify and guess, etc.  See 
+		examples below for more information.
+
+	v3.0 &< No documentation available; However documentation may still exist in
+	SourceForge PyTis SVN comments.
+
+
+EXAMPLES:  
  findrep [FIND] [REPLACE] *.txt  >> prompts each file   [y/N]
  findrep [FIND] [REPLACE] '*.txt' >> prompts only once   [y/N]
  findrep [FIND] [REPLACE]     >> prompts for global *.* [y/N]
@@ -188,7 +227,26 @@ examples:
  findrep [FIND] [REPLACE] *.txt -f  >> no prompts FOCRES ALL *.txt
   same as
  findrep [FIND] [REPLACE] '*.txt' -f >> no prompts FORCES ALL *.txt
-"""
+
+ findrep -n [FIND] [REPLACE]  >> prompts all files   [y/N]
+ findrep -n [FIND] [REPLACE] * >> 
+ findrep -n [FIND] [REPLACE] *.* >> 
+ findrep -n [FIND] [REPLACE] . >> 
+ findrep -n [FIND] [REPLACE] 'patern*'>> 
+ findrep -n [FIND] [REPLACE] patern'>> 
+ findrep -n [FIND] [REPLACE] `find . -iname 'aws-*'` >> 
+
+
+CREATED:
+
+	%(created)s
+
+VERSION:
+
+	%(version)s
+
+"""  % help_dict
+
 	#parser.set_description(__doc__)
 	parser.set_usage(main.__doc__)
 	parser.formatter.format_description = lambda s:s
@@ -206,13 +264,22 @@ examples:
 
 	parser.add_option("-i", "--iterate", action="store_true",
 					 default=False,
-					 help="Default behavior: recursive, specify this to not traverse into sub-directories")
+					 help="Default behavior: recursive, specify this to not traverse " \
+						"into sub-directories.`$*PLEASE NOTE* - This argument is " \
+						"utilized when replacing contents within files. ")
 
 	parser.add_option("-n", "--name", action="store_true",
 					 default=False,
-					 help="Default behavior: replace in files, using this turns that feature off "
-						 "and tells this tool to actuall replace parts of file names.")
+					 help="Default behavior: replace in files, using this turns that " \
+						"feature off and tells this tool to actuall replace parts of " \
+						"file names.")
 						 
+	parser.add_option("-r", "--recursive", action="store_true", default=False,
+						help="Default behavior: Iterate (when it comes to replacing " \
+							"parts of file names).  Recursively search for files to match " \
+							"provided pattern match.`$*PLEASE NOTE* - This argument is " \
+							"utilized when replacing parts of file names.")
+
 	parser.add_option("-f", "--force", action="store_true",
 					 default=False,
 					 help="Dissable prompts. Commonly used when called by other programs, this will force "
@@ -245,6 +312,13 @@ examples:
 		else:
 			parser.print_help()
 			return
+
+	#if len(args) < 3:
+	#	print "ERROR: missing file type and/or file type match patern."
+	#	sys.exit(1)
+
+	if len(args)==3 and args[2] == '.':
+		args[2] = '*'
 
 	try:
 		if opts.name:
