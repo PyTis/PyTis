@@ -109,9 +109,9 @@ def _run(re, force, ingorecase, ftype, backups, fstring, rstring):
   """ just simplifying code
   """
   if ingorecase:
-    cmd = "find . %s -type f -iname '%s' |xargs perl %s -i -pe 's/%s/%s/gi'"
+    cmd = "find . %s -type f -iname '%s' |xargs sed %s -i 's/%s/%s/gi'"
   else:
-    cmd = "find . %s -type f -name '%s' |xargs perl %s -i -pe 's/%s/%s/g'"
+    cmd = "find . %s -type f -name '%s' |xargs sed %s -i 's/%s/%s/g'"
   command = cmd % (re,
           ftype,
           backups,
