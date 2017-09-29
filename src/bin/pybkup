@@ -1,32 +1,267 @@
 #!/usr/bin/env python
 """pybkup
 ======
+
+	 -T, --files-from FILE
+				 get names to extract or create from FILE
+
+	 -X, --exclude-from FILE
+				 exclude patterns listed in FILE
+
+Mind melting brainfuck on this, I cannot seem to stay focused.  What should
+have taken a few hours, has turnned into a few weeks.  I am not sure why, but
+it is obviously a flawed design, or lack thereof.  An issue has been brought to
+my attention.  In the future these will all run from configurations pulled from
+the databases, be it sqlLite3, MySQL or PostgreSQL is of no consiquence.
+Either way we will want the data in a similar format, and still have to
+validate it.  That being said, we will want to code for easy migration.  The
+valid_config_values, valdiate, validate_opt, get_value, have all become a blur, with
+out a defined reason or distinction between them.  I am not going to start from
+scratch, but just look over it all from the beginning.  Let's see where that
+takes us.  
+
 """
 
 import os
 import sys
-import getpass
+import glob
+import shutil
 import optparse
 import tempfile
 import subprocess
+import datetime
 
 import pytis as PyTis
 from pylib import configobj as COBJ
 
-
-__curdir__ = os.path.abspath(os.path.dirname(__file__))
 __author__ = 'Josh Lee'
-__created__ = '09:15pm 09 Sep, 2013'
 __copyright__ = 'PyTis'
-__version__ = '3.0'
+__curdir__ = os.path.abspath(os.path.dirname(__file__))
+__created__ = '12:54am 03 Mar, 2014'
+__version__ = '1.0'
 
-__default_timeout__ = 3
-__default_rsync_flags__ = 'DghiLlKoprtuz'
+__default_tar_flags__ = 'cvzf'
+
+# ***IMPORTANT!*** 
+# IF YOU ARE GOING TO EDIT THE DEFAULT COUNTERS BELOW, PLEASE REMOVE OR UPDATE
+# THIS COMMENT BLOCK
+# Default below would keep:
+# daily for 2 weeks
+# weekly for 2 months
+# monthly for 2 years
+# and no further (no yearly copies)
+__default_days__ = 14
+__default_weeks__ = 8
+__default_months__ = 2
+__default_years__ = 0
+# *** END DEFAULT COUNTS ***
+
+def valid_config_values(config):
+	""" This function is to ensure that all data provided via the config file, is
+	valid. Ensure that variables to represent files or directories, represent 
+	files or directories that exist, that variables that represnt numbers, are 
+	valid numbers, and not alpha charecters, etc.
+	Additionally, ensure that each Named section has all of the critera required,
+	in order to be a valid working section.
+
+	Okay, clarifying something here.  This function only verifies that values
+	within the configuration are proper.  In other words, it tests the values.
+	If they aren't set it doesn't care, if it can't find one in a section, who
+	cares.  It just verifies values that are set.  It checks for type cast, it
+	checks for directories and files.
+
+	"""
+	global log, __default_days__, __default_weeks__, __default_months__
+	global __default_years__
+	errors = []
+	global_to_exclude = config.get('to_exclude',[])
+	global_test_local = config.get('test_local',None)
+	global_daily_dir = config.get('daily_dir',None)
+	global_weekly_dir = config.get('weekly_dir',None)
+	global_monthly_dir = config.get('monthly_dir',None)
+	global_yearly_dir = config.get('yearly_dir',None)
+	global_daily_count = config.get('daily_count',__default_days__)
+	global_weekly_count = config.get('weekly_count',__default_weeks__)
+	global_monthly_count = config.get('monthly_count',__default_months__)
+	global_yearly_count = config.get('yearly_count',__default_years__)
+	global_flags = config.get('flags','')
+	global_niceness = config.get('niceness',None)
+
+	if global_niceness and not is_int(global_niceness):
+		errors.append("The default nice variable must be an integer.")
+
+	if type(global_to_exclude) == type(''):
+		errors.append("The to_exclude variable in the global section is a string, and should be a list.  It may be missing the trailing comma.")
+
+	if trim(global_test_local) and (not os.path.isfile(os.path.abspath(global_test_local)) and not os.path.exist(os.path.abspath(global_test_local))):
+		log.debug("valid_config_values(config): The global local test file does not appear to exist.")
+
+	if trim(global_daily_dir) and (not os.path.isdir(os.path.abspath(global_daily_dir)) or not os.path.exists(os.path.abspath(global_daily_dir))):
+		try:
+			os.makedirs(os.path.abspath(global_daily_dir))
+		except (OSError, IOError): 
+			errors.append('The Daily Directory does not exist, and we failed in our attempt to create it for you, please create "%s" and ensure that this program has write access.' % os.path.abspath(global_daily_dir))
+		else:
+			log.warn('The Daily Directory "%s" did not exist, but we were able to create it for you.' % os.path.abspath(global_daily_dir))
+
+	if trim(global_weekly_dir) and (not os.path.isdir(os.path.abspath(global_weekly_dir)) or not os.path.exists(os.path.abspath(global_weekly_dir))):
+		try:
+			os.makedirs(os.path.abspath(global_weekly_dir))
+		except (OSError, IOError): 
+			errors.append('The Weekly Directory does not exist, and we failed in our attempt to create it for you, please create "%s" and ensure that this program has write access.' % os.path.abspath(global_weekly_dir))
+		else:
+			log.warn('The Weekly Directory "%s" did not exist, but we were able to create it for you.' % os.path.abspath(global_weekly_dir))
+
+	if trim(global_monthly_dir) and (not os.path.isdir(os.path.abspath(global_monthly_dir)) or not os.path.exists(os.path.abspath(global_monthly_dir))):
+		try:
+			os.makedirs(os.path.abspath(global_monthly_dir))
+		except (OSError, IOError): 
+			errors.append('The Monthly Directory does not exist, and we failed in our attempt to create it for you, please create "%s" and ensure that this program has write access.' % os.path.abspath(global_monthly_dir))
+		else:
+			log.warn('The Monthly Directory "%s" did not exist, but we were able to create it for you.' % os.path.abspath(global_monthly_dir))
+
+	if trim(global_yearly_dir) and (not os.path.isdir(os.path.abspath(global_yearly_dir)) or not os.path.exists(os.path.abspath(global_yearly_dir))):
+		try:
+			os.makedirs(os.path.abspath(global_yearly_dir))
+		except (OSError, IOError): 
+			errors.append('The Yearly Directory does not exist, and we failed in our attempt to create it for you, please create "%s" and ensure that this program has write access.' % os.path.abspath(global_yearly_dir))
+		else:
+			log.warn('The Yearly Directory "%s" did not exist, but we were able to create it for you.' % os.path.abspath(global_yearly_dir))
+
+	if global_daily_count and not is_int(global_daily_count):
+		errors.append("The default days variable must be an integer.")
+
+	if global_weekly_count and not is_int(global_weekly_count):
+		errors.append("The default weeks variable must be an integer.")
+
+	if global_monthly_count and not is_int(global_monthly_count):
+		errors.append("The default months variable must be an integer.")
+
+	if global_yearly_count and not is_int(global_yearly_count):
+		errors.append("The default years variable must be an integer.")
+
+
+
+	
+	if trim(global_flags) and type(global_flags) == type([]):
+		errors.append("Global flags must be presented as a string, not a list.")
+	
+	if config.get('action',None):
+		errors.append('You may not specify a default "action" variable in the global config.  The "action" variable must be in a section.')
+
+	if config.get('to_backup',None):
+		errors.append('You may not put the "to_backup" variable in the global config.  It must be in a section.')
+
+	for section_name, sections in PyTis.identify_sections(config):
+		section = config[section_name]
+		action = section.get('action','use')
+		to_backup = trim(section.get('to_backup',[]))
+		to_exclude = section.get('to_exclude',global_to_exclude)
+		test_local = section.get('test_local',None)
+		daily_dir = section.get('daily_dir',global_daily_dir)
+		weekly_dir = section.get('weekly_dir',global_weekly_dir)
+		monthly_dir = section.get('monthly_dir',global_monthly_dir)
+		yearly_dir = section.get('yearly_dir',global_yearly_dir)
+
+		daily_count = section.get('daily_count',global_daily_count)
+		weekly_count = section.get('weekly_count',global_weekly_count)
+		monthly_count = section.get('monthly_count',global_monthly_count)
+		yearly_count = section.get('yearly_count',global_yearly_count)
+
+		flags = section.get('flags',global_flags)
+		nicity = section.get('niceness',global_niceness)
+
+		if trim(action).lower() != 'ignore':
+			if not to_backup:
+				errors.append('The "%s" section has nothing to backup.  For now it should be ignored *(use "--help" and see "--action").' % section_name)
+
+		if trim(action).lower() not in ('ignore','use','test','run'):
+			errors.append('Invalid action, "%s" in section "%s".' % (action,section_name))
+
+		if nicity and not is_int(nicity):
+			errors.append("The default nice variable must be an integer.")
+
+		if type(to_exclude) == type(''):
+			errors.append("The to_exclude variable in the global section is a string, and should be a list.  It may be missing the trailing comma in section: %s." % section_name)
+
+		if trim(test_local) and (not os.path.isfile(os.path.abspath(test_local)) and not os.path.exist(os.path.abspath(test_local))):
+			log.debug("valid_config_values(config): The local test file does not appear to exist.")
+
+		if trim(daily_dir) and (not os.path.isdir(os.path.abspath(daily_dir)) or not os.path.exists(os.path.abspath(daily_dir))):
+			try:
+				os.makedirs(os.path.abspath(daily_dir))
+			except (OSError, IOError): 
+				errors.append('The Daily Directory for section "%s" does not exist, and we failed in our attempt to create it for you, please create "%s" and ensure that this program has write access.' % (section_name, os.path.abspath(daily_dir)))
+			else:
+				log.warn('The Daily Directory "%s" for section "%s" did not exist, but we were able to create it for you.' % (os.path.abspath(daily_dir, section_name)))
+		elif is_int(daily_count) and daily_count and not trim(daily_dir):
+			errors.append("You have not provided a daily backup directory for section \"%s\", and there isn't even one in the global configuration to inherit from.  Perhaps for now this section should be set to ignore *(use \"--help\" and see \"--action\")." % section_name)
+
+		if trim(weekly_dir) and (not os.path.isdir(os.path.abspath(weekly_dir)) or not os.path.exists(os.path.abspath(weekly_dir))):
+			try:
+				os.makedirs(os.path.abspath(weekly_dir))
+			except (OSError, IOError): 
+				errors.append('The Weekly Directory does not exist for section "%s", and we failed in our attempt to create it for you, please create "%s" and ensure that this program has write access.' % (section_name,os.path.abspath(weekly_dir)))
+			else:
+				log.warn('The Weekly Directory "%s" for section "%s" did not exist, but we were able to create it for you.' % (os.path.abspath(weekly_dir), section_name))
+		elif is_int(monthly_count) and monthly_count and not trim(weekly_dir):
+			errors.append("You have not provided a weekly backup directory for section \"%s\", and there isn't even one in the global configuration to inherit from.  Perhaps for now this section should be set to ignore *(use \"--help\" and see \"--action\")." % section_name)
+
+		if trim(monthly_dir) and (not os.path.isdir(os.path.abspath(monthly_dir)) or not os.path.exists(os.path.abspath(monthly_dir))):
+			try:
+				os.makedirs(os.path.abspath(monthly_dir))
+			except (OSError, IOError): 
+				errors.append('The Monthly Directory does not exist for section "%s", and we failed in our attempt to create it for you, please create "%s" and ensure that this program has write access.' % (section_name,os.path.abspath(monthly_dir)))
+			else:
+				log.warn('The Monthly Directory "%s" for section "%s" did not exist, but we were able to create it for you.' % (os.path.abspath(monthy_dir), section_name))
+		elif is_int(monthly_count) and monthly_count and not trim(monthly_dir):
+			errors.append("You have not provided a monthly backup directory for section \"%s\", and there isn't even one in the global configuration to inherit from.  Perhaps for now this section should be set to ignore *(use \"--help\" and see \"--action\")." % section_name)
+
+
+
+
+		if trim(yearly_dir) and (not os.path.isdir(os.path.abspath(yearly_dir)) or not os.path.exists(os.path.abspath(yearly_dir))):
+			try:
+				os.makedirs(os.path.abspath(yearly_dir))
+			except (OSError, IOError): 
+				errors.append('The Yearly Directory for section "%s" does not exist, and we failed in our attempt to create it for you, please create "%s" and ensure that this program has write access.' % (section_name, os.path.abspath(yearly_dir)))
+			else:
+				log.warn('The Yearly Directory "%s" did not exist for section "%s", but we were able to create it for you.' % (os.path.abspath(yearly_dir), section_name))
+		elif is_int(yearly_count) and yearly_count and not trim(yearly_dir):
+			errors.append("You have not provided a yearly backup directory for section \"%s\", and there isn't even one in the global configuration to inherit from.  Perhaps for now this section should be set to ignore *(use \"--help\" and see \"--action\")." % section_name)
+
+		if daily_count and not is_int(daily_count):
+			errors.append("The default days variable must be an integer.")
+		if weekly_count and not is_int(weekly_count):
+			errors.append("The default weeks variable must be an integer.")
+		if monthly_count and not is_int(monthly_count):
+			errors.append("The default months variable must be an integer.")
+		if yearly_count and not is_int(yearly_count):
+			errors.append("The default years variable must be an integer.")
+		
+		if trim(global_flags) and type(global_flags) == type([]):
+			errors.append("Global flags must be presented as a string, not a list.")
+
+		if errors:
+			raise PyTis.ConfigurationError(errors) 
+		return True
+
+
+def is_int(i):
+	try:
+		int(str(i))
+	except ValueError:
+		return False
+	return True
 
 def trim(item):
+	""" 
+	"""
 	if type(item) == type(str('')):
 		if item: item=item.strip()
 		else: item = ''
+	elif type(item) == type([]):
+		return [f.strip() for f in item]
 	else:
 		if not item:
 			item = '' 
@@ -43,124 +278,6 @@ def load_config(config_file=config_file()):
 	config = COBJ.load(config_file, True)
 	return config
 
-def validate_opt(opts,config,key):
-	dig_config=False
-	try:
-		getattr(opts,key)
-	except AttributeError,e:
-		dig_config=True
-
-	if dig_config or not getattr(opts,key):
-		try:
-			if not config.get(key):
-				raise PyTis.EmptyString('%s not provided, and could not be found in the config file.' % key.title())
-			setattr(opts,key,config[key])
-		except OSError,e:
-			raise PyTis.EmptyString('%s not provided, and a config file could not me found.' % key.title())
-	else:
-		test=getattr(opts,key) 
-		if type(test) == type(str('')) and test=='=': test=''
-		if test is None or ( type(test) == type(str('')) and test.replace("\r\n","\n").replace("\n","").strip() == ''):
-			del opts.__dict__[key]
-			return validate_opt(opts,config,key)
-
-def validate(opts, config):
-#	fields = ['address','flags','forced_dir','disable_all','backup_dir','rsyncpath','sshkey','test','user','wait']
-	fields=['flags','user','backup_dir','rsyncpath','sshkey','wait']
-	for opt, value in opts.__dict__.items():
-		if opt.lower() in fields:
-			validate_opt(opts,config,opt.lower())	
-	for opt, value in opts.__dict__.items():
-		log.debug("VALIDATED OPTIONS %s: %s" % (opt,value))
-	log.debug('-'*80) 
-
-def valid_config(config):
-	if 'all' not in config.keys():
-		raise PyTis.EmptyTemplate('The "all" section is missing from your ini file at: "%s"' % config.filename) 
-
-	try:
-		all_includes = config['all']['include']
-	except KeyError, e:
-		raise PyTis.EmptyTemplate('The "all" section is is missing an include sub-section in the ini file at: "%s"' % config.filename)
-
-	try:
-		all_excludes = config['all']['exclude']
-	except ValueError, e:
-		raise PyTis.EmptyTemplate('The "all" section is is missing an exclude sub-section in the ini file at: "%s"' % config.filename)
-
-	if type(all_includes) == type(str('')):
-		raise PyTis.EmptyTemplate('The "all" section is missing a comma at the end of it\'s "include" line in the ini file at: "%s"' % (config.filename))
-		all_includes = [all_includes]
-
-	if type(all_excludes) == type(str('')):
-		raise PyTis.EmptyTemplate('The "all" section is missing a comma at the end of it\'s "exclude" line in the ini file at: "%s"' % (config.filename))
-		all_excludes = [all_excludes]
-
-
-	for server in config.keys():
-		if server == 'all':
-			pass
-		else:
-			sub = config[server]
-
-			if str(type(sub)) == "<class 'pylib.configobj.Section'>":
-				try:
-					action = sub['action']
-				except KeyError, e:
-					action = 'use'
-				if str(action).strip() == 'ignore':
-					continue
-
-				try:
-					sub['address']
-				except KeyError, e:
-					raise PyTis.EmptyTemplate('Section "%s" is missing a valid address in the ini file at: "%s"' % (server,config.filename))
-
-				for key in sub.keys():
-					try:
-						includes = sub['include']
-					except KeyError, e:
-						raise PyTis.EmptyTemplate('Section "%s" is missing an include sub-section in the ini file at: "%s"' % (server,config.filename))
-					try:
-						excludes = sub['exclude']
-					except KeyError, e:
-						raise PyTis.EmptyTemplate('Section "%s" is missing an exclude sub-section in the ini file at: "%s"' % (server,config.filename))
-
-					if type(includes) == type(str('')):
-						raise PyTis.EmptyTemplate('Section "%s" is missing a comma at the end of it\'s "include" line in the ini file at: "%s"' % (server,config.filename))
-						includes = [includes]
-					if type(excludes) == type(str('')):
-						raise PyTis.EmptyTemplate('Section "%s" is missing a comma at the end of it\'s "exclude" line in the ini file at: "%s"' % (server,config.filename))
-						excludes = [excludes]
-
-					for item in includes:
-						if item in all_includes:
-							msg = "%s%s" % ("This will not work, you are trying to rsync the same file in two portions of your ini file at: %s.\n" % config.filename,'You have "%s" located in the "%s" and in the "all" section.' % (item,server))
-							raise PyTis.EmptyTemplate(msg)
-						'''
-						# it is okay if we exclude it in both places
-						if item in all_excludes:
-							msg = 'This will not work, you are exluding a file (%s) in the "all" section, but including it in the "%s" section of your ini file at: "%s".' % (item,key,config.filename)
-							raise PyTis.EmptyTemplate(msg)
-						'''
-						if item in excludes:
-							msg = 'This will not work, you are exluding and including the same file (%s) in the "%s" section of your ini file at: "%s".' % (item,server,config.filename)
-							raise PyTis.EmptyTemplate(msg)
-
-					for item in includes:
-						if item in all_excludes:
-							msg = 'This will not work, you are exluding the file (%s) in the "all" section, but including it in the "%s" section of your ini file at: "%s".' % (item,server,config.filename)
-							raise PyTis.EmptyTemplate(msg)
-
-def find_user():
-	log.info('No user provided, attempting to retrieve current system user')
-	user = getpass.getuser()
-	if user:
-		log.info('Found: %s' % user)
-	else:
-		log.info('No user found, returning root')
-		return 'root'
-	return user
 
 def get_value(opts, config, key, server=None):
 	global log
@@ -191,7 +308,7 @@ def get_value(opts, config, key, server=None):
 
 	error = 'Cannot find "%s" in config, nor was it passed in as an option on STDIN.' % key
 	try:
-		retval =  getattr(opts,key)
+		retval =	getattr(opts,key)
 		#log.debug("found %s in opts" % key)
 		#log.debug("value of: %s" % retval)
 	except AttributeError, e:
@@ -208,618 +325,463 @@ def get_value(opts, config, key, server=None):
 		raise PyTis.EmptyString(str(error))
 	return retval
 
-
-
-
-
-def run(opts, config, test_now=False, section_to_test=None):
-	global log, __default_timeout__
-
-	all_includes = config['all']['include']
-	all_excludes = config['all']['exclude']
-
-	if type(all_includes) == type(str('')): all_includes = [all_includes]
-	if type(all_excludes) == type(str('')): all_excludes = [all_excludes]
-
-	log.debug("config file used is: %s" % config.filename)
-
-	if opts.verbose and opts.debug: verbosity='-vv'
-	elif opts.verbose or opts.debug: verbosity='-v'
-	else: verbosity=''
-	if opts.niceness:
-		try:
-			nicety="nice -n%s" % str(int(opts.niceness))
-		except ValueError, e:
-			nicety=''
+def validate_opt(opts,cfile,key, section=None):
+	""" To clarify, this is just to make sure that the option can be found, if
+	not as an option argument, then in the section's configuration, and if not
+	there, then look to the global configuration settings.  If a required field
+	cannot be found, raise an empty string error. """
+	global __default_tar_flags__, __default_days__, __default_weeks__
+	global __default_months__,__default_years__, log
+	conf_path = os.path.abspath(config_file())
+	dig_config=False
+	title = key.replace('_',' ').title()
+	#log.debug("attempting to validate '%s' in section: %s" % (key,section))
+	try:
+		opt_val = getattr(opts,key)
+	except AttributeError,e:
+		# doesn't even have the attribute in options, the look to config
+		dig_config=True
 	else:
-		nicety=''
+		if type(opt_val) == type(str('')) and opt_val=='=' or not trim(opt_val): 
+			opt_val=''
+			dig_config=True
+		if type(opt_val) is type(list([])) and not trim(opt_val):
+			opt_val = []
+			dig_config=True
+		# if it does exist in the options as an attribute, but only because it is
+		# the default, then we need to really look to the configuration
+		if trim(key).lower() == 'flags' and \
+				trim(opt_val) == trim(__default_tar_flags__):
+			dig_config=True
+		if trim(key).lower() == 'daily_count' and \
+				trim(opt_val) == trim(__default_days__):
+			dig_config=True
+		if trim(key).lower() == 'weekly_count' and \
+				trim(opt_val) == trim(__default_weeks__):
+			dig_config=True
+		if trim(key).lower() == 'monthly_count' and \
+				trim(opt_val) == trim(__default_months__):
+			dig_config=True
+		if trim(key).lower() == 'yearly_count' and \
+				trim(opt_val) == trim(__default_years__):
+			dig_config=True
 
-	servers = []
-	for server_name in config.keys():
-		server = config[server_name]
-		if str(type(server)) == "<class 'pylib.configobj.Section'>":
-			if server_name == 'all':
-				pass # hold off until the end, do all servers together at the end.
-			else:
 
+	errs = []
+	# doesn't have attribute in options or options attribute is blank/not set
+	if dig_config or not getattr(opts,key):
+		try:
+			if section:
 				try:
-					action = server['action']
+					cfile[section]
 				except KeyError, e:
-					# action is not set, and the default is 'use'
-					action = 'use'
-
-				if section_to_test==server_name and test_now:
-					# I don't care what the action was, even if it was ignore, the user 
-					# asked to test it on the command line
-					action='test'
-
-				if trim(action) == 'ignore': 
-					# server is to be ignored, per config file, OBEY
-					if opts.force and opts.section and opts.section==server_name:
-						log.warn('You are trying to forcibly run section "%s", but it is ignored in the INI file.' % server_name)
-					if opts.section and opts.section==server_name:
-						log.warn('You are trying to run section "%s", but it is ignored in the INI file.' % server_name)
-					continue
-
-				if opts.force and opts.section and not test_now:
-				  # we are not testing, and we are forcing a section
-					# skip this other section
-					if opts.section != server_name:
-						log.debug('Skipping "%s", force was given and this is a different section that the provided "%s"' % (server_name, opts.section))
-						continue
-
-				if opts.section and opts.section==server_name and action=='test' and (not opts.action or opts.action == 'use'):
-					log.warn('You are trying to run section: "%s" that is currently in TEST mode in the INI file.' % server_name)
-					if opts.action and opts.action == 'use':
-						log.warn('Running this time only, INI file still set to "test," please update INI file if you wish to run: "%s" in the future.' % server_name)
-						action = 'use'
-					else:
-						log.warn('Skipping running section: "%s" because "test" set in INI file and no action was provided as an argument.' % server_name)
-
-
-						
-				server = config[server_name]
-
-				try:
-					address = server['address']
-				except KeyError, e:
-					err = 'Address not found for server %s' % server_name
-					if trim(action) == 'test' or test_now:
-						log.warn(err)
-					else:
-						log.error(err)
-						continue
-
-				sshkey = get_value(opts, config, 'sshkey', server_name)
-				if sshkey: ssh='-e "ssh -i %s"' % sshkey
-				else: ssh=''
-
-				rsyncpath = get_value(opts, config, 'rsyncpath', server_name)
-				if rsyncpath: rsyncpath='--rsync-path="%s"' % rsyncpath
-				else: rsyncpath=''
-
-				user = get_value(opts,config,'user',server_name)
-				if not user: user = find_user()
-				base='%s@%s' % (user,address)
-				
-				backup_dir = get_value(opts, config, 'backup_dir', server_name)
-				try:
-					testfile = get_value(opts,config,'test',server_name)
-				except PyTis.EmptyString, e:
-					testfile = None
-	
-				try:
-					disable_all = os.path.abspath(get_value(opts, config, 'disable_all', server_name))
-				except PyTis.EmptyString, e:
-					disable_all = False 
-	
-
-				if (opts.wait and opts.force and opts.wait != __default_timeout__) or (opts.wait and opts.wait != __default_timeout__ and (not opts.section or opts.section == server_name)):
-					timeout = int(opts.wait)
-				else:
-					timeout=get_value(opts, config, 'wait', server_name)
-
-				if timeout and str(timeout) == str(0):
-						log.warn("timeout cannot be zero seconds, please use a minimum of 2 seconds")
-						log.info("setting timeout to default of %s seconds" % __default_timeout__)
-						timeout = int(__default_timeout__)
-				elif not timeout:
-					# not required after all
-					pass
-				else:
-					timeout = int(timeout)
-
-				if timeout and timeout < 2:
-					log.warn("timeout cannot be less than 2 seconds")
-					log.info("setting timeout to default of %s seconds" % __default_timeout__)
-					timeout = int(__default_timeout__)
-				elif timeout > 59:
-					log.warn("timeout cannot be greater than 59 seconds")
-					log.info("setting timeout to default of %s seconds" % __default_timeout__)
-					timeout = int(__default_timeout__)
-
-
-				if timeout: t="--timeout=%s"%timeout
-				else: t=''
-
-				flags=get_value(opts, config, 'flags', server_name) or None
-				if flags: flag='-%s' % flags
-				else: flag=''
-
-				
-				try:
-					forced_dir = get_value(opts,config,'forced_dir',server_name)
-				except PyTis.EmptyString, e:
-					forced_dir = False
-
-				if str(forced_dir).strip().lower() == 'true':
-					forced_dir = True
-				else:
-					forced_dir = False
-
-				servers.append({'name':server_name,
-												'user':user,
-												'base':base,
-												'flags':flags,
-												'backup_dir':backup_dir,
-												'disable_all':disable_all,
-												'sshkey':sshkey,
-												'address':address,
-												'testfile':testfile,
-												'timeout':timeout,
-												'rsyncpath':rsyncpath,
-												'forced_dir':forced_dir
-				})
-
-				if test_now and trim(section_to_test) and section_to_test != server_name:
-					# testing only 1 section, and it isn't this one.
-					continue
-				# moving forward if test_now is true, either we are testing this 
-				# section (else we would have continued) or we are testing all 
-				# sections, either way we are testing if this code continues to execute
-				# and test_now is true.  Therfore, if test_now, only log commands, 
-				# don't execute them.
-
-				if (test_now and section_to_test=='all'):
-					# all we were doing is building the above servers list, now that we
-					# have it we can break out of this loop, or into the next server 
-					continue
-
-				if opts.section and action=='use' and opts.section != server_name:
-					# whether or not force was called, they specified a section and it 
-					# isn't this one, even if it was the all section, we don't need to 
-					# run any futher, this was put under the server bag appendage so that
-					# if we are in force with a server specified, then when we are down 
-					# in the all secton and we reach this server it has the rest of the
-					# servers to communicate with; otherwise this continue check would 
-					# have ended up up above with the others.
-					continue
-
-				if forced_dir:
-					root = os.path.abspath(backup_dir)
-				else:
-					root = os.path.abspath(os.path.join(backup_dir,server_name))
-
-				if testfile:
-					lookfor_exit_codes = [12,23,30]
-
-					if testfile.startswith('/'): 
-						itestfile = testfile[1:]
-					else: 
-						itestfile = testfile
-
-					copy_from = "%s:%s" % (base,testfile)
-
-					copy_to = os.path.abspath(os.path.join(root,itestfile))
-
-					cmd = "rsync %s --delay-updates --delete-before %s %s %s %s %s" % (flag,t,ssh,rsyncpath, copy_from, copy_to)
-					if trim(action) == 'test' or test_now:
-						log.debug("")
-						log.info("# TESTFILE")
-						log.info("# server: %s, address: %s" % (server_name, address))
-						log.info(cmd)
-					else:
-						try:
-							log.debug("")
-							log.debug("# TESTFILE")
-							log.debug("# server: %s, address: %s" % (server_name, address))
-							log.debug(cmd)
-							execute(cmd, server_name, address, lookfor_exit_codes)
-						except PyTis.FileNotFound, t:
-							log.info("")
-							log.info("# TESTFILE")
-							log.info("# server: %s, address: %s" % (server_name, address))
-							log.warn('Testfile "%s" not found on remote: %s, skipping section and continuing.' % (testfile, server_name))
-							return
-							continue
-						else:
-							os.unlink(copy_to)
-
-				if type(server['include']) == type(str('')): server['include'] = [server['include']]
-				if type(server['exclude']) == type(str('')): server['exclude'] = [server['exclude']]
-
-				excludes_tempname = None
-				if 'exclude' in server.keys():
-					exclude_temp = tempfile.NamedTemporaryFile(delete=False)
-					excludes_tempname = exclude_temp.name
-					for x in server['exclude']:
-						exclude_temp.write("%s\n" % x)
-					exclude_temp.flush()
-					exclude_temp.seek(0)
-					exclude_temp.close()
-					exclude = '--exclude-from="%s"' % excludes_tempname
-				else:
-					exclude = ''
-
-				includes_tempname = None
-				if 'include' in server.keys():
-					include_temp = tempfile.NamedTemporaryFile(delete=False)
-					includes_tempname = include_temp.name
-					for x in server['include']:
-						include_temp.write("%s\n" % x)
-						if x.startswith('/'): xx = x[1:]
-						else: xx=x
-						next_root = os.path.abspath(os.path.join(root,os.path.dirname(xx)))
-						if not os.path.exists(next_root):
-							os.makedirs(next_root,0754)
-					include_temp.flush()
-					include_temp.seek(0)
-					include_temp.close()
-					include = '--files-from="%s"' % includes_tempname
-				else:
-					include = ''
-
-				copy_from = "%s:/" % (base)
-				#copy_to = os.path.abspath(os.path.join(root,ii))
-				copy_to = os.path.abspath(root)
-
-				cmd = "%s rsync %s --delay-updates --delete-before %s %s --recursive %s %s %s %s %s %s" % (nicety,flag,verbosity,t,ssh,rsyncpath,exclude,include,copy_from,copy_to)
-				while '  ' in cmd:
-					cmd=cmd.replace('  ',' ')
-				if trim(action) == 'test' or test_now:
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.info("")
-					log.info("# server: %s, address: %s" % (server_name, address))
-					log.info(cmd)
-
-					log.debug('# -- "%s" SECTION/SERVER INCLUDE FILES --' % server_name)
-					include_temp = open(includes_tempname)
-					log.debug(str(''.join(list(['# %s' % x for x in include_temp.readlines(-1)]))))
-					include_temp.close()
-
-					log.debug('# -- "%s" SECTION/SERVER EXCLUDE FILES --' % server_name)
-					exclude_temp = open(excludes_tempname)
-					log.debug(str(''.join(list(['# %s' % x for x in exclude_temp.readlines(-1)]))))
-					exclude_temp.close()
-
+					raise PyTis.EmptyString('Section "%s" provided, and could not be " \
+						"found in the config file.' % section)
 				else:
 					try:
-						if (opts.verbose or opts.had_verbose) and not opts.quiet:
-							log.debug("")
-						log.info("# server: %s, address: %s" % (server_name, address))
-						log.debug(cmd)
-						execute(cmd, server_name, address)
-					except PyTis.FileNotFound, t:
-						if (opts.verbose or opts.had_verbose) and not opts.quiet:
-							log.info("")
-						log.info("# server: %s, address: %s" % (server_name, address))
-						log.warn(t[0])
-						log.warn(t[1])
-						log.warn(t[2])
-
-				if includes_tempname: os.unlink(includes_tempname)
-				if excludes_tempname: os.unlink(excludes_tempname)
-
-	# BEGIN ALL SECTION
-	if all_includes:
-
-		try:
-			disable_all = os.path.abspath(get_value(opts, config, 'disable_all', 'all'))
-		except PyTis.EmptyString, e:
-			disable_all = False 
-		if disable_all:
-			return
-
-	
-		if test_now and section_to_test and (not opts.force and section_to_test !='all'):
-			return
-		try:
-			action=get_value(opts,config,'action','all')
-		except PyTis.EmptyString, e:
-			action = 'use'
-
-		if opts.section and opts.section != 'all' and not opts.force:
-			return
-
-		if trim(action) == 'ignore' and (not opts.force and section_to_test):
-			return	
-
-		for server_bag in servers:
-			server_base				= server_bag['base']
-			server_name				= server_bag['name']
-			server_backup_dir	= server_bag['backup_dir']
-			server_user				= server_bag['user']
-			server_flags			= server_bag['flags']
-			server_sshkey			= server_bag['sshkey']
-			server_address		= server_bag['address']
-			server_timeout		= server_bag['timeout']
-			server_rsyncpath	= server_bag['rsyncpath']
-			server_disable_all= server_bag['disable_all']
-			if server_name == 'all':
-			  # I don't think we should run into this, but just incase, we don't syncronize all to all
-				continue
-			if server_disable_all:
-				continue
-			if action != 'test' and not test_now and opts.force and opts.section:
-				if opts.section != server_name:
-					continue
-			
-			if opts.section and opts.section != 'all' and opts.section != server_name:
-				continue
-
-
-			if(opts.wait and opts.force and opts.wait != __default_timeout__) or (opts.wait and opts.wait != __default_timeout__ and (not opts.section or opts.section == 'all' or opts.section==server_name)):
-				timeout = int(opts.wait)
-			else:
-
-				timeout=server_timeout
-				if not timeout:
-					# the forementioned server does not have a timeout specified in the INI
-					# file, that's okay, try to load one from from the all section of the
-					# INI file. If that fails too, then it will try loading it from an 
-					# argument passed into the calling of this program, loaded as an option
-					# and if that fails, the optparser has a defautl timeout, so we should
-					# be fail-proof on this one.
-					timeout=get_value(opts,config,'wait','all')
-
-			if timeout and str(timeout) == str(0):
-					log.warn("timeout cannot be zero seconds, please use a minimum of 2 seconds")
-					log.info("setting timeout to default of %s seconds" % __default_timeout__)
-					timeout = int(__default_timeout__)
-			elif not timeout:
-				# not sure how this would even be possible, but technically a timeout
-				# is not a required rsync flag.  
-				pass
-			else:
-				timeout = int(timeout)
-
-			if timeout < 2:
-				log.warn("timeout cannot be less than 2 seconds")
-				log.info("setting timeout to default of %s seconds" % __default_timeout__)
-				timeout = int(__default_timeout__)
-			elif timeout > 59:
-				log.warn("timeout cannot be greater than 59 seconds")
-				log.info("setting timeout to default of %s seconds" % __default_timeout__)
-				timeout = int(__default_timeout__)
-
-			if timeout: t="--timeout=%s"%timeout
-			else: t=''
-
-			if not server_flags:
-				server_flags = get_value(opts, config, 'flags', 'all') or None
-			if server_flags: flag='-%s' % server_flags
-			else: flag=''
-		
-			if forced_dir:
-				root = os.path.abspath(get_value(opts, config, 'backup_dir', 'all'))
-			else:
-				root = os.path.abspath(os.path.join(get_value(opts, config, 'backup_dir', 'all'),'all'))
-
-			excludes_tempname = None
-			if all_excludes:
-				exclude_temp = tempfile.NamedTemporaryFile(delete=False)
-				excludes_tempname = exclude_temp.name
-				for x in all_excludes:
-					exclude_temp.write("%s\n" % x)
-				exclude_temp.flush()
-				exclude_temp.seek(0)
-				exclude_temp.close()
-				exclude = '--exclude-from="%s"' % excludes_tempname
-			else:
-				exclude = ''
-
-			includes_tempname = None
-			if 'include' in server.keys():
-				include_temp = tempfile.NamedTemporaryFile(delete=False)
-				includes_tempname = include_temp.name
-				for i in all_includes:
-					include_temp.write("%s\n" % i)
-					if i.startswith('/'): ii = i[1:]
-					else: ii=i
-					next_root = os.path.abspath(os.path.join(root,os.path.dirname(ii)))
-					if not os.path.exists(next_root):
-						os.makedirs(next_root,0754)
-				include_temp.flush()
-				include_temp.seek(0)
-				include_temp.close()
-				include = '--files-from="%s"' % includes_tempname
-			else:
-				include = ''
-
-			copy_from = "%s:/" % (server_base)
-			copy_to = os.path.abspath(root)
-
-			cmd1 = "%s rsync %s --delay-updates %s %s --recursive %s %s %s %s %s %s" % (nicety,flag,verbosity,t,ssh,rsyncpath,exclude,include,copy_from,copy_to)
-			cmd2 = "%s rsync %s --delay-updates %s %s --recursive %s %s %s %s %s %s" % (nicety,flag,verbosity,t,ssh,rsyncpath,exclude,include,copy_to,copy_from)
-			while '  ' in cmd1:
-				cmd1=cmd1.replace('  ',' ')
-			while '  ' in cmd2:
-				cmd2=cmd2.replace('  ',' ')
-
-			if trim(action) == 'test' or test_now:
-
-				if test_now and trim(section_to_test) and section_to_test != 'all' and section_to_test != server_name :
-					# skip because section to test isn't all and is not this one either
-					pass
-
-				elif test_now and trim(section_to_test) and section_to_test == server_name:
-					# section to test is this one (a named section other than the 'all'
-				  # section) thus only this section should be getting spit out.
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.debug("")
-					log.debug('# -- "ALL" SECTION INCLUDE FILES -- ')
-					include_temp = open(includes_tempname)
-					log.debug( ''.join(['# %s' % x for x in include_temp.readlines(-1)]))
-					include_temp.close()
-
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.debug("")
-					log.debug('# -- "ALL" SECTION EXCLUDE FILES -- ')
-					exclude_temp = open(excludes_tempname)
-					log.debug( ''.join(['# %s' % x for x in exclude_temp.readlines(-1)]))
-					exclude_temp.close()
-
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.info("")
-					log.info("# 'all' >> server: %s, address: %s" % (server_name, server_address))
-					log.info(cmd1)
-
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.info("")
-					log.info("# 'all' << server: %s, address: %s" % (server_name, server_address))
-					log.info(cmd2)
-				else:
-					# section to test is specifically the all section
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.debug("")
-					log.debug('# -- "ALL" SECTION INCLUDE FILES -- ')
-					include_temp = open(includes_tempname)
-					log.debug( "".join(['# %s' % x for x in include_temp.readlines(-1)]))
-					include_temp.close()
-
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.debug("")
-					log.debug('# -- "ALL" SECTION EXCLUDE FILES -- ')
-					exclude_temp = open(excludes_tempname)
-					log.debug( ''.join(['# %s' % x for x in exclude_temp.readlines(-1)]))
-					exclude_temp.close()
-
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.info("")
-					log.info("# 'all' >> server: %s, address: %s" % (server_name, server_address))
-					log.info(cmd1)
-
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.info("")
-					log.info("# 'all' << server: %s, address: %s" % (server_name, server_address))
-					log.info(cmd2)
+						value = cfile[section][key]
+					except KeyError, e:
+						try:
+							value = cfile[key]
+							if key.lower() == 'action' and trim(value):
+								raise PyTis.ConfigurationError("Somebody directly edited the " \
+									"configuration ini file (%s).  You may specify an action in" \
+									" the global section." % conf_path)
+						except KeyError, e:
+							if key.lower() == 'action':
+								value='use'
+								return value
+							errs.append('"%s" not found in the configuration file under " \
+								"section: %s.' % (title,section))
+							errs.append('"%s" not found in the global section of the " \
+								"configuration file.' % title)
+					else:
+						if key.lower() == 'to_exclude':
+							try:
+								val2 = cfile[key]
+							except KeyError, e:
+								pass
+							else:
+								if val2 and type(val2) != type(list([])):
+									val2 = [val2]
+									value.extend(val2)
+								elif val2 and type(val2) == type(list([])):
+									value.extend(val2)
 
 			else:
-				if (opts.verbose or opts.had_verbose) and not opts.quiet:
-					log.debug("")
-				log.debug('# -- "ALL" SECTION INCLUDE FILES -- ')
-				include_temp = open(includes_tempname)
-				log.debug( ''.join(['# %s' % x for x in include_temp.readlines(-1)]))
-				include_temp.close()
-				if (opts.verbose or opts.had_verbose) and not opts.quiet:
-					log.debug("")
-				log.debug('# -- "ALL" SECTION EXCLUDE FILES -- ')
-				exclude_temp = open(excludes_tempname)
-				log.debug( ''.join(['# %s' % x for x in exclude_temp.readlines(-1)]))
-				exclude_temp.close()
 				try:
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.info("")
-					log.info("# 'all' >> server: %s, address: %s" % (server_name, server_address))
-					log.debug(cmd1)
-					execute(cmd1, server_name, server_address)
-				except PyTis.FileNotFound, t:
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.info("")
-					log.info("# 'all' >> server: %s, address: %s" % (server_name, server_address))
-					log.debug(cmd1)
-					log.warn(t[0])
-					log.warn(t[1])
-					log.warn(t[2])
+					value = cfile[key]
+				except KeyError, e:
+					errs.append('"%s" not found in the global section of the " \
+						"configuration file.' % title)
 
+			if errs:
 				try:
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.info("")
-					log.info("# 'all' << server: %s, address: %s" % (server_name, server_address))
-					log.debug(cmd2)
-					execute(cmd2, server_name, server_address)
-				except PyTis.FileNotFound, t:
-					if (opts.verbose or opts.had_verbose) and not opts.quiet:
-						log.info("")
-					log.info("# 'all' << server: %s, address: %s" % (server_name, server_address))
-					log.warn(t[0])
-					log.warn(t[1])
-					log.warn(t[2])
+					value = opt_val
+				except UnboundLocalError, e:
+					print 'key', key
+					print 'section', section
+					print e
+					sys.exit(1)
 
-			if includes_tempname: os.unlink(includes_tempname)
-			if excludes_tempname: os.unlink(excludes_tempname)
-
-def execute(command, server_name, server_address, exit_codes=[]):
-# TODO-come back and finish this with:
-# http://stackoverflow.com/questions/984941/python-subprocess-popen-from-a-thread
-# http://stackoverflow.com/questions/14272582/calling-rsync-from-python-subprocess-call
-# or 
-# http://stackoverflow.com/questions/984941/python-subprocess-popen-from-a-thread
-	"""
-	EXIT VALUES
-		 0      Success
-		 1      Syntax or usage error
-		 2      Protocol incompatibility
-		 3      Errors selecting input/output files, dirs
-		 4      Requested  action not supported: an attempt was made to manipulate 64-bit files on a platform that cannot support them; or an option was specified that is supported by the
-						client and not by the server.
-		 5      Error starting client-server protocol
-		 6      Daemon unable to append to log-file
-		 10     Error in socket I/O
-		 11     Error in file I/O
-		 12     Error in rsync protocol data stream
-		 13     Errors with program diagnostics
-		 14     Error in IPC code
-		 20     Received SIGUSR1 or SIGINT
-		 21     Some error returned by waitpid()
-		 22     Error allocating core memory buffers
-		 23     Partial transfer due to error
-		 24     Partial transfer due to vanished source files
-		 25     The --max-delete limit stopped deletions
-		 30     Timeout in data send/receive
-		 35     Timeout waiting for daemon connection
-
-	"""
-	global log
-	process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-	output = ''
-
-	# Poll process for new output until finished
-	for line in iter(process.stdout.readline, ""):
-		log.debug(str(line))
-		output += line
-
-	process.wait()
-	exitCode = process.returncode
-
-	if (exitCode == 0):
-		return output
-	elif exitCode in exit_codes:
-		# We should log this the EXACT same way we do other errors, but we must
-		# first raise it one level to be caught by the testfile portion.  Therefore
-		# we will raise it and pass in a tuple to be caught and logged if / when 
-		# it wasn't expected.
-		raise PyTis.FileNotFound('# server: %s, address: %s - exitCode: %s' % (server_name,server_address,str(exitCode)),'output follows:',output)
-	elif exitCode == 23:
-		log.info("")
-		log.warn('# server: %s, address: %s - exitCode: %s' % (server_name,server_address,str(exitCode)))
-		log.warn(str(output))
-	elif exitCode == 30:
-		log.info("")
-		log.error('# server: %s, address: %s - exitCode: %s' % (server_name,server_address,str(exitCode)))
-		log.error(str(output))
+				if not trim(value) and key not in cfile.optional_fields:
+					errs.append('%s not provided as an STDIN option, and could not be " \
+						"found in the config file.' % title)
+					raise PyTis.EmptyString("\n".join(errs))
+		except OSError,e:
+			raise PyTis.EmptyString('%s not provided, and a config file could not ' \
+				'me found.' % title)
 	else:
-		#log.info("")
-		#log.error('# server: %s, address: %s - exitCode: %s' % (server_name,server_address,str(exitCode)))
-		#log.error('output follows:')
-		#log.error(output)
-		error = "\n# server: %s, address: %s - exitCode: %s\noutput follows:\n%s" % (server_name,server_address,str(exitCode),output)
-		raise Exception(error)
+		value = opt_val
+		if not trim(value):
+			del opts.__dict__[key]
+			return validate_opt(opts,cfile,key,section)
+	return value
+
+
+def validate(opts, config):
+	""" Very similar to what will occur within the run function.  This function
+	will ensure that the required data for all of the sections (or only one
+	section, if only one is specified to be ran/tested via the optional attribute
+	"--section=[NAME OF SECTION]").  If the required data cannot be found in
+	the parsed arguments/options (or can be found, but is simply a default
+	value), then look to the config.  If it cannot be found within the section,
+	then look globally within the config.  Lastly, unless the action and section
+	were sprecifically specified within the STDIN optional arguments, then this
+	may skip over sections who have the ignore flag set.
+
+	This makes sure that when this runs for a cronjob, that each section that
+	could run, will.  In other words, each section that is not explicedly set to
+	"ignore" have all required variables set, or can be inherited.
+	
+	"""
+	config.fields=['daily_dir','weekly_dir','monthly_dir','yearly_dir','daily_count',
+		'weekly_count','monthly_count','yearly_count','to_exclude','to_backup',
+		'flags','test_local']
+	config.optional_fields = ['test_local']
+	sections = PyTis.identify_sections(config)
+
+
+	opt_keys=opts.__dict__.keys()
+	opt_keys.sort()
+	for section_name, section in sections:
+		if(opts.section_name and trim(opts.section_name).lower() == section_name) \
+			or not trim(opts.section_name):
+			if not trim(opts.section_name) and trim(section.get('action','use')).lower() == 'ignore':
+				continue
+			#for opt, value in opts.__dict__.items():
+			for opt in opt_keys:
+				value=opts.__dict__[opt]
+				if opt.lower() in config.fields:
+					#log.info('looking for %s in %s' % (str(opt.lower()),section_name))
+					value = validate_opt(opts,config,opt.lower(),section_name)	
+					log.debug("VALIDATED OPTIONS [%s] %s: %s" % (section_name,opt,value))
+
+	log.debug('-'*80) 
+
+def run(opts, config, TEST_NOW):
+	"""pybkup run doc help"""
+	global log, __default_days__, __default_weeks__, __default_months__
+	global __default_years__
+	errors = []
+	timestamp = PyTis.fileStampNow()
+
+	for section_name, section in PyTis.identify_sections(config):
+		section_name=section_name.lower()
+
+		if trim(opts.section_name) and (section_name.lower() != trim(opts.section_name).lower()):
+			continue
+		action=validate_opt(opts,config,'action',section_name.lower())
+		if trim(opts.section_name) and trim(opts.action).lower() == 'use' and action.lower() == 'ignore' and not opts.force:
+			log.error("You may not run a section that was specifically ignored.  At most you may test it, this has bee put in place for safety reasons.")
+		elif trim(opts.section_name) and trim(opts.action).lower() == 'use' and action.lower() == 'ignore' and opts.force:
+			log.warn("You may run this section this time ONLY because you used the force flag.  Please not normally, this section would be ignored, as that is what this section's action attribute is set to.")
+
+		if TEST_NOW:
+			log.info('TESTING SECTION: %s' % section_name)
+
+		to_backup = trim(section.get('to_backup',[]))
+		if type(to_backup) is type(str('')):
+			if trim(to_backup): to_backup = [to_backup]
+			else: to_backup = []
+
+		to_exclude = validate_opt(opts,config,'to_exclude',section_name)
+		if type(to_exclude) is type(str('')):
+			if trim(to_exclude): to_exclude = [to_exclude]
+			else: to_exclude = []
+
+		daily_dir		= os.path.abspath(validate_opt(opts,config,'daily_dir',section_name))
+		weekly_dir	= os.path.abspath(validate_opt(opts,config,'weekly_dir',section_name))
+		monthly_dir	= os.path.abspath(validate_opt(opts,config,'monthly_dir',section_name))
+		yearly_dir	= os.path.abspath(validate_opt(opts,config,'yearly_dir',section_name))
+
+		daily_count		= int(validate_opt(opts,config,'daily_count', section_name))
+		weekly_count	= int(validate_opt(opts,config,'weekly_count',section_name))
+		monthly_count = int(validate_opt(opts,config,'monthly_count',section_name))
+		yearly_count = int(validate_opt(opts,config,'yearly_count',section_name))
+
+		flags = validate_opt(opts,config,'flags',section_name)
+		nicity = validate_opt(opts,config,'niceness',section_name)
+		
+		root_dir = opts.root
+		root_dir = section.get('root', config.get('root', root_dir))
+
+		root_dir = None
+
+		if len(to_backup) == 1:
+			to_b = os.path.abspath(to_backup[0])
+			base = "%s_%s" % (os.uname()[1].lower(),os.path.basename(to_b))
+			include = to_b 
+			if os.path.isfile(to_b):
+				could_b = os.path.dirname(os.path.dirname(to_b))
+			else:
+				could_b = os.path.dirname(to_b)
+			if not root_dir or root_dir.startswith(could_b) and os.path.abspath(root_dir) != os.path.abspath(could_b):
+				root_dir=could_b
+		elif len(to_backup) > 1:
+			base = "%s_%s" % (os.uname()[1].lower(),section_name.lower())
+			for to_b in to_backup:
+				if not to_b: continue
+				to_b = os.path.abspath(to_b)
+				if os.path.isfile(to_b):
+					could_b = os.path.dirname(os.path.dirname(to_b))
+				else:
+					could_b = os.path.dirname(to_b)
+
+				if not root_dir or root_dir.startswith(could_b) and os.path.abspath(root_dir) != os.path.abspath(could_b):
+					root_dir=could_b
+		else:
+			include = ''
+
+		if len(to_exclude) == 1:
+			ex = os.path.abspath(to_exclude[0])
+			exclude = "--exclude='%s'" % ex
+			if os.path.isfile(ex):
+				could_b = os.path.dirname(os.path.dirname(ex))
+			else:
+				could_b = os.path.dirname(ex)
+			if not root_dir or root_dir.startswith(could_b) and os.path.abspath(root_dir) != os.path.abspath(could_b):
+				root_dir=could_b
+		elif len(to_exclude) > 1:
+			for ex in to_exclude:
+				if not ex: continue
+				ex = os.path.abspath(ex)
+				if os.path.isfile(ex):
+					could_b = os.path.dirname(os.path.dirname(ex))
+				else:
+					could_b = os.path.dirname(ex)
+				if not root_dir or root_dir.startswith(could_b) and os.path.abspath(root_dir) != os.path.abspath(could_b):
+					root_dir=could_b
+		else:
+			exclude = ''
+
+		if not root_dir:
+			root_dir = '/'
+
+		os.chdir(os.path.abspath(root_dir))
+
+		if len(to_backup) > 1:
+			includes_tempname = None
+			include_temp = tempfile.NamedTemporaryFile(delete=False)
+			includes_tempname = include_temp.name
+			include = '--files-from="%s"' % os.path.abspath(includes_tempname)
+			for to_b in to_backup:
+				if not to_b: continue
+				include_temp.write("%s\n" % to_b.strip().replace(root_dir,'')[1:])
+			include_temp.flush()
+			include_temp.seek(0)
+
+		if len(to_exclude) > 1:
+			excludes_tempname = None
+			exclude_temp = tempfile.NamedTemporaryFile(delete=False)
+			excludes_tempname = exclude_temp.name
+			exclude = '--exclude-from="%s"' % excludes_tempname
+			for ex in to_exclude:
+				if not ex: continue
+				exclude_temp.write("%s\n" % ex.strip().replace(root_dir,'')[1:])
+			exclude_temp.flush()
+			exclude_temp.seek(0)
+
+
+		target_base = "%s.tar.gz" % base	
+		target = "%s-%s" % (timestamp, target_base)
+		daily_file	= os.path.abspath(os.path.join(daily_dir,target))
+		weekly_file	= os.path.abspath(os.path.join(weekly_dir,target))
+		monthly_file= os.path.abspath(os.path.join(monthly_dir,target))
+		yearly_file	= os.path.abspath(os.path.join(yearly_dir,target))
+
+		cmd = "tar %(flags)s %(target)s %(exclude)s %(source)s" % dict(flags=flags,
+			target=daily_file, exclude=exclude, source=include)
+		if len(to_backup) > 1:
+			include_temp.seek(0)
+			log.debug("\nINCLUDE (included files read from file):\n========")
+			log.debug("\t%s\n" % "\n\t".join([tem.strip() for tem in include_temp.readlines(-1)]))
+		if len(to_exclude) > 1:
+			log.debug("\nEXCLUDE (excluded files read from temp file):\n========")
+			log.debug("\t%s\n" % "\n\t".join([tem.strip() for tem in exclude_temp.readlines(-1)]))
+		log.debug("COMMAND:")
+		if TEST_NOW:
+			log.info("#The following command would have run if not in TEST mode.")
+			log.info("#%s" % cmd)
+			log.debug("This would have created: %s" % daily_file)
+		else:
+			ret = execute(cmd)
+			if ret: ret = list(ret)
+			else: ret = 'None'
+			log.debug(cmd)
+			if not os.path.isfile(daily_file) or not os.path.exists(daily_file):
+				[log.warn(r) for r in ret]
+			log.debug("Should have created: %s" % daily_file)
+
+		now=datetime.datetime.now()
+
+		# now, that we have our daily copy, if it is a Friday, copy this to the weekly backups.
+		if not TEST_NOW and weekly_count and now.weekday() == 4:
+			shutil.copy(daily_file,weekly_file)
+
+		if not TEST_NOW and monthly_count and now.day == 1:
+			shutil.copy(daily_file,monthly_file)
+
+		if not TEST_NOW and yearly_count and now.day == 1 and now.month == 1:
+			shutil.copy(daily_file,yearly_file)
+
+		# - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # -
+		# now prune the daily folder
+		if daily_count:
+			acceptable_date = PyTis.relative_date(now,days=-daily_count).date()
+		else:
+			acceptable_date = None
+		prune('days',daily_dir,daily_count,target_base,TEST_NOW,acceptable_date)
+
+		# - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # -
+		# now prune the weekly folder
+
+		if weekly_count:
+			if now.weekday() == 4: # this is a friday.
+				acceptable_date = PyTis.relative_date(now, weeks= -weekly_count).date()
+			else: # not a friday, find last one
+				acceptable_date = PyTis.relative_date(now - datetime.timedelta(days=now.weekday() + 3), weeks= -weekly_count).date()
+		else:
+			acceptable_date = None
+		prune('weeks',monthly_dir,weekly_count,target_base,TEST_NOW,acceptable_date)
+
+
+		# - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # -
+		# now prune the monthly folder
+		if monthly_count:
+			acceptable_date = PyTis.relative_date(now.replace(day=1),months=-monthly_count).date()
+		else:
+			acceptable_date = None
+		prune('months',monthly_dir,monthly_count,target_base,TEST_NOW,acceptable_date)
+
+		# - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # - # -
+		# now prune the yearly folder
+		if yearly_count:
+			#acceptable_date = PyTis.relative_date(now.replace(day=1),years=-yearly_count).date()
+			year = now.year-yearly_count
+			acceptable_date = datetime.date(now.year,1,1)
+		else:
+			acceptable_date = None
+		prune('years',yearly_dir,yearly_count,target_base,TEST_NOW,acceptable_date)
+
+
+		if(len(to_backup)) > 1:
+			include_temp.close()
+		if(len(to_exclude)) > 1:
+			exclude_temp.close()
+
+def prune(log_label,directory,count,target_base,TEST_NOW,acceptable_date=None): 
+	global log
+	for fpath in glob.glob(os.path.join(directory,'*.tar.gz')):
+		f = os.path.basename(fpath)
+		if not f[13:] == '-%s' % target_base:
+			log.debug("%s - filename pattern non-match: [ skipping ]" % fpath)
+			continue
+		else:
+			log.debug("%s - filename pattern match" % fpath)
+
+		if count == 0:
+			if TEST_NOW:
+				log.info("%s count is set to 0, {%s} would be deleted" % (log_label.title(),f))
+			else:
+				os.unlink(fpath)
+				log.info("%s count is set to 0, {%s} [ removing ]" % (log_label.title(),f))
+		elif not count:
+			log.warn("Count not set at all, but filename match found.  No files will be pruned.")
+		else:
+			try:
+				fyear = int(f[0:4])
+				fmonth = int(f[4:6])
+				fday = int(f[6:8])
+			except (ValueError,IndexError), e:
+				# XXX-TODO log it though, like a warning
+				pass #skip because it must be someone elses tarbarll
+			else:
+				your_date = datetime.date(fyear,fmonth,fday)
+				if your_date < acceptable_date:
+					if TEST_NOW:
+						log.info("file {%s} is more than %s %s old, and would be deleted" % (f,count,log_label))
+					else:
+						log.info("file {%s} is more than %s %s old" % (f,count,log_label))
+						os.unlink(fpath)
+				else:
+					log.debug("%s - file dates checked: [ skipping ]" % f)
+
+def execute(exe):
+	p = subprocess.Popen(exe, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,shell=True)
+	while True:
+		retcode = p.poll()
+		line = p.stdout.readline()
+		if line:
+			yield line.strip()
+		if retcode is not None:
+			break
+
+def get_count(opts, attr_name, default, update_with, errors=[]):
+
+	opts_attr = getattr(opts,attr_name,None)
+
+	if trim(opts_attr) and not is_int(opts_attr):
+		# optional command line argument passed via STDIN, but is not an integer,
+		# raise an error
+		errors.append('If you specify the %s flag, you must provide an integer *(use "--help" for more information).' % attr_name.replace('_','-'))
+	elif opts_attr and is_int(opts_attr) and int(opts_attr) != default:
+		# updating with priority, because command line override in STDIN via
+		# optional argument
+		update_with.update({attr_name:opts_attr})
+	elif opts_attr and is_int(opts_attr) and int(opts_attr) == default: 
+		# it is in the optional arguments, and MAY have been provided via STDIN,
+		# but was likely not, because it is the default value
+		if not trim(opts.section_name) and config.get(attr_name,None) is None:
+			# no section given, and it isn't set globally, let's set it for them
+			update_with.update({attr_name:default})
+		if trim(opts.section_name) and not config.get(trim(opts.section_name),None):
+			# they gave us a section after all, but it doesn't exist, they are likely
+			# creating it for the first time right now.
+			if config.get(attr_name,None) is None:
+				# it is not set globally either, so lets set one for this section. 
+				update_with.update({attr_name:default})
+			else:
+				# there is already a global value within the config that this section
+				# can inherit from, lets leave this new section's attr_count value
+				# blank, allowing the value to be pulled from the global config.
+				# "Simple is better than complex." 
+				pass
+		elif trim(opts.section_name) and config.get(trim(opts.section_name),None):
+			# they gave us a section, and it does already exist in the config, treat
+			# this as if they are editing an existing section
+			if config[trim(opts.section_name)].get(attr_name,None) is None and config.get(attr_name,None) is None:
+				# there is not already a global value within the config that this
+				# section can inherit from,  therefore we will set this new section's
+				# attr _count value
+				update_with.update({attr_name:default})
+	return errors,update_with
 
 def main():
-	"""usage: %prog	...<options>""" 
-	global log, __default_rsync_flags__, __default_timeout__
-	main.__doc__ = "%s\n\n  CONFIG FILE: %s" % (main.__doc__,os.path.abspath(config_file()))
+	"""usage: pybkup {ACTION} [OPTIONS]"""
+	global __default_tar_flags__, log, __default_days__, __default_weeks__
+	global __default_months__, __default_years__
+	main.__doc__ = "%s\n\n	CONFIG FILE: %s" % (main.__doc__,os.path.abspath(config_file()))
 	errors=[]
 	PyTis.__option_always__ = [True]
 	help_dict = dict(version=__version__,
@@ -828,319 +790,47 @@ def main():
 						 copyright=__copyright__)
 	parser = PyTis.MyParser()
 
-	parser.extra_txt = """Usage: pybkup   ...<options>
+	
 
-*** USE '--help' for the full help page. ***
+	parser.extra_txt = """Usage: pybkup	 ...<options>
 
-pybkup
-======
+	tar.gz
 
-When individual sections/servers run, they use a command build from the code below:
-	cmd = "rsync %%s --delay-updates --delete-before %%s %%s %%s --recursive %%s %%s %%s %%s" %% (flag,verbosity,timeout,exclude,ssh,rsyncpath, copy_from, copy_to)
-The individual servers only pull down from the source, to this server.  Please notice, the --delete-before command is passed into rsync automatically.
+Daily for 2 weeks
+leave.
+> 2 weeks, leave if on friday.
+weekly for 2 months
+> 2 months, leave 1 per month....
 
-When the all section runs, it tries to pull from each section/server to this server, then push back up.  Then it moves on to the next server in the list doing the same thing while iterating over the include files from the "all" section of the INI.
-	cmd1 = "rsync %%s --delay-updates %%s %%s %%s --recursive %%s %%s %%s %%s" %% (flag,verbosity,t,exclude,ssh,rsyncpath, copy_to, copy_from)
-	cmd2 = "rsync %%s --delay-updates %%s %%s %%s --recursive %%s %%s %%s %%s" %% (flag,verbosity,t,exclude,ssh,rsyncpath, copy_from, copy_to)
+Named Sections to manage each set of configuration variables.
 
--------------------------------------------------------------------------------
+monthly for 2 years.
 
-UNDERSTANDING LOGGING and OUTPUT:
-
- The way my PyTis scripts and programs work, I hardly ever use the print command.  Instead I just log something using a custom logging class.  I have four log levels: debug, info, warn and error. Messages may or may not make it to the screen (as my logging class will print output as it logs) depending on which arguments you pass into the program you are executing. 
-
- The current setup allows for 2 log files, to be written to the PyTis configured log directory.  If you do not use debug, then the log file used will be the pytis_tools.log, if debugging is turned on, then the log file will be {program_name}.log found in the same directory.  In this program's case that would be pybkup.log  So if you use -D the output ends up in a different log file, but this is just to keep debugging separate from normal logging.
--V --verbose is off by default by with this program, unless you use the action 'test' then it is on (unless you specify --quiet, then it stays off).
-
- debug:
-	Not to log-file or to screen by default, but if turned on with the -D or --debug flag, it will always end up in the debug log file (pybkup.log).
-	-D: print debug messages to log only
-	-V: alone does not print debug messages anywhere, because -D or --debug not given
-	-DV: now debug messages are sent to their log file, and make it to the screen
-
- info:
-	Print normal level information, always written to log (although which log is being used depends on if you are using debugging, as stated above).
-	-V allows info messages to print to STDOUT, thus to the screen for you to see.
-	-q or --quiet turns off -V
-
- warn:
-	Warnings will always make it to which ever log is being used, and it will always make it to the screen unless -q is passed in.  If -q is passed in then warnings are hidden from STDOUT, thus only show in log files.
-	-q suppresses warnings to STDOUT (the screen) but they will still end up in whichever log this program is using.
-
- error:
-	error messages always make it to the screen, no matter what; and are always logged to the log file as well.
-
- Notes:
-	To ensure there is no confusion, I want to specify that the log file is chosen one time during the first stages of the program firing up, it does not switch back and forth while running, nothing complex like that.  Simply this, all of my programs share pytis_tools.log unless they are in debug mode.  Then, since they are obviously going to spit out allot more information, they write to their very own log file for that run.  That way they don't fill up and clutter the shared pytis_tools.log 
-
-	'-DVq' confuses my little logging class.  -q silences most messages, nothing but errors make it to the screen, -D was passed in so the debug log is used (pybkup.log) however logging level is set to verbose, with nothing to the screen so what ends up happening is only info messages make it to the debug log (debug messages hidden).
-
--------------------------------------------------------------------------------
-
-OPTIONS:
-
- -h, --help
-	show this help message and exit
-
-RUNTIME ARGUMENTS:
-
- -F, --force
-	 While in most of my PyTis tools the following is true:
-		Disable prompts. Commonly used when called by other programs, this will force the program to run without asking for user input, attempting to run with whatever input is given. Only errors are output.
-	 In this program force has a slightly different meaning: 
-	 If you pass in a section, it will force it to run only for that one section.  Whether it is the "all" section, or a specific server by name.  This is true for '... --force --action=test --server=Example...'
-	 The one notable difference is that usually when you specify a section/server other than the "all" section, and you specify the test action, then only the commands directly for that section will be written out to log/screen.  If you use the --force command while using the test --action, then it will not only log the server's direct commands, but also those commands related to that server found in the all section.  If you are still confused, give the following two commands a try, and compare the difference (so long as you have more than 2 sections in addition to your all section).
-
-		pybkup --action test -V
-		.. # server: Dallas, address: 192.168.1.1
-		.. rsync -DghiLlKoprtuz --delay-updates --delete-before -vv --timeout=3 --recursive -e "ssh -i /home/rsyncer/.ssh/id_rsa" --rsync-path="sudo rsync" --exclude-from="/tmp/tmpItatOH" --files-from="/tmp/tmpzv8vrp" rsyncer@192.168.1.1:/ /data/backups
-
-		pybkup --action test -V --force
-		.. # server: Dallas, address: 192.168.1.1
-		.. rsync -DghiLlKoprtuz --delay-updates --delete-before -vv --timeout=3 --recursive -e "ssh -i /home/rsyncer/.ssh/id_rsa" --rsync-path="sudo rsync" --exclude-from="/tmp/tmpItatOH" --files-from="/tmp/tmpzv8vrp" rsyncer@192.168.1.1:/ /data/backups
-		.. # 'all' >> server: Dallas, address: 192.168.1.1
-		.. rsync -DghiLlKoprtuz --delay-updates -vv --timeout=3 --recursive -e "ssh -i /home/rsyncer/.ssh/id_rsa" --rsync-path="sudo rsync" --exclude-from="/tmp/tmpxAo9Wy" --files-from="/tmp/tmpLoqiId" rsyncer@192.168.1.4:/ /data/backups/Dallas
-		.. # 'all' << server: Dallas, address: 192.168.1.1
-		.. rsync -DghiLlKoprtuz --delay-updates -vv --timeout=3 --recursive -e "ssh -i /home/rsyncer/.ssh/id_rsa" --rsync-path="sudo rsync" --exclude-from="/tmp/tmpxAo9Wy" --files-from="/tmp/tmpLoqiId" /data/backups/Dallas rsyncer@192.168.1.4:/
-
- -L, --list-out
-	Print out to screen a section's configuration and exit
-	Example:
-	 Dallas 
-	 =====
-	 exclude:
-	  /root/.bash_history
- 
- 	 include:
-	  /etc/update-motd.d/00-header
-		/root/
-
-	 address: 192.168.1.3
-	 flags: DghiLlKoprtuz
-
-
- -l, --list, 
-	List all sections available from configuration file, and their current action.
-	Example:
-	 SECTION NAME      ACTION
-	 ========================
-	 all               use
-	 Dallas            test
-	 Dallas.2          ignore
-	 Atlanta           use
-
- -n, --nice=[INT <-20 - 19>]
-	Nicenesses range from -20 (most favorable scheduling) to 19 (least favorable).  Default 10.
-
-
-CONFIGURATION SETTINGS:
-
- -A, --action choices: <'ignore', 'test', 'use'>
-	Used to temporarily prevent a server/section from running, until re-enabled by stating 'use'. choices: <'ignore', 'test', 'use'>.  The 'test' option will print out the command for that section, without running it.  Printing is handled with the logging tool, output will be in the log file, as well as STDOUT so long as verbose is utilized.  If action is 'test', then verbose is turned on automatically.
-
- -a, --address=[ADDRESS]
-	Address for the server/section to pull from.  Name based addresses may be used, but if DNS is not working, it could fail so IP addresses are recommended.
-
- -B, --forced-dir, 
-	Root directory for where to place rsync files, while forcing no server-name prefix.  Below, you will see the "--backup-dir" flag.  When used files are place in '/{backup-dir}/{section-name}/{included file to backup}  When this argument is used, forced_dir=True is added to the section in the INI file.  Then, the section-name isn't used as part of the path to copy to.   Why use one over the other?  
-
-	 Example 1, without --forced-dir, (excluding variables not currently relevant to this example):
-		# -- example INI -- 		backup_dir = /data/backups/ 
-		[Dallas]
-		include=/root/.bashrc
-		[Atlanta]
-		include=/root/.bashrc
-
-	 syncs:
-		Dallas:/root/.bashrc to local:/data/backups/Dallas/root/.bashrc
-		Atlanta:/root/.bashrc to local:/data/backups/Atlanta/root/.bashrc
-
-	 Example 2, with --forced-dir, (excluding variables not currently relevant to this example):
-		# -- example INI -- 		backup_dir = /data/backups/ 
-		[Atlanta]
-		forced_dir = True
-		backup_dir=/
-		include=/root/somefolder
-		[Ohio]
-		forced_dir = True
-		backup_dir=/data/backups/
-		include=/var/logs
-		
-	 syncs:
-		Atlanta:/root/somefolder to local:/root/somefolder <-- see, no server name used as a prefix
-		Ohio:/var/logs to local: /data/backups/var/logs <-- see, no server name used as a prefix
-
-	 Example 3, with AND without --forced-dir, (excluding variables not currently relevant to this example):
-		# -- example INI -- 		backup_dir = /data/backups/ 
-		[Dallas]
-		include=/root/.bashrc
-		[Atlanta]
-		include=/root/.bashrc
-		[Atlanta.other]
-		forced_dir = True
-		backup_dir=/
-		include=/root/somefolder
-		disable_all = True
-		[Ohio]
-		forced_dir = True
-		backup_dir=/data/backups/
-		include=/var/logs
-		
-	 syncs: <-- both with and without prefixes as shown below
-		Dallas:/root/.bashrc to local:/data/backups/Dallas/root/.bashrc
-		Atlanta:/root/.bashrc to local:/data/backups/Atlanta/root/.bashrc
-		Atlanta:/root/somefolder to local:/root/somefolder <-- see, no server name used as a prefix
-		Ohio:/var/logs to local: /data/backups/var/logs <-- see, no server name used as a prefix
-
-
- -b, --backup-dir=[PATH]
-	Root directory for where to place rsync files (this program pulls with rsync, it was not meant to push).
-
- -d, --disable-all
-	Prevents a section from ever running in the "all" section.  Sometimes you will want a section to run along with all of the other sections, but then to be excluded from running within the "all" section.  To do this save this argument to the section in the INI file.  Example: pybkup --server=NAME --disable-all --save
-	See Example 3 above.
-
- -f, --rsync-flags=[any rsync flag without leading '-' as it is provided for you]
-	Flags to pass to rsync, default are: 'DghiLlKoprtuz'
-
- -e, --ssh-key=[PATH]
-	Path to SSH key for rsync to use -e then ssh to use -i.  Example: rsync -e 'ssh -i /root/.ssh/id_rsa'
-
- -r, --rsync-path=[PATH]
-	Device path.
-
- -s, --server=[section]
-	Section-name/Server-name - Not required, but may be used to override above options for any section, including the 'all'
- section.  When -S/--save is provided you can save the above options to a section for use specifically with that section as overrides, instead of saving to the global scope.
-
- -T, --test-file=[FULL PATH TO FILE ON SERVER/SECTION>]
-	If this argument is provided for a section, it will attempt to see if this file exists, if the file is not found then the server/section will be skipped over.  This is useful for mounted drives.  If you are trying to rsync a file, group of files and or folders from a server and the drive is not mounted, you don't want the "--delete before" to remove you backups of your files.  So we test first to see if a touched "test-file" exists in the mount path.  If the file does exists, we continue on and backup from that server, if not, we skip that server in it's entirety.
-
- -t, --wait-time=[INT (in seconds) <2 - 59>]
-	How long to wait on a possibly unresponsive server, before logging the issue and moving on to the next server (default is 3). 
-	For some weird reason timeout of 3 seconds rounds up to 4 seconds, but 2 stays 2, and 4 seconds works as 4 seconds.  All other second counts appear to work as well, it's just 3 seconds does not, it works as 4 seconds,... go figure?  Minimum wait time of 2 seconds.  
-
- -u, --from-user=[NAME]
-	From user name for rsync.
-
- -S, --save
-	Save information for future use? **Please note this by default will save configuration options to the global section of the INI  file, unless the -s/--section is specified, then options will only be saved to that section.
-
-DEBUG:
-
- -D, --debug
-	Enable debugging
-
- -q, --quiet
-	be vewwy quiet (I'm hunting wabbits)
-
- -V, --verbose
- 	Be more Verbose (make lots of noise)
-
- -v, --version
-	Display Version
-
-	Question, I am backing up from one server, but wish to place most files in /backups/foo, except my personal home directory, I wish to have that rsynced to my home directory on this machine.  How do I set two different backup directories, for the same server?  Answer (see INI file example below):  	 
-	 Example 4, overriding the backup_dir within a section below, (excluding some variables not currently relevant to this example):
-		# -- example INI  -- 		user = backup 		rsyncpath = sudo rsync
-		sshkey = /home/backups/.ssh/id_rsa
-		backup_dir = /backups/foo/
-		wait = 5
-		[all]
-		exclude = ,
-		include = ,
-		[Dallas]
-		exclude = /root/.bashrc_history, /root/.viminfo
-		include = /root/, /home/other_guy/
-		address = 192.168.1.3
-		[Dallas.2]
-		exclude = ,
-		include = /home/USERNAME/,
-		address = 192.168.1.3
-		backup_dir = /home/USERNAME/
-
-	Question, How to I use this script to backup something from this machine to itself?  Good question.  While this machine (the one I am writing this program on (you are welcome :D)) runs from an internal SATA drive, I am backing up my other servers to an external USB3.0 drive that is plugged into this machine, and mounted.   I also wish to back up files from this server, into my external backup drive.  To do this, I had to change 2 things.  First, I had to add the localhost IP to the server for this server.  2, I had to add that localhost to the authorized_keys2 file in the .ssh directory for my backup user.  I provide an example of both below:
-
-	 Example 5 for localhost, remember, it is better to use IP address than Host Names, although host names will work, if DNS look fails, the backup fails (the 127.0.0.1 could theoretically be replaced by localhost):
-		# -- example INI -- 		user = backup 		rsyncpath = sudo rsync 		sshkey = /home/backups/.ssh/id_rsa 		backup_dir = /backups/foo/ 		wait = 5 		[all] 		exclude = , 		include = , 		[Dallas] 		exclude = /root/.bashrc_history, /root/.viminfo 		include = , 		address = 192.168.1.3 		[backup] 		exclude = , 		include = , 		address =  127.0.0.1  		# -- example /home/rsyncer/.ssh/authorized_keys2 --
-		from="192.168.1.*" ssh-rsa AAAB3NzaC1yc2EAAAABJQAAACEAgy+ADkH6ArYbqulF6RgoCseNgeCboMkprkwxRXVFFaE/
-		from="127.0.0.1" ssh-rsa AAAB3NzaC1yc2EAAAABJQAAACEAgy+ADkH6ArYbqulF6RgoCseNgeCboMkprkwxRXVFFaE/
-
-		* notice, above I have a '*' at the end of the IP address, that was so that this user could use the certificate on all of my servers, trust me I have MANY servers listed in my INI file, how many do you have?
-
--------------------------------------------------------------------------------
 
 examples:	
-	pybkup -DV
-	pybkup -sDallas -a192.168.1.2 -r'sudo rsync' --save
-	pybkup -q -n11
-
--------------------------------------------------------------------------------
-
-RSYNC EXIT VALUES:
-		 0      Success
-		 1      Syntax or usage error
-		 2      Protocol incompatibility
-		 3      Errors selecting input/output files, dirs
-		 4      Requested  action not supported: an attempt was made to manipulate 64-bit files on a platform that cannot support them; or an option was specified that is supported by the client and not by the server.
-		 5      Error starting client-server protocol
-		 6      Daemon unable to append to log-file
-		 10     Error in socket I/O
-		 11     Error in file I/O
-		 12     Error in rsync protocol data stream
-		 13     Errors with program diagnostics
-		 14     Error in IPC code
-		 20     Received SIGUSR1 or SIGINT
-		 21     Some error returned by waitpid()
-		 22     Error allocating core memory buffers
-		 23     Partial transfer due to error
-		 24     Partial transfer due to vanished source files
-		 25     The --max-delete limit stopped deletions
-		 30     Timeout in data send/receive
-		 35     Timeout waiting for daemon connection
-
--------------------------------------------------------------------------------
+	xxx
 
 SEE ALSO:
-	bulkcopy, bulkmove, findrep	
-
--------------------------------------------------------------------------------
+	xxx
 
 COPYRIGHT:
 	%(copyright)s
 
--------------------------------------------------------------------------------
-
 AUTHOR:
 	%(author)s
 
--------------------------------------------------------------------------------
-
 HISTORY:
 	Original Author
-
--------------------------------------------------------------------------------
 
 VERSION:
 	%(version)s
 """ % help_dict
 
 	parser.formatter.format_description = lambda s:s
-	parser.setFullHelpAvaiable()
 	parser.set_description(__doc__)
 	parser.set_usage(main.__doc__)
 
-	helpishere = bool('--help' in sys.argv)
-
-	# ----------------------------
 	runtime = optparse.OptionGroup(parser, "-- RUNTIME ARGUMENTS")
-
-	# force section to run in section only
-	runtime.add_option("-F", "--force", 
-									action="store_true",
-									default=False,
-									help='Force a server to run in the all within the all section, when asked to run stand alone. *(use "--help" for more help)')
-
 	runtime.add_option("-L", "--list-out", 
 									action='store',
 									default=None, 
@@ -1154,6 +844,12 @@ VERSION:
 									dest='list',
 									help='List all sections available from configuration file, and their current action.')
 
+	runtime.add_option("-F", "--force", 
+									action='store_true',
+									default=False, 
+									dest='force',
+									help='For forcing an ignored section to run.')
+
 
 	runtime.add_option("-n", "--nice", 
 									type="int", 
@@ -1162,109 +858,37 @@ VERSION:
 									dest='niceness',
 									metavar='[INT <-20 - 19>]',
 									help="Nicenesses range from -20.	Default 10")
-
 	parser.add_option_group(runtime)
 	# -------------------------------------------------------------------------
 	# variable setting
 	vars = optparse.OptionGroup(parser, "-- CONFIGURATION SETTINGS")
 
-	if helpishere:
-		verbose_help="Be more Verbose (make lots of noise)"
-	if not helpishere:
-		verbose_help=optparse.SUPPRESS_HELP
-
 	vars.add_option("-A", "--action",
 									action='store',
-									choices=['ignore','use','test'],
+									choices=['ignore','use','run','test'],
 									default=None, 
 									dest='action',
 									metavar='[ACTION]', 
 									type="choice", 
-									help="choices: <'ignore', 'test', 'use' *(use \"--help\" for more help)")
+									help="choices: <'ignore', 'test', 'run', 'use' (run is an alias for use)  *(use \"--help\" for more help)")
 
-	vars.add_option("-a", "--address", 
-									action="store",
-									default=None, 
-									dest='address',
-									metavar="[ADDRESS]",
-									type='str',
-									help="Address for the server/section to pull from.")
-
-	vars.add_option("-B", "--forced-dir", 
-									action="store_true",
-									default=False, 
-									dest='forced_dir',
-									metavar="[PATH]",
-									help='Root directory for where to place rsync files, while forcing no servername prefix. *(use "--help" for more help)')
-
-	vars.add_option("-b", "--backup-dir", 
-									action="store",
-									default=None, 
-									dest='backup_dir',
-									metavar="[PATH]",
-									type='str',
-									help="Root directory for where to place rsync files.")
-
-	vars.add_option("-d", "--disable-all", 
-									action="store_true",
-									default=False, 
-									dest='disable_all',
-									help='Prevents a section from ever running in the "all" section.')
-
-	vars.add_option("-e", "--ssh-key", 
-									action="store",
-									default=None, 
-									dest='sshkey',
-									metavar="[PATH]",
-									type='str',
-									help="Path to SSH key for rsync to use.")
-
-	vars.add_option("-f", "--rsync-flags", action="store",
-									default=__default_rsync_flags__, 
+	vars.add_option("-f", "--tar-flags", action="store",
+									default=__default_tar_flags__, 
 									dest='flags',
 									metavar="[PATH]",
-									type='str',
-									help="Flags to pass to rsync, default are: '%s'" % __default_rsync_flags__)
+									type='string',
+									help="Flags to pass to rsync, default flags are: '%s'" % __default_tar_flags__)
 
-	vars.add_option("-r", "--rsync-path",
+	vars.add_option("-N", "--section", 
 									action="store",
 									default=None, 
-									dest='rsyncpath',
-									metavar="[PATH]",
-									type='str',
-									help="Device path.")
-
-	vars.add_option("-s", "--server", 
-									action="store",
-									default=None, 
-									dest='section',
-									metavar="[NAME]",
-									type='str',
-									help="Section-name/Server-name")
-
-	vars.add_option("-T", "--test-file", 
-									action='store',
-									default=None, 
-									dest='test',
-									metavar='[Remote FPATH]', 
-									type='str',
-									help='Full path of testfile on remote server. *(use "--help" for more help)')
-		
-	vars.add_option("-t", "--wait-time", 
-									action='store',
-									default=__default_timeout__, 
-									dest='wait',
-									metavar='[INT (in seconds)]', 
-									type="int", 
-									help="How long to wait on a possibly un-responsive server (default is 3).")
-
-	vars.add_option("-u", "--from-user", 
-									action="store",
-									default=None, 
-									dest='user',
-									metavar="[NAME]",
-									type='str',
-									help="From user name for rsync.")
+									dest='section_name',
+									metavar="[LOAD/SAVE-AS SECTION NAME]",
+									type='string',
+									help='Name to save configuration into a section. '
+									' OR '
+									'Name of configuration section to load the options from the config file.'
+									'"*(use "--help" for more help)')
 
 	vars.add_option("-S", "--save", 
 									action="store_true",
@@ -1272,268 +896,320 @@ VERSION:
 									dest='save',
 									help="Save information for future use?")
 
+	vars.add_option("-t", "--test-file-local", 
+									action='store',
+									default=None, 
+									dest='test_local',
+									metavar='[LOCAL FPATH]', 
+									type='string',
+									help='Full path of testfile on local server. *(use "--help" for more help)')
+
+	vars.add_option("-d", "--daily-dir", action="store",
+									dest='daily_dir',
+									metavar="[PATH]",
+									type='string',
+									help="Where to place the daily backups.")
+
+	vars.add_option("-w", "--weekly-dir", action="store",
+									dest='weekly_dir',
+									metavar="[PATH]",
+									type='string',
+									help="Where to place the weekly backups.")
+
+	vars.add_option("-m", "--monthly-dir", action="store",
+									dest='monthly_dir',
+									metavar="[PATH]",
+									type='string',
+									help="Where to place the monthly backups.")
+
+	vars.add_option("-y", "--yearly-dir", action="store",
+									dest='yearly_dir',
+									metavar="[PATH]",
+									type='string',
+									help="Where to place the yearly backups.")
+
+	vars.add_option("", "--daily-count", action="store",
+									default=__default_days__, 
+									dest='daily_count',
+									metavar="[PATH]",
+									type='int',
+									help="How many days of backups to keep, default is: %s" % __default_days__)
+
+	vars.add_option("", "--weekly-count", action="store",
+									default=__default_weeks__, 
+									dest='weekly_count',
+									metavar="[PATH]",
+									type='int',
+									help="How many weeks of backups to keep, default is: %s" % __default_weeks__)
+
+	vars.add_option("", "--montly-count", action="store",
+									default=__default_months__, 
+									dest='monthly_count',
+									metavar="[PATH]",
+									type='int',
+									help="How many months of backups to keep, default is: %s" % __default_months__)
+
+	vars.add_option("", "--yearly-count", action="store",
+									default=__default_years__, 
+									dest='yearly_count',
+									metavar="[PATH]",
+									type='int',
+									help="How many years of backups to keep, default is: %s" % __default_years__)
+
+
+	vars.add_option("", "--root-dir", action="store",
+									default=None, 
+									dest='root',
+									metavar="",
+									type='string',
+									help=optparse.SUPPRESS_HELP)
+
 	parser.add_option_group(vars)
 	# ----------------------------
 	dbgroup = optparse.OptionGroup(parser, "-- DEBUG")
-	dbgroup.add_option("-D", "--debug", 
-									action="store_true",
-									default=False,
-									dest='debug',
-									help="Enable debugging")
+	dbgroup.add_option("-D", "--debug", action="store_true",
+					 default=False, dest='debug',
+					 help="Enable debugging")
+	helpishere=False
+	for a in sys.argv:
+		if a == '--help':
+			helpishere=True
+			dbgroup.add_option("-V", "--verbose", action="store_true",
+							 default=True, dest='verbose',
+							 help="Be more Verbose (make lots of noise)")
+	if not helpishere:
+		dbgroup.add_option("-V", "--verbose", action="store_true",
+						 default=True, dest='verbose',
+						 help=optparse.SUPPRESS_HELP)
 
-	dbgroup.add_option("-V", "--verbose", 
-									action="store_true",
-									default=False,
-									dest='verbose',
-									help=verbose_help)
+	dbgroup.add_option("-q", "--quiet", action="store_true",
+					 default=False, dest='quiet',
+					 help="be vewwy quiet (I'm hunting wabbits)")
 
-	dbgroup.add_option("-q", "--quiet", 
-									action="store_true",
-									default=False,
-									dest='quiet',
-									help="be vewwy quiet (I'm hunting wabbits)")
-
-	dbgroup.add_option("-v", "--version", 
-	action="store_true",
+	dbgroup.add_option("-v", "--version", action="store_true",
 					 default=False, dest='version',
 					 help="Display Version")
+
 	parser.add_option_group(dbgroup)
 	# ----------------------------
-	
+
 	(opts, args) = parser.parse_args()
+
 	if len(args) > 0 and not opts.action:
-		if str(args[0]).lower() in ('test','use','ignore'):
+		if str(args[0]).strip().lower() in ('test','run','use','ignore'):
 			opts.action=str(args[0]).lower()
 	opts.had_verbose = False
 	if opts.verbose: opts.had_verbose = True
 	if opts.quiet: opts.verbose = False
-	if trim(opts.action).lower() == 'test' and not trim(opts.quiet): opts.verbose=True
+	if opts.action and opts.action.strip() and opts.action.strip().lower():
+		opts.action = trim(opts.action).lower()
+	if opts.action == 'test' and not trim(opts.quiet): opts.verbose=True
 
-	try:
-		os.nice(self.opts.niceness)
-	except (AttributeError, NameError), e:
-		pass
+	
+	if is_int(opts.niceness):
+		try:
+			os.nice(opts.niceness)
+		except (AttributeError, NameError), e:
+			pass
 
 	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
-
 
 	if opts.version:
 		return PyTis.version(__version__)
 	
 	config = load_config(config_file())
+	sections =PyTis.identify_sections(config) 
 
+	# #########################################
 	if opts.list:
 		L = []
 		maxL = len('SECTION NAME')
-		for server in config.keys():
-			sub = config[server]
-			if str(type(sub)) == "<class 'pylib.configobj.Section'>":
-				try:
-					action = sub['action']
-				except KeyError, e:
-					action = 'use'
-				L.append((str(server),action))
-				if maxL < len(str(server)):
-					maxL = len(str(server))
+
+		for section, sub in sections:
+			try:
+				action = sub['action']
+			except KeyError, e:
+				action = 'use'
+			L.append((str(section).lower(),action))
+			if maxL < len(str(section)):
+				maxL = len(str(section))
+
 		x=' '*(maxL/2)
 		y="SECTION NAME%sACTION" % x
-		print y
-		print '='*len(y)
+		log.info(y)
+		log.info('='*len(y))
 		L.sort()
 		for s in L:
-			print "%s%s%s%s" % (s[0],x,' '*(maxL-len(s[0])),s[1])
+			log.info("%s%s%s%s" % (s[0],x,' '*(maxL-len(s[0])),s[1]))
 		return
+
+	# #########################################
 	if opts.list_out:
-		try:
-			sub = config[opts.list_out]
-		except KeyError, e:
-			log.error("Section not found, it is case-sensative.  Try the --list command to see a list of available sections.")
+		section = PyTis.get_section(sections,opts.list_out)
+		if not section:
+			log.error("Section not found, it is case-sensative.	Try the --list command to see a list of available sections.")
 			return
 		else:
-			if str(type(sub)) == "<class 'pylib.configobj.Section'>":
-				print opts.list_out
-				print '='*len(opts.list_out)
-				for key in sub.keys():
-					value = sub[key]
-					if type(value) == type(list([])):
-						print "%s: \n%s" % (key,"\n".join([" %s" % v for v in value]))
-						print
-					else:
-						print "%s: %s" % (key,sub[key])
-			else:
-				print "%s: %s" % (opts.list_out, sub)
+			log.info(opts.list_out)
+			log.info('='*len(opts.list_out))
+			for key in section.keys():
+				value = section[key]
+				if type(value) == type(list([])):
+					log.info("%s: \n%s\n" % (key,"\n".join([" %s" % v for v in value])))
+				else:
+					log.info("%s: %s" % (key,section[key]))
 		return
 
-
 	TEST_NOW = False; TEST_SECTION = None
-
-	# okay, this is going to go first and last.  IF test is ues, we don't save 
-	# "test" to the config file, instead we capture that a test is desired, 
-	# then utilizing config file (ini) plus anything passed in on the command
-	# line this time, we test the section a test was requested for.
-	'''
-	if opts.action and opts.action=='test':
-		if opts.section and opts.section.strip():
-			if opts.section.strip() == 'all':
-				errors.append("Actions may not be specified in the 'all' section.")
-			else:
-				TEST_NOW = True
-				TEST_SECTION = opts.section.strip()
-		else:
-			errors.append("Actions may not be specified in the Global section.")
-	'''
 	if opts.action and opts.action=='test':
 		TEST_NOW = True
-		if opts.section and opts.section.strip():
-			TEST_SECTION = opts.section.strip()
+		if trim(opts.section_name):
+			TEST_SECTION = trim(opts.section_name).lower()
 
-	if opts.save or TEST_NOW:
-		if config.exists:
-			title = 'updating config'
+	# prepair a dictionary, wither for saving, testing or running, it does not
+	# matter, it will be used
+	update_with = {}
+
+	if opts.test_local and opts.test_local.strip(): update_with.update({'test_local':opts.test_local.strip()})
+
+	if opts.daily_dir and opts.daily_dir.strip(): update_with.update({'daily_dir':opts.daily_dir.strip()})
+	if opts.weekly_dir and opts.weekly_dir.strip(): update_with.update({'weekly_dir':opts.weekly_dir.strip()})
+	if opts.monthly_dir and opts.monthly_dir.strip(): update_with.update({'monthly_dir':opts.monthly_dir.strip()})
+	if opts.yearly_dir and opts.yearly_dir.strip(): update_with.update({'yearly_dir':opts.yearly_dir.strip()})
+
+	# strings
+	if opts.flags and opts.flags.strip() and opts.flags.strip() != __default_tar_flags__:
+		update_with.update({'flags':trim(opts.flags)})
+	elif opts.flags and opts.flags.strip() and opts.flags.strip() == __default_tar_flags__ and not config.get('flags', None):
+		update_with.update({'flags':trim(opts.flags)})
+
+
+	# integers
+	errors, update_with = get_count(opts, 'daily_count', __default_days__, update_with, errors)
+	errors, update_with = get_count(opts, 'weekly_count', __default_weeks__, update_with, errors)
+	errors, update_with = get_count(opts, 'monthly_count', __default_months__, update_with, errors)
+	errors, update_with = get_count(opts, 'yearly_count', __default_years__, update_with, errors)
+
+	# lastly grab the action
+	if (opts.save and trim(opts.action)) and not trim(opts.section_name):
+		errors.append('Actions may not be specified globally, please specify a section.')
+	elif trim(opts.section_name) and trim(opts.action):
+		if trim(opts.action).lower() == 'run': opts.action='use'
+		update_with.update({'action':trim(opts.action)})
+	
+	if trim(opts.section_name) and not errors:
+		opts.section_name = trim(opts.section_name)
+		if str(type(config.get(opts.section_name))) != "<class 'pylib.configobj.Section'>":
+			config[opts.section_name] = {'to_backup':[],'to_exclude':[]}
+
+	# Okay, 1, try to update the config regardless of saving it, you need to
+	# update the config file so that the info will be in there for testing.
+	# Saving can happen later.
+	if trim(opts.section_name) and not errors:
+		config[trim(opts.section_name)].update(update_with)
+	elif update_with and not errors:
+		config.update(update_with)
+	
+	# Set the titles to be used.
+	if config.exists:
+		title = 'UPDATING '
+	else:
+		title = 'CREATING '
+
+	if opts.section_name:
+		title += 'SECTION: %s' % trim(opts.section_name)
+	else:
+		title += 'config'
+
+	if TEST_NOW:
+		log.debug(title)
+	elif opts.save:
+		log.info(title)
+
+	# moved this out side of the if statements below so it would only have to run
+	# once, regardless of if it is for testing, saving, or running.
+
+	if not errors:
+		try:
+			valid_config_values(config)
+		except PyTis.ConfigurationError, er:
+			PyTis.conjoin(er,errors)
+
+	if not errors:
+		try:
+			validate(opts, config)
+		except PyTis.EmptyString, e:
+			PyTis.conjoin(e,errors)
+
+	# TEST, if we have any errors from testing, we capture them
+	if not errors and TEST_NOW:
+		# header output
+		if TEST_SECTION:
+			log.debug('TESTING SECTION %s NOW' % TEST_SECTION)
+			log.info("# CONFIG FILE: %s\n" % os.path.abspath(config.filename))
 		else:
-			title = 'creating config'
-			config['all']={'include':[],'exclude':[]}
-		if not TEST_NOW: log.info(title)
-		update_with = {}
+			log.debug('TEST EVERYTHING NOW')
+			log.info("# CONFIG FILE: %s\n" % os.path.abspath(config.filename))
 
-		if opts.forced_dir: update_with.update({'forced_dir':opts.forced_dir})
-		if opts.disable_all: update_with.update({'disable_all':opts.disable_all})
-		
-		if opts.user and opts.user.strip(): update_with.update({'user':opts.user.strip()})
-		if opts.sshkey and opts.sshkey.strip(): update_with.update({'sshkey':opts.sshkey.strip()})
-		if opts.rsyncpath and opts.rsyncpath.strip(): update_with.update({'rsyncpath':opts.rsyncpath.strip()})
-		if opts.address and opts.address.strip(): update_with.update({'address':opts.address.strip()})
-		if opts.flags and opts.flags.strip(): update_with.update({'flags':opts.flags.strip()})
-
-		if opts.section and opts.section.strip() == 'all' and opts.test and opts.test.strip():
-			errors.append('You cannot specify a test-file for the "all" section.')
-		elif opts.test and opts.test.strip(): update_with.update({'test':opts.test.strip()})
-
-		if opts.wait or opts.wait is 0:
-			if ('-w' in sys.argv or '--wait' in sys.argv) and ((opts.section and opts.section.strip() and opts.section.strip() != 'all') or (not opts.section)):
-				update_with.update({'wait':int(opts.wait)})
-
-		if opts.action and opts.action=='ignore':
-			if opts.section and opts.section.strip():
-				if opts.section.strip() == 'all':
-					errors.append("Actions may not be specified in the 'all' section.")
-				else:
-					update_with.update({'action':'ignore'})
+		if not errors:
+			try:
+				run(opts, config, TEST_NOW)
+			except KeyboardInterrupt,e:
+				if not opts.quiet:
+					print "\nbye!"
+				return
+			except PyTis.EmptyString, er:
+				PyTis.conjoin(er,errors)
 			else:
-				errors.append("Actions may not be specified in the Global section.")
+				log.info("Done,... Test successfull.")
+				if not opts.save:
+					# We might as well return, so we don't go into the next (real) run
+					# method since instead, a test was requested.  Don't worry, the save
+					# method returns out of this main function for us.
+					return
 
-		if opts.action and opts.action.strip() == 'use':
-			if opts.section and opts.section.strip():
-				if opts.section.strip() == 'all':
-					errors.append("Actions may not be specified in the 'all' section.")
-				else:
-					try:
-						if 'action' in config[opts.section.strip()].keys():
-							del config[opts.section.strip()]['action']
-					except KeyError, e:
-						errors.append("Section '%s' does not yet exist, please add it first, before saving actions." % opts.section.strip())
-			else:
-				errors.append("Actions may not be specified in the Global section.")
 
-		if opts.backup_dir and opts.backup_dir.strip():
-			update_with.update({'backup_dir':opts.backup_dir.strip()})
-		if opts.section and opts.section.strip() == 'all' and opts.address and opts.address.strip():
-			errors.append('You cannot specify an IP address for the "all" section, this script was designed to PULL to the server it is ran from.')
-		if (opts.address and opts.address.strip()) and not (opts.section and opts.section.strip()):
+	# If no ERRORS and save, then save, test or not, if test raised errors, then
+	# we won't save because the arguments added weren't "save worthy" and if test
+	# didn't, cool we can save it, and if no test, who cares, if we have no
+	# errors and someone said save, then save it ;-)
 
-			errors.append("You cannot specify an IP address for the global section, this script was designed to PULL to the server it is ran from.")
-
-		if opts.section and opts.section.strip() and not errors:
-			if opts.section.strip() not in config.keys():
-				config[opts.section.strip()] = {'include':[],'exclude':[]}
-			#update_with.update({'section':opts.section.strip()})
-			if not TEST_NOW:
-				log.debug('updating section: %s' % opts.section.strip())
-			config[opts.section.strip()].update(update_with)
-
-		elif update_with and not errors:
-			if not TEST_NOW:
-				log.debug('updating global')
-			config.update(update_with)
-		
-		if not errors and not TEST_NOW:
+	if not errors and opts.save:
+		try:
+			validate(opts, config)
+		except PyTis.EmptyString, e:
+			PyTis.conjoin(e,errors)
+		else:
 			config.save()
 			log.debug('configfile: %s' % os.path.abspath(config.filename))
 			log.info("your settings have been saved")
 			return PyTis.toContinue()
 
-	if TEST_NOW:
-		if TEST_SECTION:
-			log.debug('TESTING SECTION %s NOW' % TEST_SECTION)
-			log.info("  CONFIG FILE: %s\n" % os.path.abspath(config_file()))
-		else:
-			log.debug('TEST EVERYTHING NOW')
-			log.info("  CONFIG FILE: %s\n" % os.path.abspath(config_file()))
-		try:
-			try:
-				valid_config(config)
-			except PyTis.EmptyTemplate, e:
-				errors.append(str(e))
-				parser.print_usage()
-				log.warn(str(e))
-				return
-			try:
-				run(opts, config, TEST_NOW, TEST_SECTION)
-			except KeyboardInterrupt,e:
-				if not opts.quiet:
-					print "\nbye!"
-				return
-			else:
-				log.info("Done.")
-				return
-		except PyTis.EmptyString, e:
-			errors.append(str(e))
-	
-	if errors:
-		parser.print_usage()
-		log.error(str("\n".join(errors)))
-		return
-	
-	if not errors:	
-		try:
-			valid_config(config)
-		except PyTis.EmptyTemplate, e:
-			errors.append(str(e))
-			parser.print_usage()
-			log.warn(str(e))
-			return
 
-	try:
-		validate(opts, config)
-	except PyTis.EmptyString, e:
-		errors.append(str(e))
-		parser.print_usage()
-		log.warn(str(e))
-		return
-
-
-	if not errors and len(sys.argv) > 0:
+	if not trim(opts.action) and not errors:
+		log.warn('To make sure this is not called by accident, by a user who is new to it, to simply run everything use "%s run".' % os.path.basename(sys.argv[0]))
+		return parser.print_usage()
+	elif not errors:
 		try:
-			run(opts, config)
-		except PyTis.EmptyString, e:
-			errors.append(str(e))
-			parser.print_usage()
-			log.warn(str(e))
-			return
+			run(opts, config, False)
 		except KeyboardInterrupt,e:
+			log.debug("Keyboard-Interrupt, bye!")
 			if not opts.quiet:
-				print "\nbye!"
+				log.info("\nbye!")
 			return
 		else:
 			log.info("Done.")
 			return
-	elif not errors and len(sys.argv) == 0:
-		parser.print_usage()
-	elif errors:
-		parser.print_help(errors)
 	else:
-		parser.print_help()
+		parser.print_usage()
+		if errors:
+			#log.error(str("\n".join(errors)))
+			[log.error(e) for e in errors if e]
+		return parser.print_help(errors)
 
+	parser.print_help("ERROR: Unknown, but invalid input.")
+	sys.exit(0)
 
 if __name__ == '__main__':
-	main()
+		main()
+

@@ -61,7 +61,7 @@ if python_version >= 3.0:
 	from pylib3.util.dicts import odict
 else:
 	from UserDict import UserDict
-	import cStringIO
+	from cStringIO import StringIO
 
 	# internal (mine/yours/ours) 
 	from pylib import configobj as COBJ
@@ -75,11 +75,15 @@ __created__ = '06:14pm 09 Sep, 2009'
 __copyright__ = 'PyTis.com'
 __configdir__ = pytis_configure.configdir # '/root/etc'
 __logdir__ = pytis_configure.logdir # '/root/log'
-__version__ = 4.1
+__version__ = 5.0
 
 
 
 __change_log__ = """
+
+5.0
+	WOW I haven't stayed up on updating this thing, I forgot this change log was even here.  
+	Well, recently, I added col2num and num2col functions, for MS Excel column translation.
 
 4.2:
 	created new class object ConfigField
@@ -2019,19 +2023,25 @@ def column_from_csv_file(fname, headers=False, col=0):
 	return ret
 		
 def parse_csv_file(fname, headers=False):
-	try:
-		handle = open(os.path.abspath(fname),'r')
-	except PermissionError as e:
-		raise PermissionError(e)
-	except (IOError, OSError) as e:
-		raise FileNotFound('CSV File not found: %s' % fname)
+	if hasattr(fname, 'readlines') and hasattr(fname, 'write') and \
+	hasattr(fname, 'seek'):
+		fname.seek(0)
+		lines = fname.readlines(-1)
 	else:
-		lines = handle.readlines(-1)
-		records=[parse(l) for l in lines if parse(l) is not None and len(parse(l))]
-		if headers and records:
-			del records[0]
-		# I think we can just call del records[0] if headers but I want to test
-		# this out a little first
+		try:
+			handle = open(os.path.abspath(fname),'r')
+		except PermissionError as e:
+			raise PermissionError(e)
+		except (IOError, OSError) as e:
+			raise FileNotFound('CSV File not found: %s' % fname)
+		else:
+			lines = handle.readlines(-1)
+
+	records=[parse(l) for l in lines if parse(l) is not None and len(parse(l))]
+	if headers and records:
+		del records[0]
+	# I think we can just call del records[0] if headers but I want to test
+	# this out a little first
 
 	return records
 
@@ -2303,7 +2313,19 @@ def set_logging(opts, name, quiet=False, __logdir__=__logdir__):
 	except AttributeError as e:
 		totally_verbose = True
 	
+	# BEGIN TRICK
+	# From here to the next comment is a trick to allow the log message to goto
+	# only a log file, and not make it to the screen of a user.
+	buf = StringIO() 
+	sys.stdout = buf
+	log.info("STARTING: %s" % name)
+	sys.stdout = sys.__stdout__
+	del buf
+	# END TRICK
+
 	if not totally_verbose:
+		# we may be using this trick again, depends on the overall verbosity, look
+		# further down this function for the next occurance of sys.stdout  
 		buf = StringIO()
 		sys.stdout = buf
 
@@ -2331,6 +2353,7 @@ def set_logging(opts, name, quiet=False, __logdir__=__logdir__):
 	log.debug('-'*80) 
 
 	if not totally_verbose:
+		# and now we end our little second utilization of the output override trick.
 		sys.stdout = sys.__stdout__
 		del buf
 	return log
@@ -2388,7 +2411,7 @@ def testFind(path):
 def filesFromArgs(opts, args):
 	""" 
 	XXX:TODO unix only, need to make this so it would work on windows.
-	XXX:TODO this thing needs sserious work, with recursive an no . in filenames
+	XXX:TODO this thing needs serious work, with recursive an no . in filenames
 	import glob
 	"""
 	if opts.recursive:
@@ -2738,12 +2761,12 @@ def trim(item):
 	return item
 
 def die(string=None):
-  global log
-  if log and string:
-    log.error(string)
-  elif string:
-    print(string)
-  sys.exit()
+	global log
+	if log and string:
+		log.error(string)
+	elif string:
+		print(string)
+	sys.exit()
 
 def protect(s,trim_len=4):
 	""" padd a password and only show the remaining "trim_len" 
@@ -2761,7 +2784,33 @@ def protect(s,trim_len=4):
 	else:
 		return '%s%s'%('*'*(len(s)-trim_len),s[(len(s)-trim_len):])
 
+def num2col(num):
+	''' Turns a numeric representation of a column into a MS Excel Column title.
+	EXAMPLES:
+		0 returns A,
+		25 returns Z,
+		26 returns AA,
+		51 returns AZ 
+		and 52 returns BA.
+	'''
+	col = []
+	while True:
+		remain =	num % 26
+		col.append(chr(int(ord('A') + remain)))
+		num = (num - remain) / 26 - 1
+		if num < 0:
+			break
+	return ''.join(reversed(col))
+
 col2num = lambda col: functools.reduce(lambda x, y: x*26 + y, [ord(c.upper()) - ord('A') + 1 for c in col])
+''' Turns a MS Excel Column title into	a numeric representation of a column.
+EXAMPLES:
+	A return 0,
+	Z returns 25,
+	AA returns 26,
+	AZ returns 51,
+	and BA returns 52.
+'''
 #col2num = lambda colo: sum(pow(26, i) * ord(c) - 64) for i, c in enumerate(reversed(col.upper()))
 
 def column(str_or_int):
