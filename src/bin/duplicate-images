@@ -15,7 +15,7 @@ import optparse
 import os
 import sys
 import pytis as PyTis
-from pylib.util.dicts import odict as OrderedDict
+from pylib.util.dicts import odict
 
 __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __author__ = 'Josh Lee'
@@ -30,7 +30,7 @@ def version():
 # used to trach uniqueness of files
 hash = {}
 # used to report files alphabetically
-alpha = OrderedDict()
+alpha = odict()
 # used for prettier reporting, if only one directory is scanned, then no need 
 # for abspaths, else we will need them
 dirs = [] 
