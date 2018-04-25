@@ -3,7 +3,7 @@ try:
 except ImportError:
 	from collections import UserDict
 
-__all__ = ['default_dict', 'default_set_dict', 'cldict', 'odict', 'cldict']
+__all__ = ['cldict', 'default_dict', 'default_set_dict', 'odict']
 
 class default_dict(dict):
     def __init__(self, other={}, default=None):
