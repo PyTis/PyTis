@@ -172,7 +172,6 @@ except ImportError as e:
 	sys.exit(1)
 
 
-
 errors=[]
 
 __author__ = 'Josh Lee'
@@ -183,10 +182,34 @@ __version__ = '0.95'
 
 __configdir__=os.path.abspath(os.path.join(PyTis.__configdir__,'.%s'%os.path.basename(sys.argv[0])))
 
-def test_config_exists(cpath):
-	return cpath.strip() and os.path.isdir(cpath) and os.path.exists(cpath)
+def test_config_exists(cpath, cfile):
+	return cpath.strip() and os.path.isdir(cpath) and os.path.exists(cpath) and \
+		cfile.strip() and os.path.isfile(cfile) and os.path.exists(cfile)
 
-def setup_config(cpath):
+def setup_config_file(cfile):
+	global log
+	
+	if os.path.exists(cfile):
+		raise PyTis.FileExists("%s file already exists, exiting." % cfile)
+	else:
+		try:
+			COBJ.fload(cfile)
+		except (PyTis.PermissionError, OSError, IOError) as e:
+			if 'File exists' in str(e):
+				log.info("%s file already exists, exiting." % cfile)
+				return 0
+			elif 'Permission denied' in str(e):
+				log.error('ERROR: You do not have permission to create ' \
+					'this file: %s' % cfile)
+				return 13
+			else:
+				log.error(str(e))
+				return 1
+
+	log.info("%s file created succesfully." % cfile)
+	return 0
+
+def setup_config_dir(cpath):
 	global log
 	try:
 		os.mkdir(cpath)
@@ -197,7 +220,7 @@ def setup_config(cpath):
 		elif 'Permission denied' in str(e):
 			log.error('ERROR: You do not have permission to create ' \
 				'this directory: %s' % cpath)
-			return 1
+			return 13
 		else:
 			log.error(str(e))
 			return 1
@@ -209,14 +232,23 @@ def check_ini(opts,config):
 	"""wget-diff run doc help"""
 	global __configdir__, log
 
+	fname = config.filename
 	files = config.get('cache')
 	dates = config.get('cache_dates')
-	if not files: 
-		files=config['cache']={}
-		config.save()
-	if not dates: 
-		files=config['cache_dates']={}
-		config.save()
+	try:
+		if not files: 
+			files=config['cache']={}
+			config.save()
+		if not dates: 
+			files=config['cache_dates']={}
+			config.save()
+	except (PyTis.PermissionError, OSError, IOError) as e:
+		if 'Permission denied' in str(e):
+			log.error('You do not have permission to save to this file: %s' % fname)
+			return 13
+		else:
+			log.error(str(e))
+			return 1
 
 	for i, url in enumerate(config.sections):
 		i+=1
@@ -268,43 +300,37 @@ def check_ini(opts,config):
 
 					driver = sqlsection.get('driver')
 					if not driver:
-						log.error("No driver provided for %s and 'rundriver' " \
+						log.error("No driver provided for %s and 'runsql' " \
 							"was specified as the action (postgresql or mysql)." % url)
 						return 1
 
 					host = sqlsection.get('host')
 					if not host:
-						log.error("No host provided for %s and 'runhost' " \
+						log.error("No host provided for %s and 'runsql' " \
 							"was specified as the action." % url)
 						return 1
 
 					port = sqlsection.get('port')
 					if not port:
-						log.error("No port provided for %s and 'runport' " \
-							"was specified as the action." % url)
-						return 1
-
-					user = sqlsection.get('port')
-					if not port:
-						log.error("No port provided for %s and 'runport' " \
+						log.error("No port provided for %s and 'runsql' " \
 							"was specified as the action." % url)
 						return 1
 
 					user = sqlsection.get('user')
 					if not user:
-						log.error("No user provided for %s and 'runuser' " \
+						log.error("No user provided for %s and 'runsql' " \
 							"was specified as the action." % url)
 						return 1
 
 					password = sqlsection.get('password')
 					if not password:
-						log.error("No password provided for %s and 'runpassword' " \
+						log.error("No password provided for %s and 'runsql' " \
 							"was specified as the action." % url)
 						return 1
 
 					database = sqlsection.get('database')
 					if not database:
-						log.error("No database provided for %s and 'rundatabase' " \
+						log.error("No database provided for %s and 'runsql' " \
 							"was specified as the action." % url)
 						return 1
 
@@ -504,6 +530,7 @@ def run(opts,config):
 			# n - o N
 			# n N o -
 			# n - o -
+
 			if new_data is None and old_data is None:
 				log.error("Cannot wget site: %s" % url)
 				trigger = False
@@ -547,7 +574,7 @@ def run(opts,config):
 					config.save()
 						
 					trigger = True 
-					log.info("%s, first cached on: %s, last updated on: %s has since " \
+					log.info("%s, first cached on: %s, last updated on: %s, has since " \
 						"changed." % (url, first_saved,last_changed))
 					if not opts.dry_run: 
 						try:
@@ -572,13 +599,24 @@ def run(opts,config):
 				# BEGIN SQL -----------------------------------------------------------
 
 					if action == 'runsql':
-						sql = section.get('sql')
-						driver = section.get('driver')
-						host = section.get('host')
-						port = section.get('port')
-						user = section.get('user')
-						password = section.get('password')
-						database = section.get('database')
+						sql_section = section.get('sql')
+
+						sql = sql_section.get('sql')
+						driver = sql_section.get('driver')
+						host = sql_section.get('host')
+						port = sql_section.get('port')
+						user = sql_section.get('user')
+						password = sql_section.get('password')
+						database = sql_section.get('database')
+
+						log.debug("sql: %s" % sql)
+						log.debug("driver: %s" % driver)
+						log.debug("host: %s" % host)
+						log.debug("port: %s" % port)
+						log.debug("user: %s" % user)
+						log.debug("password: %s" % password)
+						log.debug("database: %s" % database)
+
 
 				# END SQL -------------------------------------------------------------
 				# #####################################################################
@@ -672,7 +710,7 @@ HISTORY:
 
 TODO:
 	action=runsql - This is not yet coded, will be coded to work for mysql,
-	mssql, and postgresql.  Completing this will bring wget-diff to 100%, and
+	mssql, and postgresql.  Completing this will bring wget-diff to 100%%, and
 	thus, version 1.
 
 VERSION:
@@ -780,19 +818,33 @@ VERSION:
 	if opts.version:
 		return PyTis.version(__version__)
 
-	if not test_config_exists(__configdir__) or opts.setup:
+	if not test_config_exists(__configdir__, config_filename) or opts.setup:
 		if not opts.setup:
 			log.info("wget-diff config file missing, running Setup now.")
 		else:
 			log.info("Running Setup not to create wget-diff config file.")
+
 		try:
-			setup_config(__configdir__)
+			retval = setup_config_dir(__configdir__)
 		except KeyboardInterrupt,e:
 			log.debug("Keyboard-Interrupt, bye!")
 			if not opts.quiet:
 				log.info("\nbye!")
+			return 1
+		else:
+			if retval:
+				return retval
+
+		try:
+			retval = setup_config_file(config_filename)
+		except KeyboardInterrupt,e:
+			log.debug("Keyboard-Interrupt, bye!")
+			if not opts.quiet:
+				log.info("\nbye!")
+			return 1
+
 		finally:
-			return 0
+			return retval
 
 	config = COBJ.load(config_filename)
 
@@ -801,11 +853,14 @@ VERSION:
 		return parser.print_usage()
 	elif not errors:
 		try:
-			if check_ini(opts, config):
-				log.error("program halted due to improper ini configuration.")
-				parser.print_usage()
-				return 1
-			run(opts, config)
+			rcode = check_ini(opts, config)
+			if rcode:
+				if rcode == 1:
+					log.error("program halted due to improper ini configuration.")
+					parser.print_usage()
+				return rcode
+			else:
+				run(opts, config)
 		except KeyboardInterrupt,e:
 			log.debug("Keyboard-Interrupt, bye!")
 			if not opts.quiet:
@@ -824,5 +879,5 @@ VERSION:
 	sys.exit(0)
 
 if __name__ == '__main__':
-		main()
+		sys.exit(main())
 
