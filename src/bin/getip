@@ -20,7 +20,7 @@ __version__ = 1
 # -----------------------------------------------------------------------------
 funcs = []
 # I like this way more, but the other is easier to understand
-def decor(func):
+def collector(func):
 	global funcs
 	funcs.append(func) #[func.__name__][method] = func
 	return func # this is important, if you don't do this... you cannot call the function EXCEPT through the collector
@@ -70,7 +70,8 @@ class Timeout(Exception): pass
 # End Helpers
 # =============================================================================
 
-@decor
+
+@collector
 def hostip(log, timeout=default_timeout):
 	#ol_level = logging.getLogger().getLevel()
 	#logging.getLogger.setLevel(level=logging.CRITICAL)
@@ -97,7 +98,7 @@ def hostip(log, timeout=default_timeout):
 		return ip
 
 
-@decor
+@collector
 def ipecho(log, timeout=default_timeout):
 
 	try:
@@ -112,7 +113,7 @@ def ipecho(log, timeout=default_timeout):
 		log.debug('ipecho: "%s"' % str(ip).strip())
 		return valid_ip(ip)
 	
-@decor
+@collector
 def ipinfo(log, timeout=default_timeout):
 	''' on tested system, generally needs on or over -t0.085 timeout
 	'''
@@ -126,7 +127,7 @@ def ipinfo(log, timeout=default_timeout):
 	log.debug('ipinfo: "%s"' % str(ip).strip())
 	return valid_ip(ip)
 
-@decor
+@collector
 def opendns(log, timeout=default_timeout):
 	''' on tested system, generally needs on or over 0.0128 timeout
 	'''
