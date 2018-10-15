@@ -9,6 +9,38 @@ this file is to be licensed GPL
 When using flags to setup your config, this doesn't
 actually run the program, only set up the config.
 """
+
+"""
+This program needs updated to another version. Below, you will find an error,
+from assuming that the "info" section in the config file exists.  All that is
+needed, is to simply check for it's existence, then to create it first if it
+doesn't exist.  However, upon discovering that this needs updated, (in the
+conf_set function) also, the conf file location should be auto-generated, not
+manually set as a variable,  Now that I have had a few moments to review, I
+noticed that t his is very outdated, and needs just a full blown version
+update.  This is a TODO, since this program isn't used or needed currently.
+<<BACK BURNERED>>
+
+	DYNDNS
+	======
+
+	(root@neptune ( IP:192.168.1.17 )  )-(~/bin)-(01:55 PM Wed Sep 12)->
+	(115 files, 1.4Mb)--> dyndns
+	INFO     config file not found, creating: /home/jlee/.dyndns
+	Traceback (most recent call last):
+		File "/root/bin/dyndns", line 165, in <module>
+			main()
+		File "/root/bin/dyndns", line 162, in main
+			if run: do(conf)
+		File "/root/bin/dyndns", line 106, in do
+			conf_set(conf, 'ip address', nip)
+		File "/root/bin/dyndns", line 46, in conf_set
+			conf.set('info', option, value)
+		File "/usr/lib/python2.7/ConfigParser.py", line 396, in set
+			raise NoSectionError(section)
+	ConfigParser.NoSectionError: No section: 'info'
+
+"""
 from ConfigParser import *
 import re
 import urllib
@@ -17,9 +49,12 @@ import os
 import sys
 import logging; log=logging.getLogger('dyndns')
 
+__author__ = 'Josh Lee'
+__copyright__ = 'PyTis'
 __created__ = '2008-05-12 11:48:36.549714'
-
+__version__ = '1.8'
 cfile = '/home/jlee/.dyndns'
+
 
 def load_config(cfile=cfile):
     ''' Load our config file for us, create it if it doesn't exist.
@@ -31,13 +66,15 @@ def load_config(cfile=cfile):
        if not conf.has_section('info'):
             conf.add_section('info')
             conf.write(open(cfile,'w'))
+
+            return load_config(cfile)# conf.close()
     except IOError:
         log.info('config file not found, creating: %s', cfile)
         os.system('touch %s' % cfile)
         h = open(cfile, 'w')
         h.write("[info]\n")
         h.close()
-        conf.read(open(cfile))
+        conf.readfp(open(cfile))
     return conf
 
 def conf_set(conf, option, value, cfile=cfile):
@@ -111,6 +148,11 @@ def do(conf):
 
 def main():
     """USAGE: dyndns """
+    global __version__, __author__, __created__, __copyright__
+    help_dict = dict(version=__version__,
+             author=__author__,
+             created=__created__,
+             copyright=__copyright__)
     parser = optparse.OptionParser(description=__doc__)
     parser.set_usage(main.__doc__)
     parser.formatter.format_description = lambda s:s
@@ -131,6 +173,49 @@ def main():
     # Yeah yeah, I know, why z?  Well h is taken by help, and u by uzername,...
     parser.add_option('-z', '--hosturl', action='store',
                       help='dyndns.com host')
+
+    parser.extra_txt = """
+CODE:
+	Flag vs. Argument:
+		Flag - an option that accepts no input.
+		Argument - an option that requires input.
+
+SEE ALSO:
+
+
+COPYRIGHT:
+
+	%(copyright)s
+
+AUTHOR:
+
+	%(author)s
+
+HISTORY:
+
+	Original Author
+
+CHANGE LOG:
+
+	v1.8 MINOR CHANGE
+	Fixed missing ini file errors in load_config
+	
+EXAMPLES:	
+
+
+
+BUGS - KNOWN ISSUES:
+
+
+CREATED:
+
+	%(created)s
+
+VERSION:
+
+	%(version)s
+
+"""  % help_dict
 
     (opts, cmd) = parser.parse_args()
 
