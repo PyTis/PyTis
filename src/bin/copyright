@@ -1355,7 +1355,7 @@ VERSION:
 
 
 	if opts.version:
-		return PyTis.version()
+		return PyTis.version(__version__)
 	try:
 		if not testConfig():
 			print "This tool is not configured properly, running setup."
