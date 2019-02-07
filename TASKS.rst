@@ -14,7 +14,30 @@ own ini file, as the primary, but if not found, load default values from the
 pytis_tools.ini.
 
 
-I've recently come to the realization, after spending ours merging pytis.py and pytis3.py for the 3rd tiem, that it would make more sence to merge them back into a single file, do away with pylib and pylib3, and handle language version difference within the file.  99.9% of pytis is the same as pytis3, the subtle differences could be coded around right there in the file itself.
+I've recently come to the realization, after spending ours merging pytis.py and
+pytis3.py for the 3rd tiem, that it would make more sence to merge them back
+into a single file, do away with pylib and pylib3, and handle language version
+difference within the file.  99.9% of pytis is the same as pytis3, the subtle
+differences could be coded around right there in the file itself.
+
+[-v/--verbose]
+--------------
+
+I have realized, that there seems to be a Unix/Linux standard, on the lowercase
+or uppercase -V for checking the version of a program.  Additionally, most all
+Unix/Linux programs seem to use a lowercase "v" for "verbosity."  I need to
+alter ALL of my programs to match this standard.
+
+
+[-v/--verbose 2]
+----------------
+
+As optional arguments are not permitted, I SHOULD turn verbosity into a
+counter.  Then a person could have the default be 0, and do {-v}, {-vv} or
+{-vvv} and so on, to increase the verbosity.  The current programs I am working
+on right now, not only don't call for it, they really wouldn't have a use for
+it.  Therefore... not yet, a TODO item.
+
 
 TODO - INI Files
 ----------------
