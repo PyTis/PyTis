@@ -1,0 +1,8 @@
+apache2
+init
+sshd
+cupsd
+bash
+syslogd
+cron
+proftpd
