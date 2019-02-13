@@ -118,31 +118,43 @@ __version__ = 6.0
 
 __change_log__ = """
 
+CHANGE LOG
+
 6.0
-	MAJOR CHANGE (rather, many minor changes)
-	Moved os.touch into a function.
-	Created is_root() function
-	Altered Pidfile.get_path so that NON root users can have paths within their
-		own home directory.
-	Fixed minor bug in Pidfile.fixdirs, where os.abspath was called instead of
-		os.path.abspath
-	Fixed BIG Bug, with MyThread inside of Run, where frequency of 0 would run
-		indefinately, need to "untab" (move left) the 'if not frequency' testing 
-		block, still within the while loop.
-	Secondly, within the same MyThread.Run metohd, I added a log.warning and
-		comment block, explaining the beauty of running in -D/--debug mode, and not
-		getting stuck in a loop, because it breaks after the third cycle.
-		>> self.log.warning("STOPPING THE PROCESS BY DESIGN.")
-	Fixed os.touch functionality.  MANY things were wrong, it used O_APPEND 
-		instead of O_CREAT, AND, from version 3 to version 3.6 it was broken, as 
-		the truly low-level support wasn't actually completed, and calling os.open
-		within the with statement raised an " AttributeError __exit__ ".  In other
-		words, Python3's os.open was broken.  I had to use the built in "open"
-		function instead.  I am not really sure where I got the code that is being
-		used for the current design of touch:
-			touch(fname, times=None, ns=None, dir_fd=None):
-		But I feel like it must be correct, it looks like I did some real research
-		on it.
+  MAJOR CHANGE (rather, many minor changes)
+  Moved os.touch into a function.
+  Created is_root() function
+  Altered Pidfile.get_path so that NON root users can have paths
+    within their own home directory.
+  Fixed minor bug in Pidfile.fixdirs, where os.abspath was called
+    instead of os.path.abspath
+  Fixed BIG Bug, with MyThread inside of Run, where frequency of 0
+    would run indefinately, need to "untab" (move left) the 'if not
+    frequency' testing block, still within the while loop.
+  Secondly, within the same MyThread.Run metohd, I added a log.warning
+    and comment block, explaining the beauty of running in -D/--debug
+    mode, and not getting stuck in a loop, because it breaks after the
+    third cycle.
+    >> self.log.warning("STOPPING THE PROCESS BY DESIGN.")
+
+  Fixed os.touch functionality.  MANY things were wrong, it used
+    O_APPEND (incorrectly, you cannot append to a non-existing file
+    DUH!) instead of O_CREAT, AND, from version 3 to version 3.6 it
+    was broken, as the truly low-level support wasn't actually
+    completed, and calling os.open within the with statement raised an
+    "AttributeError __exit__".  In other words, Python3's os.open was
+    broken.  I had to use the built in "open" function instead.  I am
+    not really sure where I got the code that is being used for the
+    current design of touch:
+      def touch(fname, times=None, ns=None, dir_fd=None):
+
+    But I feel like it must be correct, it looks like I did some real
+    research on it.
+
+	Lastly, I believe this version of the primary PyTis library is
+		now completely universal.  In other-words, it works properly in
+		Python2.7 as well as Python3.x
+
 
 5.2
 	Added relogOpts function, this utilizes the above added protected_options 
