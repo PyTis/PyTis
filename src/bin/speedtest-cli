@@ -462,7 +462,7 @@ def speedtest():
     parser.add_argument('--server', help='Specify a server ID to test against')
     parser.add_argument('--mini', help='URL of the Speedtest Mini server')
     parser.add_argument('--source', help='Source IP address to bind to')
-    parser.add_argument('--version', action='store_true',
+    parser.add_argument('-V', '--version', action='store_true',
                         help='Show the version number and exit')
 
     options = parser.parse_args()
