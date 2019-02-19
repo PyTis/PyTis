@@ -47,6 +47,23 @@ reference.
 	*(for vim searching: 
 		flag vs argument vs optional flag vs optional argument vs)*
 
+program versioning.  (I need to add this to newscript)
+# XXX::TODO::GET`ER DONE!
+# __version__ = 0.1 --> creation
+# __version__ = 0.2 --> it works
+# __version__ = 0.3 --> clean it up
+# __version__ = 0.4 --> document what has been cleaned up
+# __version__ = 0.5 --> document everything else
+# __version__ = 0.6 --> test everything we can, try to break it with bad input
+# __version__ = 0.7 --> apply bug fixes
+# __version__ = 0.8 --> document bug fixes, apply spell checking and cleanup to
+#												documentation.
+# __version__ = 0.9 --> run importnanny, and ensure it is properly copyrighted! 
+# __version__ = 0.9? -> ready for release, just needs packaged up 
+# this is where confusion sets in, I still need to finish / complete jhelp, and
+# learn how to auto-build man-pages from the --help options
+# __version__ = 1.0 --> release with setup.py / installation files.
+
 """
 # builtin
 import base64 as b64
