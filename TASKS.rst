@@ -14,7 +14,30 @@ own ini file, as the primary, but if not found, load default values from the
 pytis_tools.ini.
 
 
-I've recently come to the realization, after spending ours merging pytis.py and pytis3.py for the 3rd tiem, that it would make more sence to merge them back into a single file, do away with pylib and pylib3, and handle language version difference within the file.  99.9% of pytis is the same as pytis3, the subtle differences could be coded around right there in the file itself.
+I've recently come to the realization, after spending ours merging pytis.py and
+pytis3.py for the 3rd tiem, that it would make more sence to merge them back
+into a single file, do away with pylib and pylib3, and handle language version
+difference within the file.  99.9% of pytis is the same as pytis3, the subtle
+differences could be coded around right there in the file itself.
+
+[-v/--verbose]
+--------------
+
+I have realized, that there seems to be a Unix/Linux standard, on the lowercase
+or uppercase -V for checking the version of a program.  Additionally, most all
+Unix/Linux programs seem to use a lowercase "v" for "verbosity."  I need to
+alter ALL of my programs to match this standard.
+
+
+[-v/--verbose 2]
+----------------
+
+As optional arguments are not permitted, I SHOULD turn verbosity into a
+counter.  Then a person could have the default be 0, and do {-v}, {-vv} or
+{-vvv} and so on, to increase the verbosity.  The current programs I am working
+on right now, not only don't call for it, they really wouldn't have a use for
+it.  Therefore... not yet, a TODO item.
+
 
 TODO - INI Files
 ----------------
@@ -57,16 +80,34 @@ built-in that allows me to provide a long and short version of the help, then
 depending on if the user asks for the full help or short help (-h vs --help) it
 can auto build.  This would prevent the giant IF ELSE I currently use.
 
-TODO - ITEM 5
--------------
+TODO - Program Versioning
+-------------------------
 
-DESC GOES HERE
+I need to add the below comment block to newscript (the program that generates
+skeleton programs).
+
+# XXX::TODO::GET`ER DONE!
+# __version__ = 0.1 --> creation
+# __version__ = 0.2 --> it works
+# __version__ = 0.3 --> clean it up
+# __version__ = 0.4 --> document what has been cleaned up
+# __version__ = 0.5 --> document everything else
+# __version__ = 0.6 --> test everything we can, try to break it with bad input
+# __version__ = 0.7 --> apply bug fixes
+# __version__ = 0.8 --> document bug fixes, apply spell checking and cleanup to
+#												documentation.
+# __version__ = 0.9 --> run importnanny, and ensure it is properly copyrighted! 
+# __version__ = 0.9? -> ready for release, just needs packaged up 
+# this is where confusion sets in, I still need to finish / complete jhelp, and
+# learn how to auto-build man-pages from the --help options
+# __version__ = 1.0 --> release with setup.py / installation files.
 
 
 TODO - src/bin/pg_diff
 ----------------------
 
 Currently, this program will output a very nice diff between two PostgreSQL file dumps, along with whatever commands would be needed to bring one database schema to the other.  I.E.  you have a dev and a live, your dev had undergone weeks of changes, but you lost track of them, and need to push your code live, but need to run the alter, drop, rename, add table (etc.) commands to bring live up-to-date with the schema, so that commands can be ran on live, bringing up to match dev.
+
 Next version needed.  
 I would like to have some sort of config file, where I can specify the dev db and live db as parent ini sections by name, the recall them via the command line.  Thus the user would type something like: "pg_diff mydev mylive" and then, this program could utilize pgdump and cache the sql temporarily for the diff itself.
 
