@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""web-passthru
+"""passthru
 ============
 """
 
@@ -30,14 +30,13 @@ __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __author__ = 'Josh Lee'
 __created__ = '06:50pm 12 Dec, 2015'
 __copyright__ = 'PyTis'
-__version__ = '1.0'
+__version__ = '1.1'
 
 
 class SingleThread(PyTis.MyThread):
 
 	def buildNice(self):
 		return ['nice', '-n%s' % self.default_niceness]
-
 
 	def buildIoNice(self):
 		return ['ionice', '-c%s' % self.default_ioniceness_class, '-n%s' % self.default_ioniceness]
@@ -104,7 +103,7 @@ class SingleThread(PyTis.MyThread):
 
 
 def main():
-	"""usage: web-passthru"""
+	"""usage: passthru"""
 
 	global log
 	parser = PyTis.MyParser()
@@ -134,16 +133,91 @@ def main():
 	parser._error = parser.error
 	parser.error = lambda x:x
 
+	help_dict = dict(version=__version__,
+						 author=__author__,
+						 created=__created__,
+						 copyright=__copyright__)
+
+	if '--help' in sys.argv:
+		extra = """
+CODE:
+	Flag vs. Argument:
+		Flag - an option that accepts no input.
+		Argument - an option that requires input.
+
+SEE ALSO:
+
+	web-passthru
+	test-exit-code
+	return-exit-code
+	test_onetime_daemon
+
+COPYRIGHT:
+
+	%(copyright)s
+
+AUTHOR:
+
+	%(author)s
+
+HISTORY:
+
+	Original Author
+
+CHANGE LOG:
+	
+	v1.1 MINOR CHANGE
+		Added updated changelog and removed the prefix "web-" from "web-passthru" 
+		now it is just "passthru."
+	
+	v1.Original Release
+
+EXAMPLES:	
+
+	passthru [--arguments] {your command [--arguments] --and-flags}
+
+
+BUGS - KNOWN ISSUES:
+
+	NONE (at tis time).
+
+CREATED:
+
+	%(created)s
+
+VERSION:
+
+	%(version)s
+
+"""  % help_dict
+
+		parser.set_description(__doc__ + extra)
+		parser.print_help()
+		print("\n\n")
+		parser.print_usage()
+		return 0
+	elif '-h' in sys.argv:
+		parser.print_usage()
+		return 0
+
 	(opts, args) = parser.parse_args()
 	parser.error = parser._error
+
+	old_version = opts.version
+	opts.version = True
 	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
+	opts.version = old_version
+
+	if opts.version:
+		return PyTis.version(__version__)
+
 
 	del sys.argv[0]
 	if not len(args):
-		print("USAGE: web-passthru.py your command -arguments --and-flags")
+		print("USAGE: passthru.py your command -arguments --and-flags")
 		return 0
 	else:
-		log.info("web-passthru started at %s" % PyTis.prettyNow())
+		log.info("passthru started at %s" % PyTis.prettyNow())
 
 		argv=[]
 		[argv.extend(arg.split()) for arg in sys.argv]
