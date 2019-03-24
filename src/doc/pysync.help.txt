@@ -1,0 +1,348 @@
+Usage: pysync   ...<options>
+
+*** USE '--help' for the full help page. ***
+
+pysync
+======
+
+When individual sections/servers run, they use a command build from the code below:
+	cmd = "rsync %s --delay-updates --delete-before %s %s %s --recursive %s %s %s %s" % (flag,verbosity,timeout,exclude,ssh,rsyncpath, copy_from, copy_to)
+The individual servers only pull down from the source, to this server.  Please notice, the --delete-before command is passed into rsync automatically.
+
+When the all section runs, it tries to pull from each section/server to this server, then push back up.  Then it moves on to the next server in the list doing the same thing while iterating over the include files from the "all" section of the INI.
+	cmd1 = "rsync %s --delay-updates %s %s %s --recursive %s %s %s %s" % (flag,verbosity,t,exclude,ssh,rsyncpath, copy_to, copy_from)
+	cmd2 = "rsync %s --delay-updates %s %s %s --recursive %s %s %s %s" % (flag,verbosity,t,exclude,ssh,rsyncpath, copy_from, copy_to)
+
+-------------------------------------------------------------------------------
+
+UNDERSTANDING LOGGING and OUTPUT:
+
+ The way my PyTis scripts and programs work, I hardly ever use the print command.  Instead I just log something using a custom logging class.  I have four log levels: debug, info, warn and error. Messages may or may not make it to the screen (as my logging class will print output as it logs) depending on which arguments you pass into the program you are executing. 
+
+ The current setup allows for 2 log files, to be written to the PyTis configured log directory.  If you do not use debug, then the log file used will be the pytis_tools.log, if debugging is turned on, then the log file will be {program_name}.log found in the same directory.  In this program's case that would be pysync.log  So if you use -D the output ends up in a different log file, but this is just to keep debugging separate from normal logging.
+-V --verbose is off by default by with this program, unless you use the action 'test' then it is on (unless you specify --quiet, then it stays off).
+
+ debug:
+	Not to log-file or to screen by default, but if turned on with the -D or --debug flag, it will always end up in the debug log file (pysync.log).
+	-D: print debug messages to log only
+	-V: alone does not print debug messages anywhere, because -D or --debug not given
+	-dv: now debug messages are sent to their log file, and make it to the screen
+
+ info:
+	Print normal level information, always written to log (although which log is being used depends on if you are using debugging, as stated above).
+	-V allows info messages to print to STDOUT, thus to the screen for you to see.
+	-q or --quiet turns off -V
+
+ warn:
+	Warnings will always make it to which ever log is being used, and it will always make it to the screen unless -q is passed in.  If -q is passed in then warnings are hidden from STDOUT, thus only show in log files.
+	-q suppresses warnings to STDOUT (the screen) but they will still end up in whichever log this program is using.
+
+ error:
+	error messages always make it to the screen, no matter what; and are always logged to the log file as well.
+
+ Notes:
+	To ensure there is no confusion, I want to specify that the log file is chosen one time during the first stages of the program firing up, it does not switch back and forth while running, nothing complex like that.  Simply this, all of my programs share pytis_tools.log unless they are in debug mode.  Then, since they are obviously going to spit out allot more information, they write to their very own log file for that run.  That way they don't fill up and clutter the shared pytis_tools.log 
+
+	'-DVq' confuses my little logging class.  -q silences most messages, nothing but errors make it to the screen, -D was passed in so the debug log is used (pysync.log) however logging level is set to verbose, with nothing to the screen so what ends up happening is only info messages make it to the debug log (debug messages hidden).
+
+-------------------------------------------------------------------------------
+
+OPTIONS:
+
+ -h, --help
+	show this help message and exit
+
+RUNTIME ARGUMENTS:
+
+ -F, --force
+	 While in most of my PyTis tools the following is true:
+		Disable prompts. Commonly used when called by other programs, this will force the program to run without asking for user input, attempting to run with whatever input is given. Only errors are output.
+	 In this program force has a slightly different meaning: 
+	 If you pass in a section, it will force it to run only for that one section.  Whether it is the "all" section, or a specific server by name.  This is true for '... --force --action=test --server=Example...'
+	 The one notable difference is that usually when you specify a section/server other than the "all" section, and you specify the test action, then only the commands directly for that section will be written out to log/screen.  If you use the --force command while using the test --action, then it will not only log the server's direct commands, but also those commands related to that server found in the all section.  If you are still confused, give the following two commands a try, and compare the difference (so long as you have more than 2 sections in addition to your all section).
+
+		pysync --action test -V
+		.. # server: Dallas, address: 192.168.1.1
+		.. rsync -DghiLlKoprtuz --delay-updates --delete-before -vv --timeout=3 --recursive -e "ssh -i /home/rsyncer/.ssh/id_rsa" --rsync-path="sudo rsync" --exclude-from="/tmp/tmpItatOH" --files-from="/tmp/tmpzv8vrp" rsyncer@192.168.1.1:/ /data/backups
+
+		pysync --action test -V --force
+		.. # server: Dallas, address: 192.168.1.1
+		.. rsync -DghiLlKoprtuz --delay-updates --delete-before -vv --timeout=3 --recursive -e "ssh -i /home/rsyncer/.ssh/id_rsa" --rsync-path="sudo rsync" --exclude-from="/tmp/tmpItatOH" --files-from="/tmp/tmpzv8vrp" rsyncer@192.168.1.1:/ /data/backups
+		.. # 'all' >> server: Dallas, address: 192.168.1.1
+		.. rsync -DghiLlKoprtuz --delay-updates -vv --timeout=3 --recursive -e "ssh -i /home/rsyncer/.ssh/id_rsa" --rsync-path="sudo rsync" --exclude-from="/tmp/tmpxAo9Wy" --files-from="/tmp/tmpLoqiId" rsyncer@192.168.1.4:/ /data/backups/Dallas
+		.. # 'all' << server: Dallas, address: 192.168.1.1
+		.. rsync -DghiLlKoprtuz --delay-updates -vv --timeout=3 --recursive -e "ssh -i /home/rsyncer/.ssh/id_rsa" --rsync-path="sudo rsync" --exclude-from="/tmp/tmpxAo9Wy" --files-from="/tmp/tmpLoqiId" /data/backups/Dallas rsyncer@192.168.1.4:/
+
+ -L, --list-out
+	Print out to screen a section's configuration and exit
+	Example:
+	 Dallas 
+	 =====
+	 exclude:
+	  /root/.bash_history
+ 
+ 	 include:
+	  /etc/update-motd.d/00-header
+		/root/
+
+	 address: 192.168.1.3
+	 flags: DghiLlKoprtuz
+
+
+ -l, --list, 
+	List all sections available from configuration file, and their current action.
+	Example:
+	 SECTION NAME      ACTION
+	 ========================
+	 all               use
+	 Dallas            test
+	 Dallas.2          ignore
+	 Atlanta           use
+
+ -n, --nice=[INT <-20 - 19>]
+	Nicenesses range from -20 (most favorable scheduling) to 19 (least favorable).  Default 10.
+
+
+CONFIGURATION SETTINGS:
+
+ -A, --action choices: <'ignore', 'test', 'use'>
+	Used to temporarily prevent a server/section from running, until re-enabled by stating 'use'. choices: <'ignore', 'test', 'use'>.  The 'test' option will print out the command for that section, without running it.  Printing is handled with the logging tool, output will be in the log file, as well as STDOUT so long as verbose is utilized.  If action is 'test', then verbose is turned on automatically.
+
+ -a, --address=[ADDRESS]
+	Address for the server/section to pull from.  Name based addresses may be used, but if DNS is not working, it could fail so IP addresses are recommended.
+
+ -B, --forced-dir, 
+	Root directory for where to place rsync files, while forcing no server-name prefix.  Below, you will see the "--backup-dir" flag.  When used files are place in '/{backup-dir}/{section-name}/{included file to backup}  When this argument is used, forced_dir=True is added to the section in the INI file.  Then, the section-name isn't used as part of the path to copy to.   Why use one over the other?  
+
+	 Example 1, without --forced-dir, (excluding variables not currently relevant to this example):
+
+		# -- example INI --
+		backup_dir = /data/backups/ 
+		[Dallas]
+		include=/root/.bashrc
+		[Atlanta]
+		include=/root/.bashrc
+
+	 syncs:
+		Dallas:/root/.bashrc to local:/data/backups/Dallas/root/.bashrc
+		Atlanta:/root/.bashrc to local:/data/backups/Atlanta/root/.bashrc
+
+	 Example 2, with --forced-dir, (excluding variables not currently relevant to this example):
+
+		# -- example INI --
+		backup_dir = /data/backups/ 
+		[Atlanta]
+		forced_dir = True
+		backup_dir=/
+		include=/root/somefolder
+		[Ohio]
+		forced_dir = True
+		backup_dir=/data/backups/
+		include=/var/logs
+		
+	 syncs:
+		Atlanta:/root/somefolder to local:/root/somefolder <-- see, no server name used as a prefix
+		Ohio:/var/logs to local: /data/backups/var/logs <-- see, no server name used as a prefix
+
+	 Example 3, with AND without --forced-dir, (excluding variables not currently relevant to this example):
+
+		# -- example INI --
+		backup_dir = /data/backups/ 
+		[Dallas]
+		include=/root/.bashrc
+		[Atlanta]
+		include=/root/.bashrc
+		[Atlanta.other]
+		forced_dir = True
+		backup_dir=/
+		include=/root/somefolder
+		disable_all = True
+		[Ohio]
+		forced_dir = True
+		backup_dir=/data/backups/
+		include=/var/logs
+		
+	 syncs: <-- both with and without prefixes as shown below
+		Dallas:/root/.bashrc to local:/data/backups/Dallas/root/.bashrc
+		Atlanta:/root/.bashrc to local:/data/backups/Atlanta/root/.bashrc
+		Atlanta:/root/somefolder to local:/root/somefolder <-- see, no server name used as a prefix
+		Ohio:/var/logs to local: /data/backups/var/logs <-- see, no server name used as a prefix
+
+
+ -b, --backup-dir=[PATH]
+	Root directory for where to place rsync files (this program pulls with rsync, it was not meant to push).
+
+ -d, --disable-all
+	Prevents a section from ever running in the "all" section.  Sometimes you will want a section to run along with all of the other sections, but then to be excluded from running within the "all" section.  To do this save this argument to the section in the INI file.  Example: pysync --server=NAME --disable-all --save
+	See Example 3 above.
+
+ -f, --rsync-flags=[any rsync flag without leading '-' as it is provided for you]
+	Flags to pass to rsync, default are: 'DghiLlKoprtuz'
+
+ -e, --ssh-key=[PATH]
+	Path to SSH key for rsync to use -e then ssh to use -i.  Example: rsync -e 'ssh -i /root/.ssh/id_rsa'
+
+ -r, --rsync-path=[PATH]
+	Device path.
+
+ -s, --server=[section]
+	Section-name/Server-name - Not required, but may be used to override above options for any section, including the 'all'
+ section.  When -S/--save is provided you can save the above options to a section for use specifically with that section as overrides, instead of saving to the global scope.
+
+ -t, --test-file-local=[FULL PATH TO FILE ON LOCAL SERVER/SECTION>]
+	If this argument is provided for a section, it will attempt to see if this file exists, if the file is not found then the server/section will be skipped over.  This is useful for mounted drives.  If you are trying to rsync a file, group of files and or folders from a server and the drive is not mounted, you don't want the "--delete before" to remove you backups of your files.  So we test first to see if a touched "test-file" exists in the mount path.  If the file does exists, we continue on and backup from that server, if not, we skip that server in it's entirety.
+
+ -T, --test-file-remote=[FULL PATH TO FILE ON REMOTE SERVER/SECTION>]
+	If this argument is provided for a section, it will attempt to see if this file exists, if the file is not found then the server/section will be skipped over.  This is useful for mounted drives.  If you are trying to rsync a file, group of files and or folders from a server and the drive is not mounted, you don't want the "--delete before" to remove you backups of your files.  So we test first to see if a touched "test-file" exists in the mount path.  If the file does exists, we continue on and backup from that server, if not, we skip that server in it's entirety.
+
+ -w, --wait-time=[INT (in seconds) <2 - 59>]
+	How long to wait on a possibly unresponsive server, before logging the issue and moving on to the next server (default is 3). 
+	For some weird reason timeout of 3 seconds rounds up to 4 seconds, but 2 stays 2, and 4 seconds works as 4 seconds.  All other second counts appear to work as well, it's just 3 seconds does not, it works as 4 seconds,... go figure?  Minimum wait time of 2 seconds.  
+
+ -u, --from-user=[NAME]
+	From user name for rsync.
+
+ -S, --save
+	Save information for future use? **Please note this by default will save configuration options to the global section of the INI  file, unless the -s/--section is specified, then options will only be saved to that section.
+
+DEBUG:
+
+ -D, --debug
+	Enable debugging
+
+ -q, --quiet
+	be vewwy quiet (I'm hunting wabbits)
+
+ -V, --verbose
+ 	Be more Verbose (make lots of noise)
+
+ -v, --version
+	Display Version
+
+	Question, I am backing up from one server, but wish to place most files in /backups/foo, except my personal home directory, I wish to have that rsynced to my home directory on this machine.  How do I set two different backup directories, for the same server?  Answer (see INI file example below):  	 
+	 Example 4, overriding the backup_dir within a section below, (excluding some variables not currently relevant to this example):
+
+		# -- example INI  -- 		
+		user = backup
+		rsyncpath = sudo rsync
+		sshkey = /home/backups/.ssh/id_rsa
+		backup_dir = /backups/foo/
+		wait = 5
+		[all]
+		exclude = ,
+		include = ,
+		[Dallas]
+		exclude = /root/.bashrc_history, /root/.viminfo
+		include = /root/, /home/other_guy/
+		address = 192.168.1.3
+		[Dallas.2]
+		exclude = ,
+		include = /home/USERNAME/,
+		address = 192.168.1.3
+		backup_dir = /home/USERNAME/
+
+	Question, How to I use this script to backup something from this machine to itself?  Good question.  While this machine (the one I am writing this program on (you are welcome :D)) runs from an internal SATA drive, I am backing up my other servers to an external USB3.0 drive that is plugged into this machine, and mounted.   I also wish to back up files from this server, into my external backup drive.  To do this, I had to change 2 things.  First, I had to add the localhost IP to the server for this server.  2, I had to add that localhost to the authorized_keys2 file in the .ssh directory for my backup user.  I provide an example of both below:
+
+	 Example 5 for localhost, remember, it is better to use IP address than Host Names, although host names will work, if DNS look fails, the backup fails (the 127.0.0.1 could theoretically be replaced by localhost):
+
+		# -- example INI --
+		user = backup
+		rsyncpath = sudo rsync
+		sshkey = /home/backups/.ssh/id_rsa
+		backup_dir = /backups/foo/
+		wait = 5
+		[all]
+		exclude = ,
+		include = ,
+		[Dallas]
+		exclude = /root/.bashrc_history, /root/.viminfo
+		include = ,
+		address = 192.168.1.3
+		[backup]
+		exclude = ,
+		include = ,
+		address =  127.0.0.1
+
+		# -- example /home/rsyncer/.ssh/authorized_keys2 --
+		from="192.168.1.*" ssh-rsa AAAB3NzaC1yc2EAAAABJQAAACEAgy+ADkH6ArYbqulF6RgoCseNgeCboMkprkwxRXVFFaE/
+		from="127.0.0.1" ssh-rsa AAAB3NzaC1yc2EAAAABJQAAACEAgy+ADkH6ArYbqulF6RgoCseNgeCboMkprkwxRXVFFaE/
+
+		* notice, above I have a '*' at the end of the IP address, that was so that this user could use the certificate on all of my servers, trust me I have MANY servers listed in my INI file, how many do you have?
+
+-------------------------------------------------------------------------------
+
+examples:	
+	pysync -DV
+	pysync -sDallas -a192.168.1.2 -r'sudo rsync' --save
+	pysync -q -n11
+
+-------------------------------------------------------------------------------
+
+RSYNC EXIT VALUES:
+		 0      Success
+		 1      Syntax or usage error
+		 2      Protocol incompatibility
+		 3      Errors selecting input/output files, dirs
+		 4      Requested  action not supported: an attempt was made to manipulate 64-bit files on a platform that cannot support them; or an option was specified that is supported by the client and not by the server.
+		 5      Error starting client-server protocol
+		 6      Daemon unable to append to log-file
+		 10     Error in socket I/O
+		 11     Error in file I/O
+		 12     Error in rsync protocol data stream
+		 13     Errors with program diagnostics
+		 14     Error in IPC code
+		 20     Received SIGUSR1 or SIGINT
+		 21     Some error returned by waitpid()
+		 22     Error allocating core memory buffers
+		 23     Partial transfer due to error
+		 24     Partial transfer due to vanished source files
+		 25     The --max-delete limit stopped deletions
+		 30     Timeout in data send/receive
+		 35     Timeout waiting for daemon connection
+
+-------------------------------------------------------------------------------
+
+SEE ALSO:
+	pybkup, bulkcopy, bulkmove, findrep	
+
+-------------------------------------------------------------------------------
+CHANGE LOG:
+	
+	º VERSION 3.51 New file name, updated log/ and etc/, ready for new pybkup.
+	
+	º VERSION 3.5 Added in new option test-local, changed test to test-remote.  
+		This allows the user to check for specified real files on both the from and 
+		to points of a backup.  Perhaps you are backing up from an mounted drive on
+		a remote box, to a drive mounted to a folder on the local host.  While the 
+		remote test may pass, if your local mount isn't bound, then it used to 
+		place the backup within the place-holding folder.  Now it will skip the 
+		section, because the test-local failed.
+
+	º VERSION 3.0 updated to read from INI file
+
+	º VERSION 1.5x minor tweaks, bug fixes and typos corrected
+
+	º VERSION 1.5 added in ip address option, as opposed to name based lookup,
+		name based still works
+
+	º VERSION 1.0 first version
+
+-------------------------------------------------------------------------------
+
+COPYRIGHT:
+	PyTis
+
+-------------------------------------------------------------------------------
+
+AUTHOR:
+	Josh Lee
+
+-------------------------------------------------------------------------------
+
+HISTORY:
+	Original Author
+
+-------------------------------------------------------------------------------
+
+VERSION:
+	3.51

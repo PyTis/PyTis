@@ -5,4 +5,9 @@ set noexpandtab
 set shiftwidth=2
 set softtabstop=2
 set colorcolumn=80
+
+set formatoptions+=t
+set textwidth=79
+set wrapmargin=2
+
 "source /home/ubuntu/.vim/syntax/tabcolor.vim

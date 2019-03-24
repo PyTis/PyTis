@@ -557,10 +557,10 @@ limit - default maximum for the number of available file descriptors.
 	#	if self.pidfile.validate(): self.pidfile.unlink()
 
 	def IsRunning(self):
-		return bool(self.pidfile.validate())
+		return self.running
 	
 	def RunningAndService(self):
-		return self.running
+		return self.IsRunning() and bool(self.pidfile.validate())
 
 	def Status(self):
 		pid = self.pidfile.validate()
