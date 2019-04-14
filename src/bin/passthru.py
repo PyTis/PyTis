@@ -166,11 +166,12 @@ HISTORY:
 
 CHANGE LOG:
 	
-	v1.1 MINOR CHANGE
+	v1.1 MINOR CHANGE																							 March 22, 2019
 		Added updated changelog and removed the prefix "web-" from "web-passthru" 
 		now it is just "passthru."
-	
-	v1.Original Release
+		 
+	v1.0 ORIGINAL RELEASE																				December 12, 2015
+    Original Publish.
 
 EXAMPLES:	
 

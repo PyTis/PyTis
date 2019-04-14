@@ -29,7 +29,10 @@ def generate(opts, script):
 	if opts.author:
 		buf.append("__author__ = '%s'" % opts.author)
 
-	buf.append("__created__ = '%s'" % datetime.datetime.now().strftime("%I:%M%%s %m %b, %Y") % datetime.datetime.now().strftime("%p").lower()) 
+	buf.append("__created__ = '%s'" % 
+		datetime.datetime.now().strftime("%I:%M%%s %m %b, %Y") % 
+		datetime.datetime.now().strftime("%p").lower()
+	) 
 	# datetime.datetime.now())
 	
 	if opts.copyright:
@@ -85,6 +88,9 @@ HISTORY:
 	Original Author
 
 CHANGE LOG:
+		 
+	v1.0 ORIGINAL RELEASE																			  September 2, 2007
+    Original Publish.
 
 CREATED:
 	%%(created)s

@@ -132,50 +132,68 @@ default_frequency = 1
 # Begin Imports
 # -----------------------------------------------------------------------------
 # builtin
-import optparse
-import getpass
-import subprocess
-import time
-import os
-import atexit
-from random import randint as rand
-import pam
-import sys
-import logging
+try:
+	import sys
+except KeyboardInterrupt as e:
+	print("KeyboardInterrupt: %s" % str(repr(e)))
+	print("Script terminated by Control-C")
+	print("bye!")
+	exit(1)
+# builtin
+try:
+	import os
+	from subprocess import Popen, PIPE
+	import subprocess
+	import shlex
+	import optparse
+	import getpass
+	import time
+	import atexit
+	from random import randint as rand
+#import pam
+	import logging
 
 
-# This program needs to import PyTis(2) v4.1, which imports modules from the
-# sub-package pylib, this program also needs to import from the sub-package
-# cobj, pylib.cobj itself, has to import from the parent, pytis, which it
-# can only do if the parent directory is a package, turning the parent (bin)
-# into a package breaks importing pytis for this program in the first place
-# and caused severe circular import errors.	To fix this, we have to adjust the
-# path.
-# vvvvv XXX-TODO may not need this here, dunno, remove at end and try it. vvvvv
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
-# ^^^^^ XXX-TODO may not need this here, dunno, remove at end and try it. ^^^^^
+	# This program needs to import PyTis(2) v4.1, which imports modules from the
+	# sub-package pylib, this program also needs to import from the sub-package
+	# cobj, pylib.cobj itself, has to import from the parent, pytis, which it
+	# can only do if the parent directory is a package, turning the parent (bin)
+	# into a package breaks importing pytis for this program in the first place
+	# and caused severe circular import errors.	To fix this, we have to adjust 
+	# the path.
+	# vvvv XXX-TODO may not need this here, dunno, remove at end and try it. vvvv
+
+	sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
+		'..')))
+	# ^^^^ XXX-TODO may not need this here, dunno, remove at end and try it. ^^^^
 
 #
 # Internal
 #
-try:
-	import pytis as PyTis # Shared GPL/PPL License
-	from pylib.util.functional import any as fany
-except ImportError as e:
-	# We cannot go any further than this, we can't use the Parser or Logging tool
-	# to display these errors because those very tools are loaded from PyTis.
-	# Therefore, display errors now and exit with an errored exit code.
-	print("This program requires the PyTis Python library to run.")
-	print("You may download the PyTis library, or do an SVN checkout from:")
-	print("<https://sourceforge.net/projects/pytis/>")
-	print("This program should be installed in the bin directory of the PyTis " \
-		"library.")
-	print(str(e))
-	sys.exit(1)
+	try:
+		import pytis as PyTis # Shared GPL/PPL License
+		from pylib.util.functional import any as fany
+	except ImportError as e:
+		# We cannot go any further than this, we can't use the Parser or Logging tool
+		# to display these errors because those very tools are loaded from PyTis.
+		# Therefore, display errors now and exit with an errored exit code.
+		print("This program requires the PyTis Python library to run.")
+		print("You may download the PyTis library, or do an SVN checkout from:")
+		print("<https://sourceforge.net/projects/pytis/>")
+		print("This program should be installed in the bin directory of the PyTis " \
+			"library.")
+		print(str(e))
+		sys.exit(1)
 
 #
 # Third-Party
 #
+except KeyboardInterrupt as e:
+	print("KeyboardInterrupt: %s" % str(repr(e)))
+	print("Script terminated by Control-C")
+	print("bye!")
+	# Return Code 130 - Script terminated by Control-C
+	sys.exit(130)
 
 # -----------------------------------------------------------------------------
 # End Imports
@@ -213,8 +231,217 @@ __version__ = '0.1'
 # Begin HELPER Functions
 # -----------------------------------------------------------------------------
 
-def is_root():
-	return bool(getpass.getuser()=='root')
+already_returned = []
+def rnd(passwd, ar=already_returned, large_change=True):
+	""" This is used with the PyTis.protect function, to when turning a password
+	to stars.  You may change 'secret' to '******'.  However, a malitious user
+	reading a log file, would at the least, know how many charecters the password
+	is.  This picks a random number, -5 to 5, to add on or subtract from the
+	length of your password, as it replaces it with stars.  Now 'secret' may end
+	up being '***' the first time you run this program, and '**************' the
+	second.  If this function has already returned a value, and that value would
+	work (getting to why it wouldn't in a second), then it will return that
+	random number again.  In a few cases, the number is too large.  This could
+	happen when the password is short.  If it is only 3 charecters long, and this
+	function suggests subtracting 4 charecters, well then that just wouldn't
+	work.  In this cases, it simply runs again, until it finds one that will
+	work.  Below, you can see 13 test passwords, the code used to call them, and
+	the output.  I have left the print statements in place, however they are
+	commented out.
+
+password1 = 't-1'
+password2 = 'this-2'
+password3 = 'pw-3'
+password4 = 'this-4'
+password5 = 't-5'
+password6 = 'pw-6'
+password7 = 'this-fake-password-7'
+password8 = 'thisthis_is-a_fake-password!-8'
+password9 = 'pword-9'
+password10 = 'pass-10'
+password11 = 'pw -11'
+password12 = 'password -12'
+password13 = 'pwasdsadf-13'
+
+print('-'*80)
+print('rnd of "%s" is: %s' % (password1, rnd(password1)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password2, rnd(password2)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password3, rnd(password3)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password4, rnd(password4)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password5, rnd(password5)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password6, rnd(password6)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password7, rnd(password7)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password8, rnd(password8)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password9, rnd(password9)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password10, rnd(password10)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password11, rnd(password11)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password12, rnd(password12)) )
+print('-'*80)
+print('rnd of "%s" is: %s' % (password13, rnd(password13)) )
+print('-'*80)
+
+------------------------------------------------------------------------------
+>> NO AR
+>> appending '-5' now
+>> TRUE: abs(rand_key_chop: -5) > len(str(passwd: 't-1' is 3))
+>> Trying again...
+>> there is an ar, but it's value is too large.
+>> continuing...
+>> TRUE: abs(rand_key_chop: 3) > len(str(passwd: 't-1' is 3))
+>> Trying again...
+>> there is an ar, but it's value is too large.
+>> continuing...
+>> FALSE: abs(rand_key_chop: -2) > len(str(passwd: 't-1' is 3))
+>> this is a good thing, the rand_key_chop is not too big, continuing
+>> returning rand_key_chop: -2
+>> rnd of "t-1" is: -2
+>> ---------------------------------------------------------------------------
+>> ar: -5
+>> already_returned a value that will work.
+>> rnd of "this-2" is: -5
+>> ---------------------------------------------------------------------------
+>> there is an ar, but it's value is too large.
+>> continuing...
+>> FALSE: abs(rand_key_chop: -2) > len(str(passwd: 'pw-3' is 4))
+>> this is a good thing, the rand_key_chop is not too big, continuing
+>> returning rand_key_chop: -2
+>> rnd of "pw-3" is: -2
+>> ---------------------------------------------------------------------------
+>> ar: -5
+>> already_returned a value that will work.
+>> rnd of "this-4" is: -5
+>> ---------------------------------------------------------------------------
+>> there is an ar, but it's value is too large.
+>> continuing...
+>> TRUE: abs(rand_key_chop: 4) > len(str(passwd: 't-5' is 3))
+>> Trying again...
+>> there is an ar, but it's value is too large.
+>> continuing...
+>> TRUE: abs(rand_key_chop: -5) > len(str(passwd: 't-5' is 3))
+>> Trying again...
+>> there is an ar, but it's value is too large.
+>> continuing...
+>> TRUE: abs(rand_key_chop: 3) > len(str(passwd: 't-5' is 3))
+>> Trying again...
+>> there is an ar, but it's value is too large.
+>> continuing...
+>> TRUE: abs(rand_key_chop: 3) > len(str(passwd: 't-5' is 3))
+>> Trying again...
+>> there is an ar, but it's value is too large.
+>> continuing...
+>> TRUE: abs(rand_key_chop: 5) > len(str(passwd: 't-5' is 3))
+>> Trying again...
+>> there is an ar, but it's value is too large.
+>> continuing...
+>> FALSE: abs(rand_key_chop: 2) > len(str(passwd: 't-5' is 3))
+>> this is a good thing, the rand_key_chop is not too big, continuing
+>> returning rand_key_chop: 2
+>> rnd of "t-5" is: 2
+>> ---------------------------------------------------------------------------
+>> there is an ar, but it's value is too large.
+>> continuing...
+>> FALSE: abs(rand_key_chop: 1) > len(str(passwd: 'pw-6' is 4))
+>> this is a good thing, the rand_key_chop is not too big, continuing
+>> returning rand_key_chop: 1
+>> rnd of "pw-6" is: 1
+>> ---------------------------------------------------------------------------
+>> ar: -5
+>> already_returned a value that will work.
+>> rnd of "this-fake-password-7" is: -5
+>> ---------------------------------------------------------------------------
+>> ar: -5
+>> already_returned a value that will work.
+>> rnd of "thisthis_is-a_fake-password!-8" is: -5
+>> ---------------------------------------------------------------------------
+>> ar: -5
+>> already_returned a value that will work.
+>> rnd of "pword-9" is: -5
+>> ---------------------------------------------------------------------------
+>> ar: -5
+>> already_returned a value that will work.
+>> rnd of "pass-10" is: -5
+>> ---------------------------------------------------------------------------
+>> ar: -5
+>> already_returned a value that will work.
+>> rnd of "pw -11" is: -5
+>> ---------------------------------------------------------------------------
+>> ar: -5
+>> already_returned a value that will work.
+>> rnd of "password -12" is: -5
+>> ---------------------------------------------------------------------------
+>> ar: -5
+>> already_returned a value that will work.
+>> rnd of "pwasdsadf-13" is: -5
+>> ---------------------------------------------------------------------------
+>> 
+	"""
+
+
+	if large_change: rand_key_chop_ = [-5,-4,-3,-2,-1,1,2,3,4,5]
+	#if large_change: rand_key_chop_ = [-5,-4,-3,3,4,5]
+	else: rand_key_chop_ = [-2,-1,0,1,2]
+	rand_key_chop_i = rand(0, len(rand_key_chop_)-1)
+	rand_key_chop = rand_key_chop_[rand_key_chop_i]
+
+
+
+	if ar:
+		if abs(ar[0]) < len(str(passwd)): 
+			#print("ar: %s" % ar[0])
+			#print("already_returned a value that will work.")
+			return ar[0]
+		else:
+			#print("there is an ar, but it's value is too large.")
+			#print("continuing...")
+			pass
+	else:
+		#print("NO AR")
+		ar.append(rand_key_chop)
+		#print("appending '%s' now" % rand_key_chop)
+
+	if abs(rand_key_chop) >= len(str(passwd)):
+		# won't work, try again
+		#print("TRUE: abs(rand_key_chop: %s) > len(str(passwd: '%s' is %s))" % 
+		#	(rand_key_chop, passwd, len(str(passwd))))
+
+		#print("Trying again...")
+		return rnd(passwd)
+	else:
+		#print("FALSE: abs(rand_key_chop: %s) > len(str(passwd: '%s' is %s))" % 
+		#	(rand_key_chop, passwd, len(str(passwd))))
+		#print("this is a good thing, the rand_key_chop is not too big")
+		pass
+	#print('returning rand_key_chop: %s' % rand_key_chop)
+	return rand_key_chop
+
+def protect(dic):
+	""" This utilizes the list of dict keys to protect, found in PyTis's 
+			"protected_options" list.  The difference is that it utilizes the above, 
+			"rnd" function, to add or remove a few stars, so that an 8 char password
+			may show with 5 stars one time, and 9 another.  Making the log files even
+			safer, as not only will they hide passwords, sneaky hacker spies won't
+			know the real length of the password, from counting the stars.
+	"""
+	global log
+	for thing in PyTis.protected_options:
+		if thing in dic.keys():
+			#chops
+			random_chop = rnd(dic[thing])
+			dic[thing] = '*'*(len(dic[thing])-random_chop)
+			log.debug('random chomp of: %s' % random_chop)
+	return dic
+
 
 def pidfile():
 	""" :-/  hmm,... what if a user runs this as a service (backgrounded),... 
@@ -263,6 +490,49 @@ print("Is root?: %s" % str(bool(is_root())))
 sys.exit(1)
 """
 
+
+"""
+if opts.quiet:
+
+	log.info2('-'*80)
+	individual_start_time_3 = time.time()
+	log.info4('Individual Start Time 3: %s' % format(individual_start_time_3,
+		'9.99g'))
+
+	log.info2('about to call %s with Popen' % str_cmd)
+	proc = Popen(shlex.split(str_cmd), stdout=PIPE, stderr=PIPE)
+	output_retcode_3 = proc.wait()
+	log.info2('done with Popen calling %s' % str_cmd)
+	if output_retcode_3 is not 0:
+		log.warn("EXIT CODE OF %s was %s" % (str_cmd, output_retcode_3))
+
+	individual_end_time_3 = time.time()
+	log.info4('Individual End Time 3: %s' % format(individual_end_time_3, 
+		'9.99g'))
+
+	this_run_time_3 = individual_end_time_3 - individual_start_time_3
+	log.info3('Individual Run Time 3: %s' % format(this_run_time_3, '9.99g'))
+
+else:
+	log.info2('-'*80)
+	individual_start_time_4 = time.time()
+	log.info4('Individual Start Time 4: %s' % format(individual_start_time_4,
+		'9.99g'))
+
+	log.info(repr(pargs))
+	log.info2('about to call %s with subprossess.call' % str_cmd)
+	output_retcode_2 = subprocess.call(pargs)
+	log.info2('done with subprossess.call calling %s' % str_cmd)
+
+	individual_end_time_4 = time.time()
+	log.info4('Individual End Time 4: %s' % format(individual_end_time_4, 
+		'9.99g'))
+
+	this_run_time_4 = individual_end_time_4 - individual_start_time_4
+	log.info3('Individual Run Time 4: %s' % format(this_run_time_4, '9.99g'))
+"""
+
+
 # -----------------------------------------------------------------------------
 # End HELPER Functions
 # =============================================================================
@@ -271,7 +541,7 @@ sys.exit(1)
 # -----------------------------------------------------------------------------
 
 
-def run(opts):
+def run(pargs, opts):
 	""" You don't only have to specify a callable program with a shebang line. 
 
 EXAMPLE of benchmarking a program WITH a shebang line:
@@ -299,8 +569,179 @@ benchmark.py file, and use the benchmark functions/classes.
 
 	"""
 	global log
+
+	# times_to_run = opts.ttr
+
+	#log.info(repr(pargs))
+	start_time = time.time()
+
+	func=pargs[0]
+	log.debug("FUNC: %s" % repr(func))
+	log.debug("FUNC-TYPE: %s" % type(func))
+
+	args=[]; kwargs={}
+	for arg in pargs:
+		if '=' not in arg:
+			args.append(arg)
+		else:
+			k,v = arg.split('=')
+			kwargs[k]=v
+
+	show_args = repr(list(args))
+	show_kwargs = repr(protect(dict(kwargs)))
+
+
+# XXX:FINDME 
+	str_cmd = ' '.join(pargs)
+
+	log.info('Starting Benchmark of "%s", running %s times.'%(str_cmd, opts.ttr))	
+	log.debug('start time: %f' % start_time)
+
+	i = 0
+
+	total_run_time_1 = 0
+	total_run_time_2 = 0
+	total_run_time_3 = 0
+	total_run_time_4 = 0
+
+	while i < opts.ttr:
+		i += 1
+
+		log.info2('='*80)
+		log.info2("Running %s for the %s time." % (str_cmd, i))
+		individual_start_time_1 = time.time()
+		log.info4('Individual Start Time 1: %s' % format(individual_start_time_1,
+			'9.99g'))
+
+		# func(*args, **kwargs)
+#		log.warn('would run "%s" here' % str_cmd)
+
+		# can NOT NOT NOT use Popen, as it backgrounds, and doesn't time!
+		# proc = Popen(shlex.split(str_cmd), stdout=PIPE, stderr=PIPE)
+
+		# log.info2('about to call os.system')
+		# output_retcode_1 = os.system(str_cmd)
+		# log.info2('done with os.system')
+		# this works, but I'd rather use subprocess, since I am already using it...
+		# come to think of it, I should benchmark the two, to see which is more
+		# accurate with the built in "sleep" command.
+
+		'''
+		log.info2('-'*80)
+		individual_start_time_2 = time.time()
+		log.info4('Individual Start Time 2: %s' % format(individual_start_time_2,
+			'9.99g'))
+
+		log.info2('about to call %s with os.system' % str_cmd)
+		output_retcode_1 = os.system(str_cmd)
+		log.info2('done with os.system calling %s' % str_cmd)
+
+		individual_end_time_2 = time.time()
+		log.info4('Individual End Time 2: %s' % format(individual_end_time_2, 
+			'9.99g'))
+
+		this_run_time_2 = individual_end_time_2 - individual_start_time_2
+		log.info3('Individual Run Time 2: %s' % format(this_run_time_2, '9.99g'))
+
+		total_run_time_2 += this_run_time_2
+		'''
+
+
+
+		if not opts.show:
+
+			log.info2('-'*80)
+			individual_start_time_3 = time.time()
+			log.info4('Individual Start Time 3: %s' % format(individual_start_time_3,
+				'9.99g'))
+
+			log.info2('about to call %s with Popen' % str_cmd)
+			proc = Popen(shlex.split(str_cmd), stdout=PIPE, stderr=PIPE)
+			output_retcode_3 = proc.wait()
+			log.info2('done with Popen calling %s' % str_cmd)
+			if output_retcode_3 is not 0:
+				log.warn("EXIT CODE OF %s was %s" % (str_cmd, output_retcode_3))
+
+			individual_end_time_3 = time.time()
+			log.info4('Individual End Time 3: %s' % format(individual_end_time_3, 
+				'9.99g'))
+
+			this_run_time_3 = individual_end_time_3 - individual_start_time_3
+			log.info3('Individual Run Time 3: %s' % format(this_run_time_3, '9.99g'))
+
+			total_run_time_3 += this_run_time_3
+
+			log.info2('-'*80)
+
+		else:
+
+
+			individual_start_time_4 = time.time()
+			log.info4('Individual Start Time 4: %s' % format(individual_start_time_4,
+				'9.99g'))
+
+			log.info(repr(pargs))
+			log.info2('about to call %s with subprossess.call' % str_cmd)
+			output_retcode_2 = subprocess.call(pargs)
+			log.info2('done with subprossess.call calling %s' % str_cmd)
+
+			individual_end_time_4 = time.time()
+			log.info4('Individual End Time 4: %s' % format(individual_end_time_4, 
+				'9.99g'))
+
+			this_run_time_4 = individual_end_time_4 - individual_start_time_4
+			log.info3('Individual Run Time 4: %s' % format(this_run_time_4, '9.99g'))
+
+			total_run_time_4 += this_run_time_4
+
+			log.info2('-'*80)
+
+		individual_end_time_1 = time.time()
+		log.info4('Individual End Time 1: %s' % format(individual_end_time_1, 
+			'9.99g'))
+
+
+		this_run_time_1 = individual_end_time_1 - individual_start_time_1
+		log.info3('Individual Run Time 1: %s' % format(this_run_time_1, '9.99g'))
+
+		total_run_time_1 += this_run_time_1
+
+		log.info2('_'*80)
+
+	average_run_time_1 = float(total_run_time_1 / opts.ttr)
+	average_run_time_2 = float(total_run_time_2 / opts.ttr)
+	average_run_time_3 = float(total_run_time_3 / opts.ttr)
+	average_run_time_4 = float(total_run_time_4 / opts.ttr)
+
+	print("average_run_time_1: %s" % format(average_run_time_1, '9.99g'))
+	print("average_run_time_2: %s" % format(average_run_time_2, '9.99g'))
+	print("average_run_time_3: %s" % format(average_run_time_3, '9.99g'))
+	print("average_run_time_4: %s" % format(average_run_time_4, '9.99g'))
+
+	end_time = time.time()
+	log.debug('end time -: %f' % end_time)
+	total = end_time - start_time
+
+
+	log_total = format(float(end_time - start_time), '9.99g')
+	log.debug('total time: %s' % log_total)
+
+	average = float(round(float(total) / float(opts.ttr), 8))
+
+	log_average = format(float(average), '9.99g')
+	#print(repr(dir(func)))
+	print("Average time for %s to run '%s' with args: %s, and kwargs: %s" % 
+		(str_cmd, log_average, show_args, show_kwargs ) )
+
+
+	#benchmark_func(func, 3, *args, **kwargs)
+
+
 	log.info('Outer RUN ran')
+	sys.exit()
+	PyTis.relogOpts(opts)
 	log.critical("FIND ME, I AM THE RUNNING PROGRAM!")
+	return 0
 # -----------------------------------------------------------------------------
 # End MAIN PROGRAM FUNCTIONS
 # =============================================================================
@@ -319,11 +760,14 @@ class SingleThread(PyTis.MyThread):
 		
 	"""
 
-	def run(self):
+	def run(self, pargs):
 		"""
 			Extra help goes here...
 		"""
-		self.log.info("Method run ran")
+		self.log.info("I have opts!")
+		self.log.info(repr(pargs))
+		self.log.info(repr(self.opts))
+		#self.log.info("Method run ran")
 		self.log.critical("FIND ME, I AM THE RUNNING PROGRAM!")
 
 		"""
@@ -366,6 +810,12 @@ def main2(times_to_run = 3):
 	# it is unnessecary, for one.  For two, I think it would through errors, IF
 	# you were trying to pass additional options in to the secondary program.
 	# shit, doesn't time do this already?
+# XXX: TODO 
+# XXX: TODO 
+# XXX: TODO 
+# XXX: TODO  CHECK THIS< WHY ARE BOTH UPPER AND LOWER CASE -v/-V's below?????
+# XXX: TODO 
+# XXX: TODO 
 	# No, I just checkd, it will time a process once, but not run it multiple
 	# times, and then display the average.
 	#if '-v' or '-V' or '--verbose' or '--VERBOSE' in sys.argv:
@@ -467,7 +917,6 @@ VERSION:
 
 	%(version)s
 
-`EOF
 """  % dict(version=__version__,
 						 author=__author__,
 						 created=__created__,
@@ -503,6 +952,12 @@ VERSION:
 			"also print to the screen, unless you suppress them with the " \
 			"[-q/--quiet] flag.`$"
 
+		report_help = 'Show output in report mode.`$' \
+			'`$*(use "--help" for more details)`$'
+
+		show_help = "See the output from the program or programs being " \
+			"benchmarked.  `$"
+
 		ttr_help = "How many times to run (default %s).`$"  % default_times_to_run
 
 		verbose_help=optparse.SUPPRESS_HELP
@@ -521,6 +976,12 @@ VERSION:
 
 		debug_help = "Enable debugging`$" \
 			'`$*(use "--help" for more details)`$'
+
+		report_help = 'Show output in report mode.`$' \
+			'`$*(use "--help" for more details)`$'
+
+		show_help = "See the output from the program or programs being " \
+			"benchmarked.  `$"
 
 		ttr_help = "How many times to run (default %s).`$"  % default_times_to_run
 
@@ -614,6 +1075,12 @@ VERSION:
 		default=False, dest='totally_verbose', 
 		help=optparse.SUPPRESS_HELP)
 
+	dbgroup.add_option('-r', '--report', action='store_true', default=False,
+		dest='report', help=report_help)
+
+	dbgroup.add_option('-s', '--show', action='store_true', default=False,
+		dest='show', help=show_help)
+
 	dbgroup.add_option('-v', '--verbose', action='count', default=0,
 		dest='verbose', help=verbose_help)
 
@@ -642,22 +1109,81 @@ VERSION:
 	# ##################################################################### #
 
 	wts = None # where_to_split = wts
+
+	#log.debug("Calculating where_to_split begins here.")
+	#print("Calculating where_to_split begins here.")
+
 	for i, arg in enumerate(sys.argv):
+
+		#log.debug("enumerated i is '%s' and arg is '%s'." % (i, arg))
+		#print("enumerated i is '%s' and arg is '%s'." % (i, arg))
 		if i > 0:
 			if os.path.isfile(arg): 
+
+				#log.debug("arg %s is a file" % arg)
+				#print("arg %s is a file" % arg)
+
+				if not arg.startswith('.') and not arg.startswith(os.sep):
+					if os.path.exists(os.path.abspath(os.path.join(os.getcwd(),arg))):
+						# sys.argv[i] = "./%s" % arg
+						# or
+						# sys.argv[i] = os.path.abspath(os.path.join(os.getcwd(),arg))
+						# should be the same thing,... either way, we are fixing the path
+						# to make it an executable.
+						sys.argv[i] = os.path.abspath(os.path.join(os.getcwd(),arg))
+
+				# log.debug("wts=%s" % i)
+				#print("wts=%s" % i)
+				# now set where_to_split
 				wts=i
-			elif not arg.startswith('-') and \
+				break
+
+			elif not \
+			(
+				# BEGIN both must be false 
+				( arg.startswith('"') and arg.endswith('"') )
+				or
+				( arg.startswith("'") and arg.endswith("'") )
+				# END  both must be false
+			) \
+			and not arg.startswith('-') and \
 			arg.lower() not in ('start','stop','restart','status'):
+				# log.debug("arg %s doesn't start with a - and isn't an action" % arg)
+				#print("arg %s doesn't start with a - and isn't an action" % arg)
 				x=os.popen("which '%s'" % arg)
-				if x.read() and not x.close():
+				# log.debug("x.read(): %s" % x.read())
+				#print("x.read(): %s" % x.read())
+				test_path = x.read()
+				# log.debug("test_path: %s" % test_path)
+				#print("test_path: %s" % test_path)
+
+				#if x.read() and not x.close():
+				if test_path and not x.close():
+					# log.debug("not x.close()")
+					# print("not x.close()")
+
+					sys.argv[i] = test_path.strip()
+
+					# log.debug("wts=%s" % i)
+					# print("wts=%s" % i)
+					# now set where_to_split
 					wts=i
+					break
+	
 	if not wts:
+		# log.debug("Not wts, so wts=%s" % len(sys.argv))
+		#print("Not wts, so wts=%s" % len(sys.argv))
 		wts = len(sys.argv)
+	else:
+		# log.debug("where_to_split is '%s'." % wts)
+		#print("where_to_split is '%s'." % wts)
+		pass
 		
 	sargs=[]; pargs=[]
 	if wts:
 		sargs = sys.argv[:wts] # sargs:(s)args:(s)ys.argv args 
 		pargs = sys.argv[wts:] # (p)rogram args:(p)assed args:(p)args
+
 
 	# A quick fix for executables in our direct path, where the user forgot to
 	# prefix them with the standard ./ to execute them, referencing "this"
@@ -676,31 +1202,59 @@ VERSION:
 	# ----------------------------
 	(opts, args) = parser.parse_args(sargs)
 	# ----------------------------
+
 	if opts.verbose: 
 		opts.totally_verbose = True
 
+#	if not opts.quiet and not opts.verbose:
+#		opts.verbose=1
+
 	if opts.quiet: opts.verbose = 0
+	else: opts.totally_verbose = True
 
 	# if opts.dry_run and not opts.quiet and not opts.verbose: opts.verbose = 1
 
 	#if not opts.quiet: opts.verbose = True # Defaults to Verbose
-	if not opts.verbose: opts.quiet = True # Defaults to Quiet 
+#	if not opts.verbose: opts.quiet = True # Defaults to Quiet 
 	# ----------------------------
 
 	old_version = opts.version
 	opts.version = True
-	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
+	if not old_version: # I bet half of my programs or more are missing this if
+	#	statement
+		log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
 	opts.version = old_version
 
 	if opts.version:
+		"""
+		print("benchmark v%s" % PyTis.getVersion())
+		return 0
+
 		print("benchmark v%s" % __version__)
 		return 0
+
+		return PyTis.printVersion()
+		
+		---------------------------------------
+
+		all work, but the last one is the shortest, and easiest to make standard
+		now, in the output of the "newscript" program.
+		""" 
+		return PyTis.printVersion()
 	# ----------------------------
 
 	log.setLevel(0)
 
-	if opts.verbose:			 logging.getLogger().setLevel(level=logging.WARNING)
-	if opts.verbose > 1:	 logging.getLogger().setLevel(level=logging.INFO)
+	if opts.quiet:
+		#logging.getLogger().setLevel(level=logging.WARNING)
+		logging.getLogger().setLevel(level=logging.INFO)
+
+	if opts.verbose > 0:
+		logging.getLogger().setLevel(level=logging.INFO)
+
+	if opts.verbose > 1:
+		logging.getLogger().setLevel(level=logging.DEBUG)
+
 	if opts.verbose > 2:	 
 		opts.totally_verbose=True
 		logging.getLogger().setLevel(level=logging.DEBUG)
@@ -710,10 +1264,11 @@ VERSION:
 		logging.getLogger().setLevel(level=logging.NOTSET)
 
 	if opts.debug:				 logging.getLogger().setLevel(level=logging.DEBUG)
-	if opts.quiet:				 logging.getLogger().setLevel(level=logging.CRITICAL)
+#	if opts.quiet:				 logging.getLogger().setLevel(level=logging.CRITICAL)
 
-	log.debug('sys.argv: %s' % repr(sargs))
-	log.debug('passed program args: %s' % repr(pargs))
+	log.debug('sys.argv: %s' % repr(sys.argv))
+	log.debug('passed parent program args: %s' % repr(sargs))
+	log.debug('passed child program args: %s' % repr(pargs))
 
 
 	# ##################################################################### #
@@ -811,12 +1366,22 @@ VERSION:
 		log.error("You must run the benchmark at least once, thus the " \
 			"lowest number you can choose is 1.")
 	elif opts.ttr > 500:
-		log.error("You cannot run the benchmark this many times, it " \
+		errors.append("You cannot run the benchmark this many times, it " \
 			"would likely take weeks to run.")
+		#log.error("You cannot run the benchmark this many times, it " \
+		#	"would likely take weeks to run.")
 	elif opts.ttr > 100:
-		log.error("STRONG WARNING! You have chosen a VERY large number, this " \
-			"may take too long to run.  You may press CTRL+C to exit if this " \
-			"takes too long.")
+		if opts.quiet:
+			log.error("STRONG WARNING! You have chosen a VERY large number, this " \
+				"may take too long to run.  You may press CTRL+C to exit if this " \
+				"takes too long.")
+		else:
+			log.warn("STRONG WARNING! You have chosen a VERY large number, this " \
+				"may take too long to run.  You may press CTRL+C to exit if this " \
+				"takes too long.")
+		time.sleep(3.5) # if the user has high verbosity on, this message might fly
+		# by and be off screen before they even get a chance to read it.
+
 
 	# END ERROR CHECKING (to be moved)
 	# ##################################################################### #
@@ -832,22 +1397,42 @@ VERSION:
 		#parser.print_usage()
 		#return 0
 
+
+
 	elif not errors:
 		if opts.action == 'start':
 			if not opts.quiet:
 				log.info("benchmark started at %s" % PyTis.prettyNow())
+		if opts.action == 'status':
+			pass
+			#opts.totally_verbose=True
 
+		if opts.action == 'stop':
+			pass
+			#opts.totally_verbose=True
+
+		# um... one, does info print?, I think so....
+#	two.... pargs limited?  missing first arg?
 
 		y = SingleThread()
 		y.setLogFile(log)
 		y.setOpts(opts)
 
 		if opts.action:
-			y.register(run,opts)
-			y.register(y.run)
+			#y.register(run,pargs,opts)
+			y.register(y.run, pargs)
 			y.service(opts)
+			return
 		else:
-			return run(opts)
+			try:
+				return run(pargs, opts)
+			except KeyboardInterrupt as e:
+				log.debug("KeyboardInterrupt:",e)
+				log.info("Script terminated by Control-C")
+				log.info("bye!")
+				# Return Code 130 - Script terminated by Control-C
+				return 130
+				sys.exit(130)
 
 		"""
 		
@@ -861,20 +1446,19 @@ VERSION:
 		subprocess.call(cmd_list)
 		"""
 		
-		print(repr(pargs))
-
 		'''
 		y	= SingleThread()
 		y.run()
 		'''
-		return 0 #os.system(' '.join(sys.argv))
+		return 0
 
 		
 	else: # ( else there are errors)
 
 		# odd, printing "\n" creates two line breaks, whereas a space, only one,...
 		print(" ") # therefore, we only print a space.
-		parser.print_usage()
+		if not pargs:
+			parser.print_usage()
 		for e in errors:
 			log.error("%s\n" % PyTis.wrap(e,71))
 
@@ -932,5 +1516,11 @@ VERSION:
 
 
 if __name__ == '__main__':
-	sys.exit(main())
+	try:
+		sys.exit(main())
+	except Exception as e:
+		print("An error has occured.\n")
+		print(str(e))
+		sys.exit(1)
+
 

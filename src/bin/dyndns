@@ -197,9 +197,12 @@ HISTORY:
 
 CHANGE LOG:
 
-	v1.8 MINOR CHANGE
-	Fixed missing ini file errors in load_config
-	
+	v1.8 MINOR CHANGE																						 October 15, 2018
+		Fixed missing ini file errors in load_config
+		 
+	v1.0 ORIGINAL RELEASE																				 5 December, 2008
+    Original Publish.
+
 EXAMPLES:	
 
 

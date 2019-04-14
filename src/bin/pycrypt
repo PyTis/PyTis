@@ -71,16 +71,18 @@ HISTORY:
 
 CHANGE LOG:
 
-	v2.1 BUG FIX
-		major bug in dual input fixed >> pycrypt foo bar < this was broken)
+	v2.1 MAJOR CHANGE																							 April 14, 2016
+		BUG FIX:
+			major bug in dual input fixed >> pycrypt foo bar < this was broken)
 
-	v2.0 MINOR CHANGE
+	v2.0 MINOR CHANGE																							   May 17, 2015
 		Fixed small bug, where default salt was not being set, or used.
 		Fixed pre-run error tests to distinguish no salt vs. default salt.
 		Fixed pre-run error tests to handle setting / resttting salt.
 
-	v1.0
-		original publish
+
+	v1.0 ORIGINAL RELEASE																					 August 8, 2013
+    Original Publish.
 
 CREATED:
 

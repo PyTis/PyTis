@@ -155,7 +155,8 @@ HISTORY:
 	Original Author
 
 CHANGE LOG:
-	v1.5 MINOR CHANGE
+
+	v1.5 MINOR CHANGE																								June 19, 2016
 		Issue: Special logs of mine were owned by the user www-data and group
 		postgres.  These had to maintain their state, but after I ran this program,
 		the new file was only owned by the current user and group.
@@ -167,6 +168,8 @@ CHANGE LOG:
 		chmod 0644.  This cuased major problems with apache and postgres logs, as
 		the apache logs needed to be owned by www-data.  
 		 
+  v1.0 ORIGINAL RELEASE																						  May 5, 2016
+    Original Publish.
 
 CREATED:
 	%(created)s

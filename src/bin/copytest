@@ -152,6 +152,12 @@ HISTORY:
 
 CHANGE LOG:
 
+	v1.1 MINOR CHANGE																							 April 24, 2016
+		Added new copyright features, copytest will soon be renamed to 'preview'.
+
+	v1.0 ORIGINAL RELEASE																				    April 4, 2016
+    Original Publish.
+
 CREATED:
 	%(created)s
 

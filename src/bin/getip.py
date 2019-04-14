@@ -305,7 +305,12 @@ HISTORY:
 
 CHANGE LOG:
 	
-	v1.Original Release
+	v1.1 MINOR CHANGE																					   October 15, 2018
+		Better error handling.
+
+	v1.0 ORIGINAL RELEASE																					October 1, 2018
+    Original Publish.
+
 
 EXAMPLES:	
 
@@ -377,53 +382,61 @@ VERSION:
 	'''
 	funcs.sort(key=lambda x: x.__name__)
 
-	if len(args) > 1:
-		log.error('Please only choose one method.')
-		return 1
-	elif len(args) == 1:
-		possible = args[0]
 
-		try:
-			possible = int(possible)
-		except (IndexError,ValueError) as e:
-			pass
-		else:
-			possible-=1
-
-		try:
-			if type(possible) is type(1):
-				if possible < 0 or possible > len(funcs):
-					raise IndexError
-				func = funcs[possible]
-			else:
-				func = [f for f in funcs if f.__name__ == possible][0]
-		except IndexError as e:
-			log.error('Function not found.')
+	try:
+		if len(args) > 1:
+			log.error('Please only choose one method.')
 			return 1
-		else:
+		elif len(args) == 1:
+			possible = args[0]
+
 			try:
-				print(func(log, opts.timeout))
-			except Timeout as e:
-				if opts.verbose > 1:
-					log.error(e)
+				possible = int(possible)
+			except (IndexError,ValueError) as e:
+				pass
+			else:
+				possible-=1
+
+			try:
+				if type(possible) is type(1):
+					if possible < 0 or possible > len(funcs):
+						raise IndexError
+					func = funcs[possible]
 				else:
-					return 1
-			return 0
+					func = [f for f in funcs if f.__name__ == possible][0]
+			except IndexError as e:
+				log.error('Function not found.')
+				return 1
+			else:
+				try:
+					print(func(log, opts.timeout))
+				except Timeout as e:
+					if opts.verbose > 1:
+						log.error(e)
+					else:
+						return 1
+				return 0
 
 
-	if opts.list:
-		st = '%' + str(len(str(len(funcs)))+1) + 'd. %s'
-		for i, func in enumerate(funcs):
-			print(st % (i+1, func.__name__))
-	else:
-		ip = run_funcs(log, True, opts.verbose, opts.all, opts.timeout, funcs)
-		if ip:
-			return 0
+		if opts.list:
+			st = '%' + str(len(str(len(funcs)))+1) + 'd. %s'
+			for i, func in enumerate(funcs):
+				print(st % (i+1, func.__name__))
 		else:
-			return 1
+			ip = run_funcs(log, True, opts.verbose, opts.all, opts.timeout, funcs)
+			if ip:
+				return 0
+			else:
+				return 1
+	except KeyboardInterrupt as e:
+		log.debug("KeyboardInterrupt:",e)
+		log.info("Script terminated by Control-C")
+		log.info("bye!")
+		# Return Code 130 - Script terminated by Control-C
+		# sys.exit(130)
+		return 130
 
 if __name__ == '__main__':
-
 	try:
 		sys.exit(main())
 	except Exception as e:
