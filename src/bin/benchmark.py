@@ -25,6 +25,17 @@ NAME:
 SYNOPSIS:
   benchmark [--options] [-H] [-v] [-D]
 
+ |      Note: it's tempting to calculate mean and standard deviation
+ |      from the result vector and report these.  However, this is not
+ |      very useful.  In a typical case, the lowest value gives a
+ |      lower bound for how fast your machine can run the given code
+ |      snippet; higher values in the result vector are typically not
+ |      caused by variability in Python's speed, but by other
+ |      processes interfering with your timing accuracy.  So the min()
+ |      of the result is probably the only number you should be
+ |      interested in.  After that, you should look at the entire
+ |      vector and apply common sense rather than statistics.
+
 DESCRIPTION:
 
   Three failed attemps, wait 1 minute.
@@ -142,7 +153,6 @@ except KeyboardInterrupt as e:
 # builtin
 try:
 	import os
-	from subprocess import Popen, PIPE
 	import subprocess
 	import shlex
 	import optparse
@@ -206,7 +216,7 @@ __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __author__ = 'Josh Lee'
 __created__ = '11:55 PM - 06 Feb, 2019'
 __copyright__ = 'PyTis'
-__version__ = '0.1'
+__version__ = '0.15'
 
 # XXX::TODO::GET`ER DONE!
 # __version__ = 0.1 --> creation
@@ -463,74 +473,70 @@ def pidpath():
 	""" maybe not... """
 	pass
 
-"""
+def Calibrate(opts):
+	
+	if not opts.calibrate: return None
 
-	if os.name in ('posix'):
-		rundir = '/run/'
-	elif os.name in ('mac', 'os2', 'ce', 'riscos'):
-		rundir = '/var/run/'
-	elif os.name == 'nt':
-		if self.caller is not None:
-			rundir = os.path.join(os.path.dirname(self.caller.__file__), 
-			'run/')
-		else:
-			rundir = os.path.join(os.path.dirname(__file__), 'run/')
-	else:
-		rundir = os.getcwd()
+	i = 0
+	run_times = []
+	str_cmd = 'sleep 1.000001'
+	str_cmd = 'sleep 0.0001'
+	str_cmd = 'sleep 0.000001'
+	log.info2('calibrating...')
+	while i < 15:
+		start_time = time.time()
 
-	try:
-		from win32com.shell import shellcon, shell
-		homedir = shell.SHGetFolderPath(0, shellcon.CSIDL_APPDATA, 0, 0)
-	except ImportError: # quick semi-nasty fallback for non-windows/win32com case
-		homedir = os.path.expanduser("~")
-	return homedir
+		output_retcode = subprocess.Popen(shlex.split(str_cmd), 
+			stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
-print(pid_filename())
-print("Is root?: %s" % str(bool(is_root())))
-sys.exit(1)
-"""
+		if output_retcode is not 0:
+			return 0.0
 
+		run_times.append(time.time()-start_time)
+		i+=1
+	
+	calibration = min(run_times)
+	log.info2('calibration time is: %s' % calibration)
+	return calibration
 
-"""
-if opts.quiet:
+def formatSecs(ti, opts):
+	""" This will do two separate tasks.  Hmmm,... that cam out wrong.  Shouldn't
+			this only do one thing?, perhaps I should adjust it/or,.. break it into
+			two separate functions.
 
-	log.info2('-'*80)
-	individual_start_time_3 = time.time()
-	log.info4('Individual Start Time 3: %s' % format(individual_start_time_3,
-		'9.99g'))
+			Number One: it takes in the time representation as seconds, and looks at
+			the OPS passed into STDIN.  If the user has selected to imput the
+			optional argument [-H/--human] for human-readable output, then this
+			function will change seconds to miliseconds, or microseconds, when less
+			than a second is input, and where	applicable.  Similarlly, instead of
+			returning "180" seconds, it would just return "3 mins."  If the user  
+			provides the optional arguement [-v/--verbose] "verbose, then this will
+			show both the abreviation, and the name of the messurement unit, not just
+			the abbreviation.  " 
+	"""
+	if opts.human:
+		ti=float(ti)
 
-	log.info2('about to call %s with Popen' % str_cmd)
-	proc = Popen(shlex.split(str_cmd), stdout=PIPE, stderr=PIPE)
-	output_retcode_3 = proc.wait()
-	log.info2('done with Popen calling %s' % str_cmd)
-	if output_retcode_3 is not 0:
-		log.warn("EXIT CODE OF %s was %s" % (str_cmd, output_retcode_3))
+		if ti > 0.1:
+			return "%s seconds" % round(ti, opts.decimals)
 
-	individual_end_time_3 = time.time()
-	log.info4('Individual End Time 3: %s' % format(individual_end_time_3, 
-		'9.99g'))
+		if ti >= 0.001:
 
-	this_run_time_3 = individual_end_time_3 - individual_start_time_3
-	log.info3('Individual Run Time 3: %s' % format(this_run_time_3, '9.99g'))
+			if float(ti) == float(0.001):
+				label = ''
+			else:
+				label = 's'
+			return "%s milisecond%s OR %s seconds" % (round(1000*ti, opts.decimals+4), 
+				label, round(ti, opts.decimals))
 
-else:
-	log.info2('-'*80)
-	individual_start_time_4 = time.time()
-	log.info4('Individual Start Time 4: %s' % format(individual_start_time_4,
-		'9.99g'))
+		if ti >= 0.000001:
+			if float(ti) == float(0.000001):
 
-	log.info(repr(pargs))
-	log.info2('about to call %s with subprossess.call' % str_cmd)
-	output_retcode_2 = subprocess.call(pargs)
-	log.info2('done with subprossess.call calling %s' % str_cmd)
-
-	individual_end_time_4 = time.time()
-	log.info4('Individual End Time 4: %s' % format(individual_end_time_4, 
-		'9.99g'))
-
-	this_run_time_4 = individual_end_time_4 - individual_start_time_4
-	log.info3('Individual Run Time 4: %s' % format(this_run_time_4, '9.99g'))
-"""
+				label = " Âµs microsecd"
+			else:
+				label = 'Âµ microseconds'
+			return "%s %s" % (round(ti,4), label)
+	return ti
 
 
 # -----------------------------------------------------------------------------
@@ -572,8 +578,8 @@ benchmark.py file, and use the benchmark functions/classes.
 
 	# times_to_run = opts.ttr
 
+
 	#log.info(repr(pargs))
-	start_time = time.time()
 
 	func=pargs[0]
 	log.debug("FUNC: %s" % repr(func))
@@ -595,140 +601,180 @@ benchmark.py file, and use the benchmark functions/classes.
 	str_cmd = ' '.join(pargs)
 
 	log.info('Starting Benchmark of "%s", running %s times.'%(str_cmd, opts.ttr))	
-	log.debug('start time: %f' % start_time)
+
+	if opts.no_calibration or opts.calibration == 0:
+		calibration = 0
+	else:
+		calibration = opts.calibration or (Calibrate(opts)) or 0.03080070018768308
+
+	log.warning('calibration time is: %s' % calibration)
+	#if opts.calibrate:
+	#	calibration = Calibrate(opts)
+	#else:
+	##if opts.calibration:
+#		calibration = opts.calibration or 0
 
 	i = 0
+	start_time = time.time()
+	min_run_time = None
+	max_run_time = None
+	total_run_time = 0
+	log.debug('start time: %f' % start_time)
 
-	total_run_time_1 = 0
-	total_run_time_2 = 0
-	total_run_time_3 = 0
-	total_run_time_4 = 0
+	#return log.fatal("Testing this float: %s" %
+#		formatSecs(format(float(0.0902309417724609375), '9.99g'), opts))
 
 	while i < opts.ttr:
 		i += 1
 
-		log.info2('='*80)
+		log.info3('='*80)
 		log.info2("Running %s for the %s time." % (str_cmd, i))
-		individual_start_time_1 = time.time()
-		log.info4('Individual Start Time 1: %s' % format(individual_start_time_1,
-			'9.99g'))
+		individual_start_time = time.time()
+		log.info4('Individual Start Time 1: %s' % 
+			formatSecs(format(individual_start_time, '9.99g'), opts))
 
 		# func(*args, **kwargs)
-#		log.warn('would run "%s" here' % str_cmd)
 
-		# can NOT NOT NOT use Popen, as it backgrounds, and doesn't time!
-		# proc = Popen(shlex.split(str_cmd), stdout=PIPE, stderr=PIPE)
+		# can NOT NOT NOT use subprocess.Popen, as it backgrounds, and doesn't
+		# time!
 
 		# log.info2('about to call os.system')
-		# output_retcode_1 = os.system(str_cmd)
+		# output_retcode = os.system(str_cmd)
 		# log.info2('done with os.system')
 		# this works, but I'd rather use subprocess, since I am already using it...
 		# come to think of it, I should benchmark the two, to see which is more
 		# accurate with the built in "sleep" command.
 
-		'''
-		log.info2('-'*80)
-		individual_start_time_2 = time.time()
-		log.info4('Individual Start Time 2: %s' % format(individual_start_time_2,
-			'9.99g'))
-
-		log.info2('about to call %s with os.system' % str_cmd)
-		output_retcode_1 = os.system(str_cmd)
-		log.info2('done with os.system calling %s' % str_cmd)
-
-		individual_end_time_2 = time.time()
-		log.info4('Individual End Time 2: %s' % format(individual_end_time_2, 
-			'9.99g'))
-
-		this_run_time_2 = individual_end_time_2 - individual_start_time_2
-		log.info3('Individual Run Time 2: %s' % format(this_run_time_2, '9.99g'))
-
-		total_run_time_2 += this_run_time_2
-		'''
-
-
 
 		if not opts.show:
+			# subprocess.Popen
+			if opts.calibrate:
+				log.debug("Calibration is: %s" % calibration)
+			else:
+				calibration = 0.13080070018768308
+				calibration = 0.042413234710693359375
+				calibration = 0.03080070018768308
+				log.debug("Calibration is the default: %s" % calibration)
 
-			log.info2('-'*80)
-			individual_start_time_3 = time.time()
-			log.info4('Individual Start Time 3: %s' % format(individual_start_time_3,
-				'9.99g'))
 
-			log.info2('about to call %s with Popen' % str_cmd)
-			proc = Popen(shlex.split(str_cmd), stdout=PIPE, stderr=PIPE)
-			output_retcode_3 = proc.wait()
-			log.info2('done with Popen calling %s' % str_cmd)
-			if output_retcode_3 is not 0:
-				log.warn("EXIT CODE OF %s was %s" % (str_cmd, output_retcode_3))
+			log.info3('-'*80)
+			individual_start_time = time.time()
+			log.info4('Individual Start Time 3: %s' % 
+				formatSecs(format(individual_start_time, '9.99g'), opts))
 
-			individual_end_time_3 = time.time()
-			log.info4('Individual End Time 3: %s' % format(individual_end_time_3, 
-				'9.99g'))
+			log.info2('about to call %s with subprocess.Popen' % str_cmd)
+			proc = subprocess.Popen(shlex.split(str_cmd), stdout=subprocess.PIPE, 
+				stderr=subprocess.PIPE)
+			output_retcode = proc.wait()
+			log.info2('done with subprocess.Popen calling %s' % str_cmd)
 
-			this_run_time_3 = individual_end_time_3 - individual_start_time_3
-			log.info3('Individual Run Time 3: %s' % format(this_run_time_3, '9.99g'))
 
-			total_run_time_3 += this_run_time_3
+			individual_end_time = time.time()
+			this_run_time = individual_end_time - individual_start_time - calibration
+			log.info3('Individual Run Time 3: %s' % 
+				formatSecs(format(this_run_time, '9.99g'), opts))
 
-			log.info2('-'*80)
+
+			if output_retcode is not 0:
+				log.warn("EXIT CODE OF %s was %s" % (str_cmd, output_retcode))
+
+			log.info4('Individual End Time 3: %s' % 
+				formatSecs(format(individual_end_time, '9.99g'), opts))
+
 
 		else:
+			## QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE
+			# Nope, that's wrong, (^^ that above is wrong), this isn't quiet mode, it
+			# is "SHOW OUTPUT" mode [-s/--show].
 
+			if opts.calibrate:
+				log.debug("Calibration is: %s" % calibration)
+			else:
+				calibration = 0.13146827220916746
+				calibration = 0.03146827220916746
+				calibration = 0.042413234710693359375
+				log.debug("Calibration is the default: %s" % calibration)
 
-			individual_start_time_4 = time.time()
-			log.info4('Individual Start Time 4: %s' % format(individual_start_time_4,
-				'9.99g'))
+			# subprocess.call
+			individual_start_time = time.time()
+			log.info4('Individual Start Time 4: %s' % 
+				formatSecs(format(individual_start_time, '9.99g'), opts))
 
 			log.info(repr(pargs))
 			log.info2('about to call %s with subprossess.call' % str_cmd)
-			output_retcode_2 = subprocess.call(pargs)
+			output_retcode = subprocess.call(pargs)
 			log.info2('done with subprossess.call calling %s' % str_cmd)
 
-			individual_end_time_4 = time.time()
-			log.info4('Individual End Time 4: %s' % format(individual_end_time_4, 
-				'9.99g'))
 
-			this_run_time_4 = individual_end_time_4 - individual_start_time_4
-			log.info3('Individual Run Time 4: %s' % format(this_run_time_4, '9.99g'))
-
-			total_run_time_4 += this_run_time_4
-
-			log.info2('-'*80)
-
-		individual_end_time_1 = time.time()
-		log.info4('Individual End Time 1: %s' % format(individual_end_time_1, 
-			'9.99g'))
+			individual_end_time = time.time()
+			this_run_time = individual_end_time - individual_start_time - calibration
+			log.info3('Individual Run Time 4: %s' % 
+				formatSecs(format(this_run_time, '9.99g'), opts))
 
 
-		this_run_time_1 = individual_end_time_1 - individual_start_time_1
-		log.info3('Individual Run Time 1: %s' % format(this_run_time_1, '9.99g'))
+			if output_retcode is not 0:
+				log.warn("EXIT CODE OF %s was %s" % (str_cmd, output_retcode))
 
-		total_run_time_1 += this_run_time_1
+			log.info4('Individual End Time 4: %s' % 
+				formatSecs(format(individual_end_time, '9.99g'), opts))
+
+		if min_run_time is None: min_run_time = this_run_time
+		if min_run_time > this_run_time: min_run_time = this_run_time
+		if max_run_time is None: max_run_time = this_run_time
+		if max_run_time < this_run_time: max_run_time = this_run_time
+
+		total_run_time += this_run_time
+
+		log.info3('-'*80)
+
+		individual_end_time = time.time()
+		log.info4('Individual End Time 1: %s' % 
+			formatSecs(format(individual_end_time, '9.99g'), opts))
+
+
+		this_run_time = individual_end_time - individual_start_time
+		log.info3('Individual Run Time 1: %s' % 
+			formatSecs(format(this_run_time, '9.99g'), opts))
+
+
+		total_run_time += this_run_time
 
 		log.info2('_'*80)
 
-	average_run_time_1 = float(total_run_time_1 / opts.ttr)
-	average_run_time_2 = float(total_run_time_2 / opts.ttr)
-	average_run_time_3 = float(total_run_time_3 / opts.ttr)
-	average_run_time_4 = float(total_run_time_4 / opts.ttr)
+	average_run_time = float(total_run_time / opts.ttr)
 
-	print("average_run_time_1: %s" % format(average_run_time_1, '9.99g'))
-	print("average_run_time_2: %s" % format(average_run_time_2, '9.99g'))
-	print("average_run_time_3: %s" % format(average_run_time_3, '9.99g'))
-	print("average_run_time_4: %s" % format(average_run_time_4, '9.99g'))
+	# average_run_time = float(total_run_time / opts.ttr)
+	# average_run_time = float(total_run_time / opts.ttr)
+	# #average_run_time = float(total_run_time / opts.ttr)
+
+	print("min_run_time: %s" % formatSecs(format(min_run_time, '9.99g'), opts))
+	print("max_run_time: %s" % formatSecs(format(max_run_time, '9.99g'), opts))
+
+	if opts.human:
+		print("HUMAN READABLE: average_run_time: %s seconds" % 
+			formatSecs(format(average_run_time, '9.2g'), opts))
+	else:
+		print("average_run_time: %s" % 
+			formatSecs(format(average_run_time, '9.99g'), opts))
+
+	# print("average_run_time: %s" % 
+	#	formatSecs(format(average_run_time, '9.99g'), opts))
+	# print("average_run_time: %s" % 
+	#	formatSecs(format(average_run_time, '9.99g'), opts))
+	# print("average_run_time: %s" % 
+	#	formatSecs(format(average_run_time, '9.99g'), opts))
 
 	end_time = time.time()
 	log.debug('end time -: %f' % end_time)
 	total = end_time - start_time
 
 
-	log_total = format(float(end_time - start_time), '9.99g')
+	log_total = formatSecs(format(float(end_time - start_time), '9.99g'), opts)
 	log.debug('total time: %s' % log_total)
 
-	average = float(round(float(total) / float(opts.ttr), 8))
+	average = float(round(float(total) / float(opts.ttr), 99))
 
-	log_average = format(float(average), '9.99g')
+	log_average = formatSecs(format(float(average), '9.99g'), opts)
 	#print(repr(dir(func)))
 	print("Average time for %s to run '%s' with args: %s, and kwargs: %s" % 
 		(str_cmd, log_average, show_args, show_kwargs ) )
@@ -933,8 +979,8 @@ VERSION:
 			"		i.e.: pers -DV -u start `$" \
 			"This argument allows you to access the service features of this " \
 			"program. Choices: <start, stop, restart, status>, when using the " \
-			"[-b/--background] flag, this argument is not required, as the 'start'" \
-			" action is automatically implied."
+			"[-b/--bg/--background] flag, this argument is not required, as the " \
+			"'start' action is automatically implied.`$"
 
 		background_help = "This could take hours to run, and you may wish to " \
 			"run it in the background, checking back later to read the results " \
@@ -945,6 +991,14 @@ VERSION:
 			"If this flag is used, the 'start' action is implied for the " \
 			"[-a/--action] argument.`$"
 
+		calibrate_help = "Run a quick calibration algorithm, to make the " \
+			"results more accurate, for this machine.`$"
+
+		calibration_help = "Provide a calibration time. `$"
+
+		no_calibration_help = "Do not calibrate. `$" \
+			'`$*(use "--help" for more details)`$'
+
 		debug_help = "Enable debugging.	When debugging is enabled, this " \
 			"program will utilize it's own log file ('pers.log') logging will " \
 			"write to the ('pytis-tools.log') when this option is NOT enabled.	" \
@@ -952,11 +1006,25 @@ VERSION:
 			"also print to the screen, unless you suppress them with the " \
 			"[-q/--quiet] flag.`$"
 
-		report_help = 'Show output in report mode.`$' \
-			'`$*(use "--help" for more details)`$'
+		human_help = ' Human Readable Output. `$'
+
+		report_help = 'Show output in report mode.`$'
+
+		report_file_help = 'Full, or relative path to the report-file.`$' \
+			'This is the file that (when the [-r/--report] flag is provided, ' \
+			'output from this program will be written to.  You cannot provide the ' \
+			'optional report ([-r/--report]) flag, without also providing the ' \
+			"a file's name and path to write the output to.  This path maybe " \
+			'absolute, or relative.`$' \
+			'`$***see also: report-mode ([-m/--report-file-mode])`$'
+
+		report_file_mode_help = 'Report file modes can be "Append", or ' \
+			'"replace." The default is append, and requires no input on your ' \
+			'behalf.  To select "append" mode, you may provide "+" to the ' \
+			'[-m/--report-file-mode] argument. `$'
 
 		show_help = "See the output from the program or programs being " \
-			"benchmarked.  `$"
+			"benchmarked. `$"
 
 		ttr_help = "How many times to run (default %s).`$"  % default_times_to_run
 
@@ -974,14 +1042,35 @@ VERSION:
 		background_help = "Run this process in the Background. `$" \
 			'`$*(use "--help" for more details)`$'
 
+		calibrate_help = "Run a quick calibration algorithm. `$" \
+			'`$*(use "--help" for more details)`$'
+
+		calibration_help = "Provide a calibration time. `$" \
+			'`$*(use "--help" for more details)`$'
+
+		no_calibration_help = "Do not calibrate. `$" \
+			'`$*(use "--help" for more details)`$'
+
 		debug_help = "Enable debugging`$" \
+			'`$*(use "--help" for more details)`$'
+
+		human_help = ' Human Readable Output. `$' \
 			'`$*(use "--help" for more details)`$'
 
 		report_help = 'Show output in report mode.`$' \
 			'`$*(use "--help" for more details)`$'
 
+		report_file_help = 'Full, or relative path to the report file.`$' \
+			'`$*(use "--help" for more details)`$'
+
+		report_file_mode_help = 'Report file modes, `$' \
+			"Default replace, or '+' for append.`$" \
+			'`$*(use "--help" for more details)`$'
+
+
 		show_help = "See the output from the program or programs being " \
-			"benchmarked.  `$"
+			"benchmarked.  `$" \
+			'`$*(use "--help" for more details)`$'
 
 		ttr_help = "How many times to run (default %s).`$"  % default_times_to_run
 
@@ -998,21 +1087,45 @@ VERSION:
 
 	runtime.add_option("-a", "--action", type="choice", action='store',
 		default=None, dest='action', choices=('start','stop','restart','status'),
-		metavar='[ACTION]',
+		metavar='[ACTION <start, stop, restart, status>]',
 		help=action_help)
 
 	runtime.add_option("", "--bg", action="store_true",
 		default=False, dest='background',
 		help='')
+
 	runtime.add_option("-b", "--background", action="store_true",
 		default=False, dest='background',
 		help=background_help)
 
+	runtime.add_option("-d", "--decimals", type='int', action="store",
+		default=99, dest='decimals', metavar='[INT <0-99>]',
+		help=human_help)
+
+	runtime.add_option("-H", "--human", action="store_true",
+		default=False, dest='human',
+		help=human_help)
+
+	runtime.add_option('-r', '--report', action='store_true', default=False,
+		dest='report', help=report_help)
+
+	runtime.add_option('-f', '--file', action='store', default=None,
+		type='string', dest='file', metavar='[REPORT FILENAME/FILE PATH]',
+		help=report_file_help)
+
+	runtime.add_option('-m', '--report-file-mode', action='store', 
+		default='', type='string', dest='report_file_mode', 
+		metavar='[MODE: <, +>]',
+		help=report_file_mode_help)
+
+	runtime.add_option('-s', '--show', action='store_true', default=False,
+		dest='show', help=show_help)
+
 	runtime.add_option("", "--times", type="int", action='store',
-		default=default_times_to_run, dest='ttr',
+		default=default_times_to_run, dest='ttr',  metavar='[INT <0-x>]',
 		help='')
 	runtime.add_option("-t", "--times-to-run", type="int", action='store',
-		default=default_times_to_run, dest='ttr', metavar='[INT]',
+		default=default_times_to_run, dest='ttr', metavar='[INT <0-x>]',
 		help=ttr_help)
 
 	parser.add_option_group(runtime)
@@ -1023,18 +1136,33 @@ VERSION:
 	vars = optparse.OptionGroup(parser, "-- CONFIGURATION SETTINGS")
 	# ----------------------------
 	# ----------------------------
+	vars.add_option("-c", "--calibrate", action="store_true",
+		default=False, dest='calibrate',
+		help=calibrate_help)
+
+	vars.add_option("-C", "--calibration", type='float', action="store",
+		default=None, dest='calibration',
+		metavar='[NUMERIC <CALIBRATION-SECONDS>]',
+		help=calibration_help)
+
+	vars.add_option("", "--zero-calibration", action="store",
+		default=False, dest='no_calibration',
+		help=no_calibration_help)
+
+	vars.add_option("", "--no-calibration", action="store",
+		default=False, dest='no_calibration',
+		help=no_calibration_help)
+
 	vars.add_option("-i", "--ionice", type="int", action='store',
-		 default=PyTis.MyThread.default_ioniceness, 
+		 default=PyTis.MyThread.default_ioniceness, metavar='[INT <0 to 7>]',
 		 dest='ioniceness',
-		 metavar='[INT <0 to 7>]',
 		 help="Niceness range from 0 " \
 					"(most favorable scheduling) to 7 (least favorable).	Default 4.`$" \
 					"for more information, please run: man ionice.`$")
 
 	vars.add_option("-I", "--io-class", type="int", action='store',
 		default=PyTis.MyThread.default_ioniceness_class, 
-		dest='ioniceness_class',
-		metavar='[INT <0-3>]',
+		dest='ioniceness_class', metavar='[INT <0-3>]',
 		help="The scheduling class. 0 for none, 1 for real time, 2 for " \
 			"best-effort, 3 for idle. Default: 2`$")
 
@@ -1042,8 +1170,7 @@ VERSION:
 
 	vars.add_option("-N", "--nice", type="int", action='store',
 		 default=PyTis.MyThread.default_niceness, 
-		 dest='niceness', 
-		 metavar='[INT <-20 to 19>]',
+		 dest='niceness', metavar='[INT <-20 to 19>]',
 		 help="Niceness range from -20 (most favorable scheduling) to 19 " \
 		 "(least favorable).	Default 10.`$" \
 		 "for more information, please run: man nice.`$")
@@ -1051,7 +1178,7 @@ VERSION:
 	# ----------------------------
 
 	vars.add_option("", "--frequency__", type="int", action='store', 
-		default=default_frequency, dest='frequency', metavar='[INT]',
+		default=default_frequency, dest='frequency', metavar='[INT 0]',
 		help=optparse.SUPPRESS_HELP)
 		# help="This needs to only run once, even if running in the background.
 		# Threfore the frequency will be 0, and the user SHOULD NOT SPECIFY any
@@ -1074,12 +1201,6 @@ VERSION:
 	dbgroup.add_option("", "--totaly-verbose", action="store_true",
 		default=False, dest='totally_verbose', 
 		help=optparse.SUPPRESS_HELP)
-
-	dbgroup.add_option('-r', '--report', action='store_true', default=False,
-		dest='report', help=report_help)
-
-	dbgroup.add_option('-s', '--show', action='store_true', default=False,
-		dest='show', help=show_help)
 
 	dbgroup.add_option('-v', '--verbose', action='count', default=0,
 		dest='verbose', help=verbose_help)
@@ -1253,7 +1374,7 @@ VERSION:
 		logging.getLogger().setLevel(level=logging.INFO)
 
 	if opts.verbose > 1:
-		logging.getLogger().setLevel(level=logging.DEBUG)
+		logging.getLogger().setLevel(level=logging.INFO)
 
 	if opts.verbose > 2:	 
 		opts.totally_verbose=True
@@ -1263,8 +1384,33 @@ VERSION:
 		opts.debug=True
 		logging.getLogger().setLevel(level=logging.NOTSET)
 
+		# logging.getLogger().setLevel(level=logging.DEBUG)
+		# log.setOpts(opts)
+
+	# log.setOpts(opts)
+	# XXX:TODO - 
+	# this is KINDOF a bug, I shouldn't have to reset the OPTS 
+	# IF I have already just set the level, it should respect this.... need to
+	# look into this now.
+
 	if opts.debug:				 logging.getLogger().setLevel(level=logging.DEBUG)
 #	if opts.quiet:				 logging.getLogger().setLevel(level=logging.CRITICAL)
+
+
+	log.setOpts(opts)
+	'''
+	log.debug("Logging debug")
+	log.info("Logging info plain")
+	log.info0("Logging info 0 %s" % logging.getLevelName(20) )
+	log.info1("Logging info 1 %s" % logging.getLevelName(22) )
+	log.info2("Logging info 2 %s" % logging.getLevelName(24) )
+	log.info3("Logging info 3 %s" % logging.getLevelName(26) )
+	log.info4("Logging info 4 %s" % logging.getLevelName(28) )
+	log.warn("Logging a warning")
+	log.error("logging an error")
+	log.critical("Logging Critical")
+	log.fatal("A fatal log entry")
+	'''
 
 	log.debug('sys.argv: %s' % repr(sys.argv))
 	log.debug('passed parent program args: %s' % repr(sargs))
@@ -1465,55 +1611,6 @@ VERSION:
 		return 1
 	
 
-	'''
-
-	if not errors:
-		if not opts.action:
-			return parser.print_usage()
-		else:
-			y = PyTis.MyThread()
-			y.setLogFile(log)
-			y.setOpts(opts)
-			y.register(run,opts,cfile)
-			y.service(opts)
-			return
-	else:
-		if len(args) == 0 and not opts.action and not errors:
-			return parser.print_usage()
-		return parser.print_help(errors)
-
-	parser.print_help("ERROR: Unknown, but invalid input.")
-	'''
-	'''
-	if len(sys.argv) > 1:
-		try:
-			ttr = int(sys.argv[1])
-		except ValueError as e:
-			print("ERROR: You may input an integer only, for times to run!")
-			return 1
-			# ttr = times_to_run
-
-		else:
-			if ttr < 1:
-				print("ERROR: You must run the benchmark at least once, thus the " \
-					"lowest number you can choose is 1.")
-				return 1
-
-			if ttr > 100:
-				print("STRONG WARNING! You have chosen a VERY large number, this " \
-					"may take too long to run.  You may press CTRL+C to exit if this " \
-					"takes too long.")
-
-			if ttr > 500:
-				print("ERROR!!! You cannot run the benchmark this many times, it " \
-					"would likely take weeks to run.")
-				return 1
-
-	else:
-		ttr = times_to_run # the default, 
-	
-	'''
-
 
 if __name__ == '__main__':
 	try:
@@ -1522,5 +1619,4 @@ if __name__ == '__main__':
 		print("An error has occured.\n")
 		print(str(e))
 		sys.exit(1)
-
 
