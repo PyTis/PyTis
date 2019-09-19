@@ -30,7 +30,7 @@ __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __author__ = 'Josh Lee'
 __created__ = '12:31am 11 Nov, 2011'
 __copyright__ = 'PyTis'
-__version__ = '1.1'
+__version__ = '1.2'
 
 def version():
 	print	__version__
@@ -167,6 +167,24 @@ EXAMPLES:
 	$ bulkmove -rL . -o/home/jlee/image_base/final/
 	$ bukmove -lv -o=/home/myname/newoutdir .
 
+	So I was having difficulty providing args to flatten folder structure for
+	MP3s.  It needed to be flattened, because my car stereo had issues with
+	folders inside of folders.  However using:
+
+		bulkmove -VD -rp `find . -iname '*.mp3'`
+
+	DID NOT WORK!  And, after some debugging to log files, I found out it wasn't
+	this program's fault.  It was the OS splitting filenames and folder names on
+	spaces.  (Windows 10 with Cygwin).  
+	
+	A SOLUTION! Simply providing them as STDIN.  I forgot, but after reviewing
+	the code I wrote just over 10 years ago, this program can handle STDIN.  The
+	command that worked was:
+
+		bulkmove -VD -rp `find . -iname '*.mp3'`
+	
+	I hope this helps someone in the future.
+
 NOTE:
 	prefixes and postfixes are based on the directories leading to the file,
 	from the current path.  If your structure is:
@@ -223,6 +241,9 @@ HISTORY:
 	Original Author
 
 CHANGE LOG:
+
+	v1.2 MINOR CHANGES																				 September 18, 2019
+		Added an example referencing MP3's.
 		 
 	v1.1 MINOR CHANGES																				 September 18, 2019
 		Changed typo in log file name from "duplicate-images" to "bulkmove".

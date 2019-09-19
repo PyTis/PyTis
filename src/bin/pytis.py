@@ -2779,7 +2779,10 @@ def filesFromArgs(opts, args):
 	global log
 	files = []
 	for arg in args:
-		files.extend(filesFromPath(arg,opts.recursive))
+		if os.path.isdir(arg):
+			files.extend(filesFromPath(path=arg,recursive=opts.recursive))
+		else:
+			files.append(arg)
 	return files
 
 def testFile(f):
