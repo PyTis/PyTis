@@ -20,6 +20,14 @@ into a single file, do away with pylib and pylib3, and handle language version
 difference within the file.  99.9% of pytis is the same as pytis3, the subtle
 differences could be coded around right there in the file itself.
 
+[ GET BETTER ]
+--------------
+
+I really, really need to work on making functions not depend on options from
+the optparser (opts variable in all of my programs) so that the functions can
+be exported and used by other programs.
+
+
 [-v/--verbose]
 --------------
 
@@ -27,6 +35,8 @@ I have realized, that there seems to be a Unix/Linux standard, on the lowercase
 or uppercase -V for checking the version of a program.  Additionally, most all
 Unix/Linux programs seem to use a lowercase "v" for "verbosity."  I need to
 alter ALL of my programs to match this standard.
+
+pycrypt, copyright, getip, do not use the same standard!  Not even for DEBUG!
 
 
 [-v/--verbose 2]
