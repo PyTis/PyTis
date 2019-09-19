@@ -8,12 +8,52 @@ spellcheck_dir [/dir/to/search]
 For example:
 
 spellcheck_dir src *.py
+
+2019-04-16
+First new development in decades,...
+for a long time, I've wanted to write this, so that it could parse html, shtml,
+	xml, php, python, javascript, etc, and help you "spell check" all text that
+	would be output to screen.  Technically, the correct way of doing this would
+	be to write a lexical parser (or extend one) for each language.  Many of
+	these would be,. or could be, especially more complex than you would think.
+	Even a language as simple as Javascript, could use a variable, let's name it
+	"buff" and build up a string over time.  
+
+		buff = "";
+		buff = buff + "Hel";
+		buff = buff + "lo " + "W";
+		buff = "orld!";
+		alert(buff);
+
+		>> Alert box would appear in browser stating: "Hello World!"
+
+	As you can see, this would be a nightmare, as many languages, have many, many
+	unique ways to build up strings.
+
+Tonight, the 16th of March, at 21:46 2019 I just thought of something that,
+while it wouldn't be as thourough as building a true working Lexical Parser for
+	each language, it would be a good start.  I could pipe each document into
+	"links", the "built-in" (in many OS's) and available in all, text/Linux/Unix
+	based Web Browser, then pipe the output (as plain text) to a temp-file,
+	buffer, etc, to then spell check.
+
+links -dump /cygdrive/c/webpages/DataTables/docs/index.html > output.txt
+can become something like: aspell `links -dump URL`, anywho, this is for down
+the road, but I wanted to brain dump this here, while I was thinking of it.
+
 """
 import re
 import sys
 import os
 import glob
 from subprocess import *
+
+__author__ = 'Josh Lee'
+__created__ = '2012-02-26 21:33:41'
+__created__ = '9:33:41pm 26 Feb, 2012'
+__copyright__ = 'PyTis'
+__version__ = '0.1'
+
 
 def grep_pipe(head_pipe, patterns):
     for pattern in patterns:

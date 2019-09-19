@@ -30,7 +30,7 @@ __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __author__ = 'Josh Lee'
 __created__ = '12:31am 11 Nov, 2011'
 __copyright__ = 'PyTis'
-__version__ = '1.0'
+__version__ = '1.1'
 
 def version():
 	print	__version__
@@ -222,6 +222,14 @@ AUTHOR:
 HISTORY:
 	Original Author
 
+CHANGE LOG:
+		 
+	v1.1 MINOR CHANGES																				 September 18, 2019
+		Changed typo in log file name from "duplicate-images" to "bulkcopy".
+
+	v1.0 ORIGINAL RELEASE																				September 9, 2009
+    Original Publish.
+
 VERSION:
 	%(version)s
 """ % help_dict
@@ -276,7 +284,7 @@ VERSION:
 
 
 	(opts,args) = parser.parse_args()
-	log = PyTis.set_logging(opts,'duplicate-images')
+	log = PyTis.set_logging(opts,'bulkcopy')
 
 	log.debug('-'*80) 
 	log.debug("Starting %s at %s" % (os.path.basename(sys.argv[0]),PyTis.prettyNow())) 
