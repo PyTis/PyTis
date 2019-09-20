@@ -185,6 +185,86 @@ EXAMPLES:
 	
 	I hope this helps someone in the future.
 
+	Total example of usage, including command line prompt, program output, etc.:
+
+
+		(jlee@CHIMP)-[last command: 0 seconds]-(23:21:17 PM Thu Sep 19)->
+		(~/test-copy/3 Doors Down has 10 files, 25Mb) --> ls -l
+		Dir Size|Perms|Link Count|Owner|Group|Size|Mod. Time|Name
+		total 25M
+		4.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:20  ./
+		4.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:20  ../
+		4.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:20 '17 Days'/
+		4.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:20 'Away From The Sun'/
+			 0 drwxrwx---+ 1 jlee None    0 2019-09-19 23:20 'Promo Only MR - 07'/
+		8.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:20 'The Better Life'/
+		4.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:20 "When I'm Gone-CDS"/
+		9.2M -rwxrwx---+ 1 jlee None 9.2M 2009-07-16 20:06 '01 Kryptonite.mp3'*
+		 11M -rwxrwx---+ 1 jlee None  11M 2009-07-16 20:07 '02 Loser.mp3'*
+		5.1M -rwxrwx---+ 1 jlee None 5.1M 2008-05-11 11:48 'Be Like That.mp3'*
+		1.0K -rwxrwx---+ 1 jlee None  372 2010-08-13 06:38  desktop.ini*
+		8.0K -rwxrwx---+ 1 jlee None 6.0K 2008-05-18 04:27  Thumbs.db*
+
+		(jlee@CHIMP)-[last command: 0 seconds]-(23:21:19 PM Thu Sep 19)->
+		(~/Music/3 Doors Down has 10 files, 25Mb) -->  find . -iname '*.mp3' | bulkmove -r
+		Starting bulkmove at 11:21pm 09 Sep, 2019
+		ERROR: Source and Destination are the same: cp ./01 Kryptonite.mp3 /cygdrive/C/Development/Music/3 Doors Down/01 Kryptonite.mp3
+		WARNING: 01 Kryptonite.mp3 already existed in the outdir, added _1 to the end of the filename.
+		ERROR: Source and Destination are the same: cp ./02 Loser.mp3 /cygdrive/C/Development/Music/3 Doors Down/02 Loser.mp3
+		WARNING: 02 Loser.mp3 already existed in the outdir, added _1 to the end of the filename.
+		ERROR: Source and Destination are the same: cp ./Be Like That.mp3 /cygdrive/C/Development/Music/3 Doors Down/Be Like That.mp3
+		WARNING: Be Like That.mp3 already existed in the outdir, added _1 to the end of the filename.
+
+		(jlee@CHIMP)-[last command: 1 seconds]-(23:28:03 PM Thu Sep 19)->
+		(~/test-copy/3 Doors Down has 30 files, 139Mb) --> l
+		Dir Size|Perms|Link Count|Owner|Group|Size|Mod. Time|Name
+		total 139M
+		8.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:21  ./
+		4.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:20  ../
+		4.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:21 '17 Days'/
+		4.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:21 'Away From The Sun'/
+			 0 drwxrwx---+ 1 jlee None    0 2019-09-19 23:21 'Promo Only MR - 07'/
+		8.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:21 'The Better Life'/
+		4.0K drwxrwx---+ 1 jlee None    0 2019-09-19 23:21 "When I'm Gone-CDS"/
+		9.2M -rwxrwx---+ 1 jlee None 9.2M 2009-07-16 20:06 '01 Kryptonite.mp3'*
+		9.2M -rwxrwx---+ 1 jlee None 9.2M 2009-07-16 20:06 '01 Kryptonite_1.mp3'*
+		5.8M -rwxrwx---+ 1 jlee None 5.8M 2009-07-16 20:07 "01 When I'm Gone.mp3"*
+		5.4M -rwxrwx---+ 1 jlee None 5.4M 2009-07-16 20:06 '02 Away From The Sun.mp3'*
+		 11M -rwxrwx---+ 1 jlee None  11M 2009-07-16 20:07 '02 Loser.mp3'*
+		 11M -rwxrwx---+ 1 jlee None  11M 2009-07-16 20:07 '02 Loser_1.mp3'*
+		8.9M -rwxrwx---+ 1 jlee None 8.9M 2009-07-16 20:07 '03 Duck and Run.mp3'*
+		5.5M -rwxrwx---+ 1 jlee None 5.5M 2009-07-16 20:06 '03 The Road Im On.mp3'*
+		 11M -rwxrwx---+ 1 jlee None  11M 2009-07-16 20:07 '05 Be Like That.mp3'*
+		6.8M -rwxrwx---+ 1 jlee None 6.8M 2009-02-12 14:21 '11 Here Without You.mp3'*
+		5.1M -rwxrwx---+ 1 jlee None 5.1M 2008-05-11 11:48 'Be Like That.mp3'*
+		5.1M -rwxrwx---+ 1 jlee None 5.1M 2008-05-11 11:48 'Be Like That_1.mp3'*
+		3.6M -rwxrwx---+ 1 jlee None 3.6M 2008-05-11 11:48 'Better Life.mp3'*
+		3.8M -rwxrwx---+ 1 jlee None 3.8M 2008-05-11 11:48 'By My Side.mp3'*
+		1.0K -rwxrwx---+ 1 jlee None  372 2010-08-13 06:38  desktop.ini*
+		5.0M -rwxrwx---+ 1 jlee None 5.0M 2008-05-11 11:48 'Down Poison.mp3'*
+		4.4M -rwxrwx---+ 1 jlee None 4.4M 2008-05-11 11:48 'Duck And Run.mp3'*
+		4.5M -rwxrwx---+ 1 jlee None 4.5M 2008-05-11 11:48  Kryptonite.mp3*
+		5.7M -rwxrwx---+ 1 jlee None 5.7M 2009-07-16 20:06 'Let Me Go.mp3'*
+		4.6M -rwxrwx---+ 1 jlee None 4.6M 2008-05-11 11:48 'Life Of My Own.mp3'*
+		5.1M -rwxrwx---+ 1 jlee None 5.1M 2008-05-11 11:49  Loser.mp3*
+		3.8M -rwxrwx---+ 1 jlee None 3.8M 2008-05-11 11:49 'Not Enough.mp3'*
+		2.9M -rwxrwx---+ 1 jlee None 2.9M 2008-05-11 11:49  Smack.mp3*
+		4.4M -rwxrwx---+ 1 jlee None 4.4M 2008-05-11 11:49 'So I Need You.mp3'*
+		8.0K -rwxrwx---+ 1 jlee None 6.0K 2008-05-18 04:27  Thumbs.db*
+
+		(jlee@CHIMP)-[last command: 0 seconds]-(23:28:23 PM Thu Sep 19)->
+		(~/test-copy/3 Doors Down has 30 files, 139Mb) -->
+
+	Perfect, if I do say so myself.  Now, I stil will have to remove the folders.
+	Maybe that can become a feature for the next version; a flag or argument that
+	will allow the user to tell this program to remove children direcotries, once
+	done.  You would need one to tell it to remove them only if empty, one to
+	tell it to remove Windows's "Thumbs.db" file and "desktop.ini" files, and one
+	to tell it to go ahead and ignore the "duplicate file" filename already
+	exists error.  Which would be nice to have anyways, cause now I have to go
+	through and remove the files that had "_1" added to the end of the filename,
+	as you can see from the WARNING message.
+
 NOTE:
 	prefixes and postfixes are based on the directories leading to the file,
 	from the current path.  If your structure is:
