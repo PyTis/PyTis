@@ -1,8 +1,19 @@
-
 "" default overrides for this folder only
 set ts=2
 set noexpandtab
 set shiftwidth=2
 set softtabstop=2
+
+set formatoptions+=t
+set textwidth=79
+set wrapmargin=2
+
 set colorcolumn=80
-"source /home/ubuntu/.vim/syntax/tabcolor.vim
+hi ColorColumn ctermbg=blue guibg=red
+
+highlight OverLength ctermbg=red ctermfg=white guibg=#592929
+match OverLength /\%80v.\+/
+
+"source /home/leejo7a/.vim/syntax/tabcolor.vim
+""
+
