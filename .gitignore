@@ -2,5 +2,4 @@
 *.swp
 *.swo
 *.svn*
-log/pytis_tools.log
-
+log/pytis_tools.log*
