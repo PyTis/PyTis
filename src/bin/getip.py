@@ -78,7 +78,7 @@ default_timeout = 1
 __author__ = 'Josh Lee'
 __created__ = '06:14pm 01 October 2018'
 __copyright__ = 'PyTis.com'
-__version__ = 1.1
+__version__ = 1.2
 
 # =============================================================================
 # Begin Helpers
@@ -304,8 +304,11 @@ HISTORY:
 	Original Author
 
 CHANGE LOG:
-	
-	v1.1 MINOR CHANGE																					   October 15, 2018
+
+	v1.1 MINOR CHANGE 				                                   February 2, 2018
+    Tweaked minor help ("-h").
+
+	v1.1 MINOR CHANGE																	           October 15, 2018
 		Better error handling.
 
 	v1.0 ORIGINAL RELEASE																					October 1, 2018
@@ -351,8 +354,12 @@ VERSION:
 		parser.print_usage()
 		return 0
 	elif '-h' in sys.argv:
-		parser.print_usage()
+		parser.set_description('')
+		parser.print_help()
 		return 0
+	elif '?' in sys.argv:
+		parser.print_usage()
+                return 0
 
 	(opts, args) = parser.parse_args()
 	
