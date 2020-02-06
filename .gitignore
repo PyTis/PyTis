@@ -2,6 +2,7 @@
 *.swp
 *.swo
 *.svn*
+*.log
 src/log/pytis_tools.log*
 src/log/*
 
