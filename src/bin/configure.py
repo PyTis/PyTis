@@ -16,9 +16,9 @@
 ############################################################################## #
 
 
-configdir = '/root/etc'
-copyright_dir = '/root/.mycopyright'
-logdir = '/root/log'
+configdir = '/home/leejo7a/etc'
+copyright_dir = '/home/leejo7a/.mycopyright'
+logdir = '/home/leejo7a/log'
 
 __all__ = ['configdir', 'copyright_dir', 'logdir']
 
