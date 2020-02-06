@@ -25,7 +25,6 @@ CHANGELOG
 """
 
 import compiler
-import optparse
 import os
 import sys
 import traceback
