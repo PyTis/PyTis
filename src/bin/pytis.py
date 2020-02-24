@@ -2267,6 +2267,109 @@ class ImmutableDict(UserDict):
 		if key not in self._keys: self._keys.append(key)
 
 # ============================================================================#
+#
+class StopWatch():
+  # the exact time this class was initialized, or time since reset was called.
+  t = 0
+  # there is a way to pause this, I don't know why I coded it, I'm not going
+  # any further (adding in start, restart, etc.).
+  _stopped=False
+  # do you want this to show the total time since initialized, or since last
+  # used?  If since last used, then pass True into the instance as you
+  # initialize it.
+  reset_each_call=False
+
+  # decimals is used when formatting the output to be more "human-readable"
+  decimals=4
+
+  def __init__(self,reset_each_call=False):
+    """
+    The intention is for this class's instance to be treated as almost a
+    singleton.  Look closely at the internal methods that I am overridding.
+    Example usage:
+      sw = StopWatch()
+      print(dosomething(), sw)
+      print(dosomething_else(), sw)
+      print(and_done(), sw)
+
+    Example (copy/paste) of REAL output:
+
+     --> ./dynamodb.py
+ >> Event Id: 07c3cbee-ec83-4451-963c-d80d85000ef6...0.0 Âµ microseconds..
+ >> DynamoDB auto remediation function has been called 0.0001 Âµ microseconds
+ >> obtaining dynamodb client - 7.6639 seconds
+ >> obtaining dynamodb resource - 23.67544174 miliseconds OR 0.0237 seconds
+ >> grabbing 'test_users' to read - 14.90569115 miliseconds OR 0.0149 seconds
+ >> dynamodb.Table(name='test_users')
+ >> describing table 'test_users' - 2.56061554 miliseconds OR 0.0026 seconds
+
+
+
+    """
+    self.t=time.time()
+    self.reset_each_call=reset_each_call
+
+  def __call__(self):
+    """
+    this could be a shortcut to stop or reset this timer
+    """
+    pass
+
+  def __str__(self):
+    """
+    Print the time as a string (human readable / formatted)
+    """
+    return self.beautify(self.read())
+
+  def __repr__(Self):
+    """
+    Print the time as a string (unformatted)
+    """
+    return self.read()
+
+  def read(self):
+    if self._stopped:
+      return self.t
+    else:
+      if self.reset_each_call: 
+        r=(time.time()-self.t)
+        self.reset()
+        return r
+      return (time.time()-self.t)
+
+  def reset(self):
+    self.t=time.time()
+    self._stopped=False
+
+  def stop(self):
+    self.t=time.time()-self.t
+    self._stopped=True
+
+  def beautify(self, t):
+    """
+    Make the output human friendly / readable.  
+    Examples of Output:
+      > 14.8730278 miliseconds OR 0.0149 seconds
+      > 24.6193409 miliseconds OR 0.0246 seconds
+      > 16.13354683 miliseconds OR 0.0161 seconds
+      > 0.2569 seconds
+      > 20.0882 seconds
+    """
+    t=float(t)
+
+    if t > 0.1: return "%s seconds" % round(t, self.decimals)
+
+    if t >= 0.001:
+      if float(t) == float(0.001): label = ''
+      else: label = 's'
+      return "%s milisecond%s OR %s seconds" % (round(1000*t, self.decimals+4),
+        label, round(t, self.decimals))
+
+    if t >= 0.000001:
+      if float(t) == float(0.000001): label = " Âµs microsecd"
+      else: label = 'Âµ microseconds'
+      return "%s %s" % (round(t,4), label)
+
 
 # #############################################################################
 # Util functions Below
