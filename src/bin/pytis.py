@@ -65,6 +65,49 @@ program versioning.  (I need to add this to newscript)
 # learn how to auto-build man-pages from the --help options
 # __version__ = 1.0 --> release with setup.py / installation files.
 
+List of error codes, to remember which one to return.
+
+Codes:
+
+	0 - Proper Exit
+	1 - Catchall for general errors
+	2 - Misuse of shell builtins (according to Bash documentation)
+			
+	64 - command line usage error
+	65 - data format error
+	66 - cannot open input
+	67 - addressee unknown
+	68 - host name unknown
+	69 - service unavailable
+	70 - internal software error
+	71 - system error (e.g., can't fork)
+	72 - critical OS file missing
+	73 - can't create (user) output file
+	74 - input/output error
+	75 - temp failure; user is invited to retry
+	76 - remote error in protocol
+	77 - permission denied
+	78 - configuration error
+	126 - Command invoked cannot execute
+	127 - “command not found”
+	128 - Invalid argument to exit
+	128+n - Fatal error signal “n”
+	130 - Script terminated by Control-C
+	255 - Exit status out of range
+
+Most Used Codes:
+
+	0 - Proper Exit
+	1 - Catchall for general errors
+	2 - Misuse of shell builtins (according to Bash documentation)
+	66 - cannot open input
+	72 - critical OS file missing
+	73 - can't create (user) output file
+	74 - input/output error
+	77 - permission denied
+	78 - configuration error
+	130 - Script terminated by Control-C
+
 """
 # builtin
 import base64 as b64
