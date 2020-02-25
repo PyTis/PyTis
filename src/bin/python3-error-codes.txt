@@ -1,0 +1,122 @@
+1 - Operation not permitted
+2 - No such file or directory
+3 - No such process
+4 - Interrupted system call
+5 - Input/output error
+6 - No such device or address
+7 - Argument list too long
+8 - Exec format error
+9 - Bad file descriptor
+10 - No child processes
+11 - Resource temporarily unavailable
+12 - Cannot allocate memory
+13 - Permission denied
+14 - Bad address
+15 - Block device required
+16 - Device or resource busy
+17 - File exists
+18 - Invalid cross-device link
+19 - No such device
+20 - Not a directory
+21 - Is a directory
+22 - Invalid argument
+23 - Too many open files in system
+24 - Too many open files
+25 - Inappropriate ioctl for device
+26 - Text file busy
+27 - File too large
+28 - No space left on device
+29 - Illegal seek
+30 - Read-only file system
+31 - Too many links
+32 - Broken pipe
+33 - Numerical argument out of domain
+34 - Numerical result out of range
+35 - No message of desired type
+36 - Identifier removed
+37 - Channel number out of range
+38 - Level 2 not synchronized
+39 - Level 3 halted
+40 - Level 3 reset
+41 - Link number out of range
+42 - Protocol driver not attached
+43 - No CSI structure available
+44 - Level 2 halted
+45 - Resource deadlock avoided
+46 - No locks available
+50 - Invalid exchange
+51 - Invalid request descriptor
+52 - Exchange full
+53 - No anode
+54 - Invalid request code
+55 - Invalid slot
+56 - File locking deadlock error
+57 - Bad font file format
+60 - Device not a stream
+61 - No data available
+62 - Timer expired
+63 - Out of streams resources
+64 - Machine is not on the network
+65 - Package not installed
+66 - Object is remote
+67 - Link has been severed
+68 - Advertise error
+69 - Srmount error
+70 - Communication error on send
+71 - Protocol error
+74 - Multihop attempted
+76 - RFS specific error
+77 - Bad message
+79 - Inappropriate file type or format
+80 - Name not unique on network
+81 - File descriptor in bad state
+82 - Remote address changed
+83 - Can not access a needed shared library
+84 - Accessing a corrupted shared library
+85 - .lib section in a.out corrupted
+86 - Attempting to link in too many shared libraries
+87 - Cannot exec a shared library directly
+88 - Function not implemented
+90 - Directory not empty
+91 - File name too long
+92 - Too many levels of symbolic links
+95 - Operation not supported
+96 - Protocol family not supported
+104 - Connection reset by peer
+105 - No buffer space available
+106 - Address family not supported by protocol
+107 - Protocol wrong type for socket
+108 - Socket operation on non-socket
+109 - Protocol not available
+110 - Cannot send after transport endpoint shutdown
+111 - Connection refused
+112 - Address already in use
+113 - Software caused connection abort
+114 - Network is unreachable
+115 - Network is down
+116 - Connection timed out
+117 - Host is down
+118 - No route to host
+119 - Operation now in progress
+120 - Operation already in progress
+121 - Destination address required
+122 - Message too long
+123 - Protocol not supported
+124 - Socket type not supported
+125 - Cannot assign requested address
+126 - Network dropped connection on reset
+127 - Transport endpoint is already connected
+128 - Transport endpoint is not connected
+129 - Too many references: cannot splice
+130 - Too many processes
+131 - Too many users
+132 - Disk quota exceeded
+133 - Stale NFS file handle
+134 - Not supported
+135 - No medium found
+138 - Invalid or incomplete multibyte or wide character
+139 - Value too large for defined data type
+140 - Operation canceled
+141 - State not recoverable
+142 - Previous owner died
+143 - Streams pipe error
