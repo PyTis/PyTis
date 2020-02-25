@@ -265,6 +265,14 @@ EXAMPLES:
 	through and remove the files that had "_1" added to the end of the filename,
 	as you can see from the WARNING message.
 
+	find 'Moving Melodies'/ -iname '*.mp3' | bulkmove -p
+	
+
+	find Techno2 -iname '*.mp3' | bulkmove -p
+	mv Techno2_* 'Techno and Trance'/
+	rmdir Techno2
+
+
 NOTE:
 	prefixes and postfixes are based on the directories leading to the file,
 	from the current path.  If your structure is:
@@ -441,3 +449,4 @@ VERSION:
 
 if __name__ == '__main__':
 	main()
+

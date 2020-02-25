@@ -25,6 +25,7 @@ CHANGELOG
 """
 
 import compiler
+import optparse
 import os
 import sys
 import traceback
@@ -226,8 +227,8 @@ def run(opts,files):
       log.info("CHECKING: %s" % os.path.abspath(path))
       try:
         mod = compiler.parseFile(path)
-      except SyntaxError:
-        print 'Syntax Error in %r' % path
+      except SyntaxError as e:
+        print('Syntax Error in %r' % path)
         traceback.print_exc(0, file=sys.stdout)
         continue
       v = ImportVisitor()
@@ -243,23 +244,23 @@ def run(opts,files):
 
       for mod in mods:
         if not show_filename:
-          print 'Results for %r' % path
+          print('Results for %r' % path)
           show_filename = True
         if mod.alias == '*':
-          print 'Skipping * import on module %r (line %s)'\
-            % (mod.modname, mod.lineno)
-          print ' %s' % file_buf[mod.lineno-1].strip()
+          print('Skipping * import on module %r (line %s)' \
+						% (mod.modname, mod.lineno))
+          print(' %s' % file_buf[mod.lineno-1].strip())
         else:
           if mod.alias == mod.modname:
-            print 'Missing reference %r (line %s)'\
-              % (mod.modname, mod.lineno)
+            print('Missing reference %r (line %s)'\
+              % (mod.modname, mod.lineno))
           else:
-            print 'Missing reference %r for variable %r (line %s)'\
-              % (mod.alias, mod.modname, mod.lineno)
-          print ' %s' % file_buf[mod.lineno-1].strip()
+            print('Missing reference %r for variable %r (line %s)'\
+              % (mod.alias, mod.modname, mod.lineno))
+          print(' %s' % file_buf[mod.lineno-1].strip())
 
       if show_filename:
-        print 
+        print("") 
 
 def main():
   """usage: importnanny """

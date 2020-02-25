@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # encoding=utf-8
 # ##############################################################################
 # The contents of this file are subject to the PyTis Public License Version    #
@@ -78,7 +78,7 @@ default_timeout = 1
 __author__ = 'Josh Lee'
 __created__ = '06:14pm 01 October 2018'
 __copyright__ = 'PyTis.com'
-__version__ = 1.2
+__version__ = 1.1
 
 # =============================================================================
 # Begin Helpers
@@ -124,7 +124,7 @@ def valid_ip(ip):
 		ip=''
 	try:
 		socket.inet_aton(ip)
-	except socket.error as e:
+	except socket.error:
 		return ''
 	else:
 		return validate_ip(ip)
@@ -155,7 +155,7 @@ def hostip(log, timeout=default_timeout):
 		#log.error(e.reason) # e.g. 'timed out'
 		#log.error('(are you connected to the internet?)')
 		raise Timeout(str(e))
-	except KeyboardInterrupt as e:
+	except KeyboardInterrupt:
 		return None
 	else:
 		log.debug('hostip: "%s"' % str(ip).strip())
@@ -304,11 +304,8 @@ HISTORY:
 	Original Author
 
 CHANGE LOG:
-
-	v1.1 MINOR CHANGE 				                                   February 2, 2018
-    Tweaked minor help ("-h").
-
-	v1.1 MINOR CHANGE																	           October 15, 2018
+	
+	v1.1 MINOR CHANGE																					   October 15, 2018
 		Better error handling.
 
 	v1.0 ORIGINAL RELEASE																					October 1, 2018
@@ -354,12 +351,8 @@ VERSION:
 		parser.print_usage()
 		return 0
 	elif '-h' in sys.argv:
-		parser.set_description('')
-		parser.print_help()
-		return 0
-	elif '?' in sys.argv:
 		parser.print_usage()
-                return 0
+		return 0
 
 	(opts, args) = parser.parse_args()
 	
@@ -399,7 +392,7 @@ VERSION:
 
 			try:
 				possible = int(possible)
-			except (IndexError,ValueError) as e:
+			except (IndexError,ValueError):
 				pass
 			else:
 				possible-=1
@@ -411,7 +404,7 @@ VERSION:
 					func = funcs[possible]
 				else:
 					func = [f for f in funcs if f.__name__ == possible][0]
-			except IndexError as e:
+			except IndexError:
 				log.error('Function not found.')
 				return 1
 			else:
