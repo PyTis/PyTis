@@ -2731,13 +2731,24 @@ def set_logging(opts, name, quiet=False, __logdir__=__logdir__):
 	else: 
 		level=logging.INFO
 		log_file = 'pytis_tools.log'
-	logging.basicConfig(
-		name=name,
-		filename = os.path.abspath(os.path.join(os.path.abspath(__logdir__), log_file )),
-		level=level,
-		format='%(asctime)s.%(msecs)03d %(name)-10s %(levelname)-8s ' \
-			'[PID: %(process)d]  %(message)s',
-		datefmt="%Y%m%d %H:%M:%S")
+	if python_version >=3:
+		logging.basicConfig(
+			filename = os.path.abspath(os.path.join(os.path.abspath(__logdir__), 
+				log_file )),
+			level=level,
+			format='%(asctime)s.%(msecs)03d %(name)-10s %(levelname)-8s ' \
+				'[PID: %(process)d]  %(message)s',
+			datefmt="%Y%m%d %H:%M:%S")
+	else:
+		logging.basicConfig(
+			name=name,
+			filename = os.path.abspath(os.path.join(os.path.abspath(__logdir__), 
+				log_file )),
+			level=level,
+			format='%(asctime)s.%(msecs)03d %(name)-10s %(levelname)-8s ' \
+				'[PID: %(process)d]  %(message)s',
+			datefmt="%Y%m%d %H:%M:%S")
+
 	logging.setLoggerClass(MyLogger)
 	log = logging.getLogger(name)
 	log.setopts(opts)
@@ -3276,7 +3287,7 @@ def die(string=None):
 	global log
 	try:
 		if log and string:
-			log.error(string)
+			log.fatal(string)
 
 	except NameError:
 		if string:
