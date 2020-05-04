@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # ##############################################################################
 # The contents of this file are subject to the PyTis Public License Version	   #
 # 1.0 (the "License"); you may not use this file except in compliance with	   #
@@ -27,7 +28,6 @@ Features:
 	*	Creates default copyright for you.
 
 """
-import cStringIO
 import datetime
 import glob
 import optparse
@@ -40,8 +40,9 @@ import configure as pytis_configure # (imports configdir and logdir)
 
 __author__ = 'Josh Lee'
 __created__ = '06:14pm 09 Sep, 2009'
+__modified__ = '12:14pm 09 Mar, 2020'
 __copyright__ = 'PyTis'
-__version__ = '2.5'
+__version__ = '2.6'
 __configdir__ = pytis_configure.copyright_dir # '/root/.mycopyright'
 
 comment_chars = {'php'			:	{'begin'	: '/*',
@@ -127,8 +128,8 @@ def generic_check(fi,cp,lang):
 	handle.close()
 
 	if pcp in body:
-		raise PyTis.DuplicateCopyright, "This file already has been " \
-					"copyrighted with an identical copyright." 
+		raise PyTis.DuplicateCopyright("This file already has been " \
+					"copyrighted with an identical copyright." )
 	for line in lines:
 		if 'copyright' in line.lower() or 'license' in line.lower():
 			if comment_chars[lang]['begin'] in line or \
@@ -189,24 +190,24 @@ def javascript(fi,cp):
 	pcp = prettyCopyright(cp,comment_chars['javascript'])
 
 	try:
-		handle = open(fi,'r')
+		handle = open(fi,'rb')
 		lines = handle.readlines(-1)
 		handle.close()
-		nhandle = open(fi,'wb')
+		nhandle = open(fi,'wb', encoding='utf-8')
 
 		# BEGIN HANDLE EMPTY
 		# simplest case, the file is empty.
 		if not lines:
-			nhandle.write(pcp)
+			nhandle.write(bytes(pcp, encoding='utf-8'))
 		# END HANDLE EMPTY
 
 		else:
 			lines=PyTis.dos2unix(lines)
-			nhandle.write(pcp)
+			nhandle.write(bytes(pcp, encoding='utf-8'))
 			nhandle.writelines(lines[0:])
 
-	except Exception, e:
-		print e 
+	except Exception as e:
+		print(e)
 		# we messed up, restore from backup
 		try:
 			handle.close()
@@ -217,7 +218,7 @@ def javascript(fi,cp):
 		except:
 			pass
 		shutil.move(backup, fi)
-		raise Exception, str(e)
+		raise Exception(e)
 	else:
 		nhandle.close()
 		os.unlink(backup)
@@ -236,10 +237,10 @@ def ini(fi,cp):
 	pcp = prettyCopyright(cp,comment_chars['ini'])
 
 	try:
-		handle = open(fi,'r')
+		handle = open(fi,'rb')
 		lines = handle.readlines(-1)
 		handle.close()
-		nhandle = open(fi,'wb')
+		nhandle = open(fi,'wb', encoding='utf-8')
 
 		# BEGIN HANDLE EMPTY
 		# simplest case, the file is empty.
@@ -252,8 +253,8 @@ def ini(fi,cp):
 			nhandle.write(pcp)
 			nhandle.writelines(lines[0:])
 
-	except Exception, e:
-		print e 
+	except Exception as e:
+		print(e)
 		# we messed up, restore from backup
 		try:
 			handle.close()
@@ -264,7 +265,7 @@ def ini(fi,cp):
 		except:
 			pass
 		shutil.move(backup, fi)
-		raise Exception, str(e)
+		raise Exception(e)
 	else:
 		nhandle.close()
 		os.unlink(backup)
@@ -283,10 +284,10 @@ def css(fi,cp):
 	pcp = prettyCopyright(cp,comment_chars['css'])
 
 	try:
-		handle = open(fi,'r')
+		handle = open(fi,'rb')
 		lines = handle.readlines(-1)
 		handle.close()
-		nhandle = open(fi,'wb')
+		nhandle = open(fi,'wb', encoding='utf-8')
 
 		# BEGIN HANDLE EMPTY
 		# simplest case, the file is empty.
@@ -299,8 +300,8 @@ def css(fi,cp):
 			nhandle.write(pcp)
 			nhandle.writelines(lines[0:])
 
-	except Exception, e:
-		print e 
+	except Exception as e:
+		print(e)
 		# we messed up, restore from backup
 		try:
 			handle.close()
@@ -311,7 +312,7 @@ def css(fi,cp):
 		except:
 			pass
 		shutil.move(backup, fi)
-		raise Exception, str(e)
+		raise Exception(e)
 	else:
 		nhandle.close()
 		os.unlink(backup)
@@ -330,10 +331,10 @@ def html(fi,cp):
 	pcp = prettyCopyright(cp,comment_chars['html'])
 
 	try:
-		handle = open(fi,'r')
+		handle = open(fi,'rb')
 		lines = handle.readlines(-1)
 		handle.close()
-		nhandle = open(fi,'wb')
+		nhandle = open(fi,'wb', encoding='utf-8')
 
 		# BEGIN HANDLE EMPTY
 		# simplest case, the file is empty.
@@ -362,8 +363,8 @@ def html(fi,cp):
 				nhandle.write(pcp)
 				nhandle.writelines(lines[0:])
 
-	except Exception, e:
-		print e 
+	except Exception as e:
+		print(e)
 		# we messed up, restore from backup
 		try:
 			handle.close()
@@ -374,7 +375,7 @@ def html(fi,cp):
 		except:
 			pass
 		shutil.move(backup, fi)
-		raise Exception, str(e)
+		raise Exception(e)
 	else:
 		nhandle.close()
 		os.unlink(backup)
@@ -397,10 +398,10 @@ def bash(fi,cp):
 	pcp = prettyCopyright(cp,comment_chars['bash'])
 
 	try:
-		handle = open(fi,'r')
+		handle = open(fi,'rb')
 		lines = handle.readlines(-1)
 		handle.close()
-		nhandle = open(fi,'wb')
+		nhandle = open(fi,'wb', encoding='utf-8')
 
 		# BEGIN HANDLE EMPTY
 		# simplest case, the file is empty.
@@ -422,8 +423,8 @@ def bash(fi,cp):
 				nhandle.write(pcp)
 				nhandle.writelines(lines[0:])
 
-	except Exception, e:
-		print e 
+	except Exception as e:
+		print(e)
 		# we messed up, restore from backup
 		try:
 			handle.close()
@@ -434,7 +435,7 @@ def bash(fi,cp):
 		except:
 			pass
 		shutil.move(backup, fi)
-		raise Exception, str(e)
+		raise Exception(e)
 	else:
 		nhandle.close()
 		os.unlink(backup)
@@ -457,10 +458,10 @@ def sh(fi,cp):
 	pcp = prettyCopyright(cp,comment_chars['sh'])
 
 	try:
-		handle = open(fi,'r')
+		handle = open(fi,'rb')
 		lines = handle.readlines(-1)
 		handle.close()
-		nhandle = open(fi,'wb')
+		nhandle = open(fi,'wb', encoding='utf-8')
 
 		# BEGIN HANDLE EMPTY
 		# simplest case, the file is empty.
@@ -482,8 +483,8 @@ def sh(fi,cp):
 				nhandle.write(pcp)
 				nhandle.writelines(lines[0:])
 
-	except Exception, e:
-		print e 
+	except Exception as e:
+		print(e)
 		# we messed up, restore from backup
 		try:
 			handle.close()
@@ -494,7 +495,7 @@ def sh(fi,cp):
 		except:
 			pass
 		shutil.move(backup, fi)
-		raise Exception, str(e)
+		raise Exception(e)
 	else:
 		nhandle.close()
 		os.unlink(backup)
@@ -511,14 +512,14 @@ def python(fi,cp):
 	shutil.copy(fi,backup)
 	
 	# little fix for encoding bug,...
-	cp = cp.replace("\xa9", "(c)")
+	#cp = cp.replace("\xa9", "(c)")
 
 
 	# get the copyright ready
 	pcp = prettyCopyright(cp,comment_chars['python'])
 
 	try:
-		handle = open(fi,'r')
+		handle = open(fi,'rb')
 		lines = handle.readlines(-1)
 		handle.close()
 		nhandle = open(fi,'wb')
@@ -526,6 +527,7 @@ def python(fi,cp):
 		# BEGIN HANDLE EMPTY
 		# simplest case, the file is empty.
 		if not lines:
+			#nhandle.write(bytes(pcp, encoding='utf-8'))
 			nhandle.write(pcp)
 		# END HANDLE EMPTY
 
@@ -534,17 +536,36 @@ def python(fi,cp):
 			lines=PyTis.dos2unix(lines)
 			# BEGIN HANDLE SHEBANG
 			if lines[0].startswith('#!/'): # shebangline
-				nhandle.write(lines[0])
-				nhandle.write(pcp)
-				nhandle.writelines(lines[1:])
+				# BEGIN HANLDE ENCLDING LINE, WITH SHEBANG LINE
+				if lines[1].startswith('# encoding='):
+					nhandle.write(lines[1]) # copy encoding
+					#nhandle.write(bytes(pcp, encoding='utf-8'))
+					nhandle.write(pcp) # place copyright
+					nhandle.write(lines[2:]) # write everythign else
+				# END HANLDE ENCLDING LINE, WITH SHEBANG LINE
+				else:
+					nhandle.write(lines[0]) # copy shebang
+					#nhandle.write(bytes(pcp, encoding='utf-8'))
+					nhandle.write(pcp) # place copyright
+					nhandle.writelines(lines[1:]) # write everything else
 			# END HANDLE SHEBANG
-
 			else:
-				nhandle.write(pcp)
-				nhandle.writelines(lines[0:])
+				# BEGIN HANDLE ENCODING LINE, WITHOUT SHEBANG LINE
+				if lines[0].startswith('# encoding='):
+					nhandle.write(lines[0]) # copy over encoding line
+					#nhandle.write(bytes(pcp, encoding='utf-8'))
+					nhandle.write(pcp) # place copyright
+					nhandle.write(lines[1:]) # write everything else
+				# END HANDLE ENCODING LINE, WITHOUT SHEBANG LINE
+				else:
+					# No SHEBANG, NO ENCODING
+					#nhandle.write(bytes(pcp, encoding='utf-8'))
+					nhandle.write(pcp) # place copyright
+					nhandle.writelines(lines[0:]) # write everything else
 
-	except Exception, e:
-		print e 
+
+	except Exception as e:
+		print(e)
 		# we messed up, restore from backup
 		try:
 			handle.close()
@@ -555,7 +576,7 @@ def python(fi,cp):
 		except:
 			pass
 		shutil.move(backup, fi)
-		raise Exception, str(e)
+		raise Exception(e)
 	else:
 		nhandle.close()
 		os.unlink(backup)
@@ -573,10 +594,10 @@ def php(fi, cp):
 	pcp = prettyCopyright(cp,comment_chars['php'])
 
 	try:
-		handle = open(fi,'r')
+		handle = open(fi,'rb')
 		lines = handle.readlines(-1)
 		handle.close()
-		nhandle = open(fi,'wb')
+		nhandle = open(fi,'wb', encoding='utf-8')
 
 		# BEGIN HANDLE EMPTY
 		# simplest case, the file is empty.
@@ -642,8 +663,8 @@ def php(fi, cp):
 				nhandle.write("\n%s\n" % ' '.join(lines[0].split()[1:]))
 				nhandle.writelines(lines[1:])
 
-	except Exception, e:
-		print e 
+	except Exception as e:
+		print(e)
 		# we messed up, restore from backup
 		try:
 			handle.close()
@@ -654,7 +675,7 @@ def php(fi, cp):
 		except:
 			pass
 		shutil.move(backup, fi)
-		raise Exception, str(e)
+		raise Exception(e)
 	else:
 		nhandle.close()
 		os.unlink(backup)
@@ -678,15 +699,15 @@ def loadCopyright(opts):
 	fi = tpath(opts,opts.file==None)
 	log.debug("template path: %s" % fi)
 	try:
-		handle = open(fi,'r')
-	except (IOError, OSError), e:
-		raise PyTis.FileNotFound, 'Template not found: %s' % fi
+		handle = open(fi,'rb')
+	except (IOError, OSError) as e:
+		raise PyTis.FileNotFound('Template not found: %s' % fi)
 
 	body = handle.read(-1)
 	handle.close()
 	if not body.strip():
-		raise PyTis.EmptyTemplate, "ERROR! The copyright template loaded " \
-			"was empty.	Template file: %s" % os.path.abspath(fi)
+		raise PyTis.EmptyTemplate("ERROR! The copyright template loaded " \
+			"was empty.	Template file: %s" % os.path.abspath(fi))
 	else:
 		body = PyTis.ireplace('%(year)s',datetime.datetime.now().year,body)
 		body = PyTis.ireplace('{year}',datetime.datetime.now().year,body)
@@ -705,7 +726,7 @@ def prettyCopyright(cp,d):
 	loaded for it's filetype.
 	"""
 
-	b = cStringIO.StringIO()
+	b = PyTis.StringIO()
 	b.write(str("%s %s" % (d['begin'], d['middle']*80))[:80])
 	b.write("\n")
 	for line in cp.split("\n"):
@@ -726,7 +747,7 @@ def fileType(fi):
 	"""
 	def tryShebang(fi):
 		# try to find a shebang line
-		handle = open(os.path.abspath(fi),'r')
+		handle = open(os.path.abspath(fi),'rb')
 		lines = handle.readlines(-1)
 		if lines:
 			line = lines[0]
@@ -738,7 +759,7 @@ def fileType(fi):
 
 	try:
 		ext = os.path.splitext(fi)[-1:][0]
-	except IndexError, e:
+	except IndexError as e:
 		# no file extention, last resort
 		return tryShebang(fi)
 
@@ -789,7 +810,7 @@ def copyright(opts,args):
 	log.debug("FILES: %s" % files)
 
 	if not files:
-		raise PyTis.IdiotError, "No files to copyright" 
+		raise PyTis.IdiotError("No files to copyright")
 
 	force = False # if the user wants to force all
 	fix = [] # a list of files that the user might want to check latter.a
@@ -798,7 +819,7 @@ def copyright(opts,args):
 		# The cannot copyright a the template file that the copyright was
 		# loaded from, nor can they copyright this program, hell, they didn't
 		# write it, I did.
-		raise PyTis.IdiotError, "These files may not be copyrighted."
+		raise PyTis.IdiotError("These files may not be copyrighted.")
 
 	def checkFoo():
 		c = raw_input('[y/N/a (always) or q to quit] >>>').lower()
@@ -806,7 +827,7 @@ def copyright(opts,args):
 			return checkFoo()
 		if c == 'q':
 			log.debug('user input quit')
-			raise QuitNow, "User pressed quit."
+			raise PyTis.QuitNow("User pressed quit.")
 		return c
 
 	
@@ -817,9 +838,9 @@ def copyright(opts,args):
 		log.debug("data: %s" % data)
 
 		if not ftype:
-			msg = 'Skipping un-known filetype for: ', f
+			msg = 'Skipping un-known filetype for: %s' % f
 			log.debug(msg)
-			print msg
+			print(msg)
 			continue
 		try:
 			if opts.preview:
@@ -834,7 +855,7 @@ def copyright(opts,args):
 					else:
 						msg = "\nThis file appears to already have a copyright, " \
 								"do you wish to add one anyway?\n\t%s" % f
-						print msg
+						print(msg)
 						log.debug(msg)
 						c = checkFoo()
 						if c == 'n':
@@ -859,7 +880,7 @@ def copyright(opts,args):
 				else:
 					msg = "\nThis file appears to already have a copyright, " \
 							"do you wish to add one anyway?\n\t%s" % f
-					print msg
+					print(msg)
 					log.debug(msg)
 					c = checkFoo()
 					if c == 'n':
@@ -873,10 +894,11 @@ def copyright(opts,args):
 						log.debug('user input yes')
 						applyCopyright(f,data,cp)
 		
-		except PyTis.DuplicateCopyright, e:
+		except PyTis.DuplicateCopyright as e:
 			log.info("duplicate, skipping: %s" % f)
-			print '%s\nSkipping: %s' % (e,f)
-		except PyTis.QuitNow, e:
+			print('%s\nSkipping: %s' % (e,f))
+		except PyTis.QuitNow as e:
+			print("\n%s\n\nOkay, bye!" % str(e))
 			return False
 	return fix
 
@@ -927,32 +949,31 @@ def nfpath(opts, default=False):
 def show(opts):
 	try:
 		cr, path= loadCopyright(opts)
-	except (PyTis.EmptyTemplate, PyTis.FileNotFound), e:
-		print str(e)
+	except (PyTis.EmptyTemplate, PyTis.FileNotFound) as e:
+		print(str(e))
 		sys.exit(1)
-	print cr
+	print(cr)
 	return 
 
 def tList(opts):
 	global __configdir__
-	print "Available Templates"
-	print "==================="
+	print("Available Templates")
+	print("===================")
 	print
 	i =1
 	temps = {}
 	for f in glob.glob(os.path.join(__configdir__,'*.txt')):
 		n = os.path.basename(f).replace('.txt','')
 		temps[str(i)]=n
-		print " %s) %s" % (i,n)
+		print(" %s) %s" % (i,n))
 		i+=1
-	print 
-	print "Enter a template number to edit, or any other key to quit"
+	print("\nEnter a template number to edit, or any other key to quit")
 	res = raw_input('>>> ').strip()
 
 	if res in temps.keys():
 		opts.edit = temps[res]
 		fi = efpath(opts, False)
-		print 'About to edit: ', fi
+		print('About to edit: %s' % fi)
 		PyTis.toContinue()
 		return edit(fi, direct=True)
 	else:
@@ -975,15 +996,15 @@ License."""
 	if fi is None:
 		fi = nfpath(opts, opts.new==None)
 	if os.path.isfile(fi) and os.path.exists(fi):
-		print "ERROR: A template with this name already exists in: %s.\n\n" \
-		"**Please rename or remove this file first.\n" % __configdir__
+		print("ERROR: A template with this name already exists in: %s.\n\n" \
+		"**Please rename or remove this file first.\n" % __configdir__)
 		return PyTis.toContinue()
 
-	handle = open(fi, 'wb')
+	handle = open(fi, 'wb', encoding='utf-8')
 	txt = createDefault.__doc__ % datetime.datetime.now().year
 	handle.writelines(txt)
 	handle.close()
-	print 'The template "%s" has been created.' % fi
+	print('The template "%s" has been created.' % fi)
 	edit(fi, direct=False)
 
 def edit(fi, direct=False):
@@ -997,19 +1018,19 @@ def edit(fi, direct=False):
 		if ed:
 			os.system("%s %s" % (ed, fi))
 		else:
-			print 'You may edit "%s" at any time.' % fi
+			print('You may edit "%s" at any time.' % fi)
 		return PyTis.toContinue()
 	else: 
 		if raw_input('Would you like to edit the license/copyright '
 					 'now? [y/N]').lower() in ['y','yes']:
 			if ed:
 				os.system("%s %s" % (ed, fi))
-				print 'This license is now ready.'
+				print('This license is now ready.')
 			else:
-				print 'You may edit "%s" at any time.' % fi
+				print('You may edit "%s" at any time.' % fi)
 			return PyTis.toContinue()
 
-		print 'You may edit "%s" at any time.' % fi
+		print('You may edit "%s" at any time.' % fi)
 		return PyTis.toContinue()
 
 
@@ -1043,10 +1064,10 @@ def removeConfigDir(opath):
 		os.remove(f)
 	try:
 		os.rmdir(opath)
-	except OSError, e:
+	except OSError as e:
 		print
-		print 'ERROR:'
-		print 'Could not remove direcotry %s, this folder contains user files.'
+		print('ERROR:')
+		print('Could not remove direcotry %s, this folder contains user files.')
 		print
 
 def addConfigDir(d):
@@ -1054,7 +1075,7 @@ def addConfigDir(d):
 	if raw_input('Create directory %s [y/N]: ' % d).lower().strip() == 'y':
 		try:
 			os.mkdir(d)
-		except OSError, e:
+		except OSError as e:
 			if 'File exists' in str(e):
 				if raw_input('Directory already exists, use anyway? ' \
 							 '[y/N]: ').lower().strip() == 'y':
@@ -1062,11 +1083,11 @@ def addConfigDir(d):
 				else:
 					return False
 			elif 'Permission denied' in str(e):
-				print 'ERROR: You do not have permission to create this ' \
-						'directory.'
+				print('ERROR: You do not have permission to create this ' \
+						'directory.')
 				return False
 			else:
-				print e
+				print(str(e))
 				return 
 		else:
 			return True
@@ -1077,7 +1098,7 @@ def addConfigDir(d):
 def setConfig(d):
 	global __configdir__
 	mpath = os.path.abspath(sys.argv[0])
-	handle = open(mpath, 'r')
+	handle = open(mpath, 'rb')
 	lines = handle.readlines(-1)
 	handle.close()
 	nfile_lines = []
@@ -1086,7 +1107,7 @@ def setConfig(d):
 			line = "__configdir__ = '%s'\n" % d
 		nfile_lines.append(line)
 
-	handle = open(mpath,'wb')
+	handle = open(mpath,'wb', encoding='utf-8')
 	handle.writelines(nfile_lines)
 	handle.close()
 	
@@ -1105,14 +1126,14 @@ def config(opts):
 	if __configdir__.strip()	and \
 	os.path.isdir(os.path.abspath(__configdir__)) and \
 	os.path.exists(os.path.abspath(__configdir__)):
-		print 'CONFIG DIR was already set to:', oldpath
+		print('CONFIG DIR was already set to: %s' % oldpath)
 		if raw_input('Remove old CONFIG DIR? [y/N]').lower().strip() == 'y':
 			removeConfigDir(oldpath)
 
 	newpath = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]),
 											 '.mycopyright'))
-	print 'DEFAULT: %s' % newpath
-	print "Path to data dir (leave blank to use default) q to quit "
+	print('DEFAULT: %s' % newpath)
+	print("Path to data dir (leave blank to use default) q to quit ")
 	configdir = raw_input('>>>')
 	if not configdir.strip():
 		configdir = newpath
@@ -1120,7 +1141,7 @@ def config(opts):
 	if configdir == 'q':
 		return sys.exit(0)
 	if not addConfigDir(configdir):
-		print "\nPlease try again."
+		print("\nPlease try again.")
 		return config(opts)
 	else:
 		setConfig(configdir)
@@ -1163,8 +1184,8 @@ def myContinue(fi=None):
 
 	try:
 		res = raw_input("%s>>> " % (txt))
-	except (KeyboardInterrupt,EOFError), e:
-		print "\nInvalid input, press 'q' to quit or 'h' for help."
+	except (KeyboardInterrupt,EOFError) as e:
+		print("\nInvalid input, press 'q' to quit or 'h' for help.")
 		return myContinue()
 	else:
 		if res.lower().strip() == 'q':
@@ -1172,8 +1193,8 @@ def myContinue(fi=None):
 		elif res.lower().strip() == 's':
 			return False
 		elif res.lower().strip() in ('h','help','?'):
-			print 'Enter "h" for help, "q" to quit, "s" to skip the file, or ' \
-			'Enter to continue to the next file.'
+			print('Enter "h" for help, "q" to quit, "s" to skip the file, or ' \
+			'Enter to continue to the next file.')
 			return myContinue(fi)
 		else:
 			return True
@@ -1181,7 +1202,7 @@ def myContinue(fi=None):
 
 def main():
 	"""usage: copyright [optional: -t{TEMLATE}] [file(s)]"""
-	global __configdir__
+	global __configdir__,__author__,__created__,__modified__,__copyright__
 	global log
 	hlp = __doc__
 	if '-d' in sys.argv[1:] or '--debug' in sys.argv[1:]:
@@ -1191,6 +1212,7 @@ def main():
 	help_dict = dict(version=__version__,
 						 author=__author__,
 						 created=__created__,
+						 modified=__modified__,
 						 copyright=__copyright__)
 	parser = PyTis.MyParser()
 	parser.extra_txt = """
@@ -1216,6 +1238,10 @@ HISTORY:
 	Original Author
 
 CHANGE LOG:
+
+	v2.6 MINOR CHANGE																							   March 9 2020
+		Changed Python decorated handler to now, in addition to handle shebang
+		lines, it can also handle encoding lines.
 
 	v2.5 MINOR CHANGE																							 January 8 2019
 		Edited timestamp to end of copyright (@auto-generated by the PyTis...)
@@ -1283,6 +1309,10 @@ BUGS - KNOWN ISSUES:
 	php-cli, php files with a shebang line seem to place the copyright after the
 	shebang line, before the "<?php", this will need fixed, when I have time to
 	get to it. 
+
+LAST MODIFIED:
+
+	%(modified)s
 
 CREATED:
 
@@ -1365,15 +1395,15 @@ VERSION:
 		return PyTis.version(__version__)
 	try:
 		if not testConfig():
-			print "This tool is not configured properly, running setup."
+			print("This tool is not configured properly, running setup.")
 			__configdir__ = None
-			print 'INSTALLING'
-			print '='*80
+			print('INSTALLING')
+			print('='*80)
 			return config(opts)
 
 		if opts.setup:
-			print 'INSTALLING'
-			print '='*80
+			print('INSTALLING')
+			print('='*80)
 			return config(opts)
 
 		if opts.new:
@@ -1381,11 +1411,11 @@ VERSION:
 
 		if opts.edit is not None:
 			fi = efpath(opts, False)
-			print 'About to edit: ', fi
+			print('About to edit: %s' % fi)
 			PyTis.toContinue()
 			if not os.path.exists(fi) or not os.path.isfile(fi):
-				print "Template not found: '%s'" % fi
-				print "Try using the --list option to see available templates."
+				print("Template not found: '%s'" % fi)
+				print("Try using the --list option to see available templates.")
 				return
 			return edit(fi, direct=True)
 
@@ -1399,22 +1429,22 @@ VERSION:
 		if len(args) > 0:
 			try:
 				fix = copyright(opts, args)
-			except (PyTis.EmptyTemplate, PyTis.FileNotFound), e:
-				print str(e)
+			except (PyTis.EmptyTemplate, PyTis.FileNotFound) as e:
+				print(str(e))
 				sys.exit(1)
-			except PyTis.IdiotError, e:
-				print str(e)
+			except PyTis.IdiotError as e:
+				print(str(e))
 			else:
 				if fix:
-					print '-'*80
-					print "These files might have had a different copyright, " \
-							"and you might want to \ncheck these files."
-					print "\t", "\n\t".join(fix)
+					print('-'*80)
+					print("These files might have had a different copyright, " \
+							"and you might want to \ncheck these files.")
+					print("\t", "\n\t".join(fix))
 				return True
 		return parser.print_help()
 
-	except KeyboardInterrupt, e:
-		print "\nbye!"
+	except KeyboardInterrupt as e:
+		print("\nbye!")
 		return
 	else:
 		return

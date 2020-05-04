@@ -158,6 +158,7 @@ try:
 	import optparse
 	import getpass
 	import time
+	import datetime
 	import atexit
 	from random import randint as rand
 #import pam
@@ -593,21 +594,26 @@ benchmark.py file, and use the benchmark functions/classes.
 			k,v = arg.split('=')
 			kwargs[k]=v
 
-	show_args = repr(list(args))
+	#show_args = str(', '.join([x for x in list(args)[1:]]))
+	show_args = repr(list(args[1:]))
 	show_kwargs = repr(protect(dict(kwargs)))
 
 
 # XXX:FINDME 
 	str_cmd = ' '.join(pargs)
+	the_cmd = pargs[0]
 
-	log.info('Starting Benchmark of "%s", running %s times.'%(str_cmd, opts.ttr))	
+	log.info1('Starting Benchmark of "%s", running %s times, at %s ' % \
+		(str_cmd, opts.ttr, 
+		datetime.datetime.now().strftime("%-I:%M %p on %b %-m, %Y")))
+
 
 	if opts.no_calibration or opts.calibration == 0:
 		calibration = 0
 	else:
 		calibration = opts.calibration or (calibrate(opts)) or 0.03080070018768308
 
-	log.warning('calibration time is: %s' % calibration)
+	log.info4('calibration time is: %s' % calibration)
 	#if opts.calibrate:
 	#	calibration = calibrate(opts)
 	#else:
@@ -630,14 +636,12 @@ benchmark.py file, and use the benchmark functions/classes.
 		log.info3('='*80)
 		log.info2("Running %s for the %s time." % (str_cmd, i))
 		individual_start_time = time.time()
-		log.info4('Individual Start Time 1: %s' % 
+		log.info4('Individual Start Time: %s' % 
 			formatSecs(format(individual_start_time, '9.99g'), opts))
 
 		# func(*args, **kwargs)
-
 		# can NOT NOT NOT use subprocess.Popen, as it backgrounds, and doesn't
 		# time!
-
 		# log.info2('about to call os.system')
 		# output_retcode = os.system(str_cmd)
 		# log.info2('done with os.system')
@@ -645,79 +649,53 @@ benchmark.py file, and use the benchmark functions/classes.
 		# come to think of it, I should benchmark the two, to see which is more
 		# accurate with the built in "sleep" command.
 
-
-		if not opts.show:
-			# subprocess.Popen
-			if opts.calibrate:
-				log.debug("Calibration is: %s" % calibration)
+		if opts.calibrate:
+			log.debug("Calibration is: %s" % calibration)
+		else:
+			if opts.show:
+			# is "SHOW OUTPUT" mode [-s/--show].
+				calibration = 0.13146827220916746
+				calibration = 0.03146827220916746
+				calibration = 0.042413234710693359375
 			else:
+			## QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE
 				calibration = 0.13080070018768308
 				calibration = 0.042413234710693359375
 				calibration = 0.03080070018768308
-				log.debug("Calibration is the default: %s" % calibration)
+			log.debug("Calibration is the default: %s" % calibration)
 
 
-			log.info3('-'*80)
-			individual_start_time = time.time()
-			log.info4('Individual Start Time 3: %s' % 
-				formatSecs(format(individual_start_time, '9.99g'), opts))
+		log.info3('-'*80)
+		individual_start_time = time.time()
+		log.info4('Individual Start Time: %s' % 
+			formatSecs(format(individual_start_time, '9.99g'), opts))
 
+		if opts.show:
+			# is "SHOW OUTPUT" mode [-s/--show].
+			log.info2('about to call %s with subprossess.call' % str_cmd)
+			output_retcode = subprocess.call(pargs)
+			log.info2('done with subprossess.call calling %s' % str_cmd)
+		else:
+			## QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE
 			log.info2('about to call %s with subprocess.Popen' % str_cmd)
 			proc = subprocess.Popen(shlex.split(str_cmd), stdout=subprocess.PIPE, 
 				stderr=subprocess.PIPE)
 			output_retcode = proc.wait()
 			log.info2('done with subprocess.Popen calling %s' % str_cmd)
 
+		log.info3('-'*80)
 
-			individual_end_time = time.time()
-			this_run_time = individual_end_time - individual_start_time - calibration
-			log.info3('Individual Run Time 3: %s' % 
-				formatSecs(format(this_run_time, '9.99g'), opts))
-
-
-			if output_retcode is not 0:
-				log.warn("EXIT CODE OF %s was %s" % (str_cmd, output_retcode))
-
-			log.info4('Individual End Time 3: %s' % 
-				formatSecs(format(individual_end_time, '9.99g'), opts))
+		individual_end_time = time.time()
+		log.info4('Individual End Time: %s' % 
+			formatSecs(format(individual_end_time, '9.99g'), opts))
 
 
-		else:
-			## QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE
-			# Nope, that's wrong, (^^ that above is wrong), this isn't quiet mode, it
-			# is "SHOW OUTPUT" mode [-s/--show].
+		this_run_time = individual_end_time - individual_start_time
+		log.info3('Individual Run Time: %s' % 
+			formatSecs(format(this_run_time, '9.99g'), opts))
 
-			if opts.calibrate:
-				log.debug("Calibration is: %s" % calibration)
-			else:
-				calibration = 0.13146827220916746
-				calibration = 0.03146827220916746
-				calibration = 0.042413234710693359375
-				log.debug("Calibration is the default: %s" % calibration)
-
-			# subprocess.call
-			individual_start_time = time.time()
-			log.info4('Individual Start Time 4: %s' % 
-				formatSecs(format(individual_start_time, '9.99g'), opts))
-
-			log.info(repr(pargs))
-			log.info2('about to call %s with subprossess.call' % str_cmd)
-			output_retcode = subprocess.call(pargs)
-			log.info2('done with subprossess.call calling %s' % str_cmd)
-
-
-			individual_end_time = time.time()
-			this_run_time = individual_end_time - individual_start_time - calibration
-			log.info3('Individual Run Time 4: %s' % 
-				formatSecs(format(this_run_time, '9.99g'), opts))
-
-
-			if output_retcode is not 0:
-				log.warn("EXIT CODE OF %s was %s" % (str_cmd, output_retcode))
-
-			log.info4('Individual End Time 4: %s' % 
-				formatSecs(format(individual_end_time, '9.99g'), opts))
-
+		if output_retcode is not 0:
+			log.warn("EXIT CODE OF %s was %s" % (str_cmd, output_retcode))
 		if min_run_time is None: min_run_time = this_run_time
 		if min_run_time > this_run_time: min_run_time = this_run_time
 		if max_run_time is None: max_run_time = this_run_time
@@ -725,44 +703,21 @@ benchmark.py file, and use the benchmark functions/classes.
 
 		total_run_time += this_run_time
 
-		log.info3('-'*80)
-
-		individual_end_time = time.time()
-		log.info4('Individual End Time 1: %s' % 
-			formatSecs(format(individual_end_time, '9.99g'), opts))
-
-
-		this_run_time = individual_end_time - individual_start_time
-		log.info3('Individual Run Time 1: %s' % 
-			formatSecs(format(this_run_time, '9.99g'), opts))
-
-
-		total_run_time += this_run_time
-
 		log.info2('_'*80)
 
 	average_run_time = float(total_run_time / opts.ttr)
 
-	# average_run_time = float(total_run_time / opts.ttr)
-	# average_run_time = float(total_run_time / opts.ttr)
-	# #average_run_time = float(total_run_time / opts.ttr)
-
-	print("min_run_time: %s" % formatSecs(format(min_run_time, '9.99g'), opts))
-	print("max_run_time: %s" % formatSecs(format(max_run_time, '9.99g'), opts))
+	log.info1("min_run_time: %s" % formatSecs(format(min_run_time, '9.99g'), opts))
+	log.info3("max_run_time: %s" % formatSecs(format(max_run_time, '9.99g'), opts))
 
 	if opts.human:
-		print("HUMAN READABLE: average_run_time: %s seconds" % 
-			formatSecs(format(average_run_time, '9.2g'), opts))
-	else:
-		print("average_run_time: %s" % 
-			formatSecs(format(average_run_time, '9.99g'), opts))
+# XXX-TODO
+		log.info("HUMAN READABLE: average_run_time: %s" % \
+			formatSecs(format(float(average_run_time), '9.99g'), opts))
 
-	# print("average_run_time: %s" % 
-	#	formatSecs(format(average_run_time, '9.99g'), opts))
-	# print("average_run_time: %s" % 
-	#	formatSecs(format(average_run_time, '9.99g'), opts))
-	# print("average_run_time: %s" % 
-	#	formatSecs(format(average_run_time, '9.99g'), opts))
+	else:
+		log.info2("average_run_time: %s" % 
+			formatSecs(format(average_run_time, '9.99g'), opts))
 
 	end_time = time.time()
 	log.debug('end time -: %f' % end_time)
@@ -774,19 +729,19 @@ benchmark.py file, and use the benchmark functions/classes.
 
 	average = float(round(float(total) / float(opts.ttr), 99))
 
+# XXX-TODO
 	log_average = formatSecs(format(float(average), '9.99g'), opts)
-	#print(repr(dir(func)))
-	print("Average time for %s to run '%s' with args: %s, and kwargs: %s" % 
-		(str_cmd, log_average, show_args, show_kwargs ) )
+	log.info("Average time for %s to run '%s' with args: [%s], and kwargs: %s" % 
+		(the_cmd, log_average, show_args, show_kwargs ) )
 
+# XXX-TODO
+	log.info("Minimum run time: %s" % \
+		formatSecs(format(min_run_time, '9.99g'), opts))
 
-	#benchmark_func(func, 3, *args, **kwargs)
+	log.info1('Benchmark for "%s" remediator is exiting at %s ' % \
+		(the_cmd,
+		datetime.datetime.now().strftime("%-I:%M %p on %b %-m, %Y")))
 
-
-	log.info('Outer RUN ran')
-	sys.exit()
-	PyTis.relogOpts(opts)
-	log.critical("FIND ME, I AM THE RUNNING PROGRAM!")
 	return 0
 # -----------------------------------------------------------------------------
 # End MAIN PROGRAM FUNCTIONS
@@ -811,8 +766,8 @@ class SingleThread(PyTis.MyThread):
 			Extra help goes here...
 		"""
 		self.log.info("I have opts!")
-		self.log.info(repr(pargs))
-		self.log.info(repr(self.opts))
+#		self.log.info(repr(pargs))
+#		self.log.info(repr(self.opts))
 		#self.log.info("Method run ran")
 		self.log.critical("FIND ME, I AM THE RUNNING PROGRAM!")
 
