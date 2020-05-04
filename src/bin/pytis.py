@@ -352,6 +352,8 @@ def conjoin(unknown,errors=[]):
 		errors.extend(unknown)
 	elif type(unknown) is type(tuple((1,))):
 		[errors.append(u) for u in unknown if u]
+	else:
+		errors.append(repr(unknown))
 	return errors
 
 # #############################################################################
