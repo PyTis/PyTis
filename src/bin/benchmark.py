@@ -473,7 +473,7 @@ def pidpath():
 	""" maybe not... """
 	pass
 
-def Calibrate(opts):
+def calibrate(opts):
 	
 	if not opts.calibrate: return None
 
@@ -605,11 +605,11 @@ benchmark.py file, and use the benchmark functions/classes.
 	if opts.no_calibration or opts.calibration == 0:
 		calibration = 0
 	else:
-		calibration = opts.calibration or (Calibrate(opts)) or 0.03080070018768308
+		calibration = opts.calibration or (calibrate(opts)) or 0.03080070018768308
 
 	log.warning('calibration time is: %s' % calibration)
 	#if opts.calibrate:
-	#	calibration = Calibrate(opts)
+	#	calibration = calibrate(opts)
 	#else:
 	##if opts.calibration:
 #		calibration = opts.calibration or 0
