@@ -5,4 +5,5 @@
 *.log
 src/log/pytis_tools.log*
 src/log/*
+dist/*
 
