@@ -3,16 +3,12 @@
 """setup
 =====
 """
-from distutils.core import setup
+#from distutils.core import setup
+from setuptools import setup, find_packages
 import imp
 import optparse
 import os
 import sys
-
-sys.path.append(os.path.abspath(os.path.join(os.curdir, 'src/bin')))
-import pytis as PyTis
-COPYRIGHT = imp.load_source('copyright', 'src/bin/copyright')
-#from src.bin import copyright as c
 
 __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __created__ = '01:21am 01 Jan, 2014'
@@ -21,40 +17,63 @@ __author__ = 'Josh Lee'
 __copyright__ = 'PyTis, LLC.'
 
 file_handle = open('README.md','r')
-contents = file_handle.read(-1)
+readme_contents = file_handle.read(-1)
 file_handle.close()
+
+file_handle = open('LICENSE','r')
+license_contents = file_handle.read(-1)
+file_handle.close()
+
+#os.chdir(os.path.abspath(os.path.join(os.curdir,'src')))
 
 def run(opts,args):
 	"""setup run doc help"""
-	setup(name='copyright',
-				version=COPYRIGHT.__version__,
+	setup_options=dict(
+				name='PyTis-pytisconsulting',
+				version=PyTis.__version__,
 				author='Josh Lee',
 				author_email='pytis@PyTis.com',
-				description='copyright-tool',
-				long_description=contents,
+				description='pytis-toolkit',
+				license=license_contents,
+				long_description=readme_contents,
 				long_description_content_type="text/markdown",
-				classifiers=[
-					"Programming Language :: Python :: 3",
-					"License :: OSI Approved :: MIT License",
-					"Operating System :: OS Independent",
-				],
-#				py_modules=[os.path.abspath(os.path.join(os.curdir,'src/bin/pytis.py'))],
 				url='https://github.com/PyTis/PyTis',
+				classifiers=[
+					"Development Status :: %s - Production/Stable" % PyTis.__version__,
+					'Intended Audience :: Developers',
+					'Intended Audience :: System Administrators',
+					'Natural Language :: English',
+					'Programming Language :: Python :: 3',
+					'License :: OSI Approved :: PyTis License',
+					'Operating System :: OS Independent',
+					'Programming Language :: Python',
+					'Programming Language :: Python :: 2',
+					'Programming Language :: Python :: 2.7',
+					'Programming Language :: Python :: 3',
+					'Programming Language :: Python :: 3.4',
+					'Programming Language :: Python :: 3.5',
+					'Programming Language :: Python :: 3.6',
+					'Programming Language :: Python :: 3.7',
+					'Programming Language :: Python :: 3.8',
+
+				],
 				packages=[
-					os.path.abspath(os.path.join(os.curdir,'src/bin')),
-					os.path.abspath(os.path.join(os.curdir,'src/bin/pylib')),
-					os.path.abspath(os.path.join(os.curdir,'src/bin/pylib3'))
+										'src.pytis',
+#										'src/pytis/pytis.py',
+#										'src/pytis/configure.py',
+#										'src/pytis/*.py',
+										'src.pytis.pylib',
+										'src.pytis.pylib.util',
+										'src.pytis.pylib3',
+										'src.pytis.pylib3.util',
 				],
-				package_dir={'pytis':'src/bin',
-					'pylib':'src/bin/pylib',
-					'pylib3':'src/bin/pylib3'
-				},
 				scripts=[
-					'src/bin/copyright',
-					os.path.abspath(os.path.join(os.curdir,'src/bin/copyright'))
+#					os.path.abspath(os.path.join(os.curdir,'src/bin/copyright')),
+					'src/bin/copyright.py',
+					'src/bin/copyright'
 				],
-				py_modules=['src/bin/pytis'],
 			)
+	setup(**setup_options)
 
 def main():
 	"""usage: setup"""
