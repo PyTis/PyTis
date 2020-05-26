@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python
 # -*- coding: utf-8 -*-
 # ##############################################################################
 # The contents of this file are subject to the PyTis Public License Version	   #
@@ -43,7 +43,9 @@ __created__ = '06:14pm 09 Sep, 2009'
 __modified__ = '12:14pm 09 Mar, 2020'
 __copyright__ = 'PyTis'
 __version__ = '2.6'
-__configdir__ = '' 
+#__configdir__ = pytis_configure.copyright_dir # '/root/.mycopyright'
+__configdir__ = os.path.abspath(os.path.join(pytis_configure.configdir, \
+	'.mycopyright')) 
 
 comment_chars = {'php'			:	{'begin'	: '/*',
 									'middle' : '//',
@@ -1121,24 +1123,17 @@ def testConfig():
 
 def config(opts):
 	global __configdir__
-
 	print
 	oldpath = os.path.abspath(__configdir__)
-	if __configdir__.strip()	and os.path.isdir(oldpath) and \
-		os.path.exists(oldpath):
-
+	if __configdir__.strip()	and \
+	os.path.isdir(os.path.abspath(__configdir__)) and \
+	os.path.exists(os.path.abspath(__configdir__)):
 		print('CONFIG DIR was already set to: %s' % oldpath)
 		if raw_input('Remove old CONFIG DIR? [y/N]').lower().strip() == 'y':
 			removeConfigDir(oldpath)
 
-	if PyTis.is_root():
-		default_configdir = os.path.abspath(os.path.join(PyTis.__configdir__,
-			'.mycopyright'))
-	else:
-		default_configdir = os.path.abspath(os.path.join(PyTis.homedir(),
-			'.mycopyright'))
-
-	newpath = os.path.abspath(os.path.join(default_configdir, '.mycopyright'))
+	newpath = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]),
+											 '.mycopyright'))
 	print('DEFAULT: %s' % newpath)
 	print("Path to data dir (leave blank to use default) q to quit ")
 	configdir = raw_input('>>>')
