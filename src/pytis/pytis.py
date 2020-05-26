@@ -152,6 +152,7 @@ else:
 
 	class PermissionError(Exception): pass
 	# internal (mine/yours/ours) 
+	sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 	from pylib import configobj as COBJ
 	from pylib import parse
 	#from pylib.util.dicts import odict
