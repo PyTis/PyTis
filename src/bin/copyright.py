@@ -43,7 +43,9 @@ __created__ = '06:14pm 09 Sep, 2009'
 __modified__ = '12:14pm 09 Mar, 2020'
 __copyright__ = 'PyTis'
 __version__ = '2.6'
-__configdir__ = pytis_configure.copyright_dir # '/root/.mycopyright'
+#__configdir__ = pytis_configure.copyright_dir # '/root/.mycopyright'
+__configdir__ = os.path.abspath(os.path.join(pytis_configure.configdir, \
+	'.mycopyright')) 
 
 comment_chars = {'php'			:	{'begin'	: '/*',
 									'middle' : '//',
