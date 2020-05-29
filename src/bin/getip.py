@@ -126,12 +126,14 @@ def validate_ip(s):
 
 def valid_ip(ip):
 	if ip:
-		ip=str(ip).strip()
+		if type(ip) != type(str('string')):
+			ip = ip.decode('utf-8')
+		ip=str(ip).strip().replace("\\n","")
 	else:
 		ip=''
 	try:
 		socket.inet_aton(ip)
-	except socket.error:
+	except socket.error as e:
 		return ''
 	else:
 		return validate_ip(ip)
@@ -175,7 +177,7 @@ def ipecho(log, timeout=default_timeout):
 
 	try:
 		response = urlopen('http://ipecho.net/plain', timeout=timeout)
-		ip = response.read(-1)
+		ip = response.read()
 		
 	except URLError as e:
 		raise Timeout("timeout 1: %s" % str(e))
@@ -274,7 +276,8 @@ def main(funcs=funcs):
 		dest='quiet', help="be vewwy quiet (I'm hunting wabbits)`$")
 
 	vrs.add_option('-v', '--verbose', dest='verbose', action='count', default=0,
-		help="Verbosity.")
+		help="Verbosity, numeric, -vvv is less verbose than -vv which is less " \
+		"than -v.")
 
 	vrs.add_option("-V", "--version", action="store_true", default=False,
 		dest='version', help="show program's version number and exit")
@@ -370,6 +373,9 @@ VERSION:
 		print("getip v%s" % __version__)
 		return 0
 	# ----------------------------
+	if opts.verbose >= 3:
+		opts.debug=True
+
 	log.setLevel(0)
 	formatter = ' %(name)s | %(asctime)s | %(levelname)-8s | %(message)s'
 	logging.basicConfig(level=logging.ERROR, format=formatter, datefmt="%Y%m%d %H:%M:%S")
@@ -418,6 +424,8 @@ VERSION:
 				log.error('Function not found.')
 				return 1
 			else:
+				if opts.verbose > 0:
+					print('%s:' % func.__name__)
 				try:
 					print(func(log, opts.timeout))
 				except Timeout as e:
@@ -434,6 +442,7 @@ VERSION:
 				print(st % (i+1, func.__name__))
 		else:
 			ip = run_funcs(log, True, opts.verbose, opts.all, opts.timeout, funcs)
+			print(ip)
 			if ip:
 				return 0
 			else:
