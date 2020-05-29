@@ -71,14 +71,21 @@ import socket
 from subprocess import Popen, PIPE
 import sys
 from threading import Timer
-import urllib2
+python_version = float("%s.%s"%(sys.version_info.major,sys.version_info.minor))
+if python_version >= 3.0:
+	from urllib.request import urlopen
+	from urllib.error import URLError
+else:
+	from urllib2 import urlopen, URLError
+
+
 import logging; log=logging.getLogger('getip')
 
 default_timeout = 1
 __author__ = 'Josh Lee'
 __created__ = '06:14pm 01 October 2018'
 __copyright__ = 'PyTis.com'
-__version__ = 1.1
+__version__ = 1.2
 
 # =============================================================================
 # Begin Helpers
@@ -142,7 +149,7 @@ def hostip(log, timeout=default_timeout):
 	#logging.getLogger.setLevel(level=logging.CRITICAL)
 	try:
 		url = 'http://api.hostip.info/get_json.php'
-		info = json.loads(urllib2.urlopen(url,
+		info = json.loads(urlopen(url,
 			timeout=timeout).read().decode('utf-8'))
 		ip = info['ip']
 		'''
@@ -151,7 +158,7 @@ def hostip(log, timeout=default_timeout):
 			print('about to test: %s' % ip)
 			#socket.inet_aton(ip)
 		'''
-	except urllib2.URLError as e:
+	except URLError as e:
 		#log.error(e.reason) # e.g. 'timed out'
 		#log.error('(are you connected to the internet?)')
 		raise Timeout(str(e))
@@ -167,10 +174,10 @@ def hostip(log, timeout=default_timeout):
 def ipecho(log, timeout=default_timeout):
 
 	try:
-		response = urllib2.urlopen('http://ipecho.net/plain', timeout=timeout)
+		response = urlopen('http://ipecho.net/plain', timeout=timeout)
 		ip = response.read(-1)
 		
-	except urllib2.URLError as e:
+	except URLError as e:
 		raise Timeout("timeout 1: %s" % str(e))
 	except socket.timeout as e:
 		raise Timeout("timeout 2: %s" % str(e))
@@ -305,6 +312,9 @@ HISTORY:
 
 CHANGE LOG:
 	
+	v1.2 MINOR CHANGE																					       May 29, 2020
+		Updated urllib2 import to support both Python2 and Python3
+
 	v1.1 MINOR CHANGE																					   October 15, 2018
 		Better error handling.
 
