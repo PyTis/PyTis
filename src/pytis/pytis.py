@@ -142,6 +142,7 @@ if python_version >= 3.0:
 
 	# internal (mine/yours/ours) 
 	class PermissionError(Exception): pass
+	sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 	from pylib3 import configobj as COBJ
 	from pylib3 import parse
 	#from pylib3.util.dicts import odict
@@ -175,7 +176,7 @@ __created__ = '06:14pm 09 Sep, 2009'
 __copyright__ = 'PyTis.com'
 __configdir__ = pytis_configure.configdir # '/root/etc'
 __logdir__ = pytis_configure.logdir # '/root/log'
-__version__ = 7.0
+__version__ = '8.0.2'
 
 
 
@@ -183,7 +184,18 @@ __change_log__ = """
 
 CHANGE LOG
 
-v7.0
+v7.2
+	MAJOR CHANGES
+		added setup.py
+		moved allot around, new pytis direcotry for libs, bin directory remains for
+			scripts.
+		added get_input function to be python version indepenent
+
+v6.2
+	MAJOR CHANGES
+		added setup.py
+		moved allot around, new pytis direcotry for libs, bin directory remains for
+		scripts.
 
 v6.1
 	MINOR CHANGE ( version from boolean to integer)
@@ -356,6 +368,14 @@ def conjoin(unknown,errors=[]):
 	else:
 		errors.append(repr(unknown))
 	return errors
+
+def get_input(*args, **kwargs):
+	global python_version
+	if python_version >= 3.0:
+		return input(*args,**kwargs)
+	else:
+		return raw_input(*args,**kwargs)
+
 
 # #############################################################################
 # Custom Classes Below
@@ -2592,7 +2612,7 @@ def getInput(question, helptext='No help for this command',example_or_hint=None,
 		txt = '%s %s%s ' % (question,example_or_hint,h)
 
 	try:
-		res = raw_input("%s>>> " % (txt))
+		res = get_input("%s>>> " % (txt))
 	except (KeyboardInterrupt,EOFError) as e:
 		print("\nInvalid input, press 'q' to quit or 'h' for help.")
 		return getInput(question,helptext,example_or_hint,default,required)
@@ -2651,7 +2671,7 @@ input_options=__input_options__,option_always=__option_always__):
 	options = '/'.join(input_options)
 
 	try:
-		res = raw_input("%s [%s]>>> " % (question,options))
+		res = get_input("%s [%s]>>> " % (question,options))
 	except (KeyboardInterrupt,EOFError) as e:
 		print("\nInvalid input, press 'q' to quit or 'h' for help.")
 		if 'q' in input_options:
@@ -2998,15 +3018,20 @@ def dirTest(d):
 	if not os.path.exists(d) or not os.path.isdir(d): return False
 	return True
 
-def toContinue():
+def toContinue(prefix=''):
 	""" Prompt the user to press a key to continue. Should probably use a pager
 	most of the time though.
 	"""
+	def done():
+		return toContinue('done.')
+	self.done = done
 	if sys.platform in ('win32', 'win64'):
 		os.system('PAUSE')
 		sys.stdout.write("\n")
 	elif sys.stdin.isatty():
 		import tty
+		if prefix.strip():
+			sys.stdout.write("\n%s\n" % prefix)
 		sys.stdout.write("Press any key to continue . . .\n")
 		tty.setraw(sys.stdin.fileno())
 		try:
@@ -3015,6 +3040,9 @@ def toContinue():
 			os.system("stty sane")
 		sys.stdout.write("\n")
 	return
+def _done():
+	return toContinue('done.')
+toContinue.done=_done
 
 def dos2unix(thing):
 	"""

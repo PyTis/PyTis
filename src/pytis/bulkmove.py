@@ -32,8 +32,8 @@ __created__ = '12:31am 11 Nov, 2011'
 __copyright__ = 'PyTis'
 __version__ = '1.2'
 
-def version():
-	print	__version__
+def version(__version__=__version__):
+	print(__version__)
 
 def find_fix(fpath,rootdir):
 	""" finds prefix or postfix for a file.
@@ -48,7 +48,7 @@ def find_fix(fpath,rootdir):
 	try:
 		if fix.startswith('_'):
 			fix = fix[1:]
-	except IndexError, e:
+	except IndexError as e:
 		return ''
 	return fix
 
@@ -93,7 +93,7 @@ def run(files,rootdir,opts):
 		new_filename = bag[0]
 		try:
 			new_fileext = bag[1]
-		except IndexError, e:
+		except IndexError as e:
 			continue
 
 		if opts.prefix:
@@ -425,7 +425,7 @@ VERSION:
 		if not os.path.isdir(opts.outdir) or not os.path.exists(opts.outdir):
 			try:
 				os.mkdir(opts.outdir)
-			except OSError, SystemError:
+			except (OSError, SystemError):
 				log.error("Output dir does not exist, and cannot be created, perhaps you do not have permission to do this. Outdir: %s" % opts.outdir)
 				sys.exit(1)
 
@@ -439,11 +439,11 @@ VERSION:
 			return parser.print_help("No files provided")
 		else:
 			return run(files,rootdir,opts)
-	except PyTis.QuitNow,e:
-		print "Exiting now, bye!"
-	except KeyboardInterrupt,e:
+	except PyTis.QuitNow as e:
+		print("Exiting now, bye!")
+	except KeyboardInterrupt as e:
 		if opts.verbose:
-			print "\nbye!"
+			print("\nbye!")
 		return
 
 

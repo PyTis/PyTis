@@ -34,7 +34,7 @@ import optparse
 import os
 import shutil
 import sys
-import pytis as PyTis
+import pytis.pytis as PyTis
 
 import configure as pytis_configure # (imports configdir and logdir)
 
@@ -43,7 +43,7 @@ __created__ = '06:14pm 09 Sep, 2009'
 __modified__ = '12:14pm 09 Mar, 2020'
 __copyright__ = 'PyTis'
 __version__ = '2.6'
-__configdir__ = '' 
+__configdir__ = '.' 
 
 comment_chars = {'php'			:	{'begin'	: '/*',
 									'middle' : '//',
@@ -822,7 +822,7 @@ def copyright(opts,args):
 		raise PyTis.IdiotError("These files may not be copyrighted.")
 
 	def checkFoo():
-		c = raw_input('[y/N/a (always) or q to quit] >>>').lower()
+		c = PyTis.get_input('[y/N/a (always) or q to quit] >>>').lower()
 		if c not in ['y','n','q','a']:
 			return checkFoo()
 		if c == 'q':
@@ -968,7 +968,7 @@ def tList(opts):
 		print(" %s) %s" % (i,n))
 		i+=1
 	print("\nEnter a template number to edit, or any other key to quit")
-	res = raw_input('>>> ').strip()
+	res = PyTis.get_input('>>> ').strip()
 
 	if res in temps.keys():
 		opts.edit = temps[res]
@@ -1021,7 +1021,7 @@ def edit(fi, direct=False):
 			print('You may edit "%s" at any time.' % fi)
 		return PyTis.toContinue()
 	else: 
-		if raw_input('Would you like to edit the license/copyright '
+		if PyTis.get_input('Would you like to edit the license/copyright '
 					 'now? [y/N]').lower() in ['y','yes']:
 			if ed:
 				os.system("%s %s" % (ed, fi))
@@ -1072,12 +1072,12 @@ def removeConfigDir(opath):
 
 def addConfigDir(d):
 	
-	if raw_input('Create directory %s [y/N]: ' % d).lower().strip() == 'y':
+	if PyTis.get_input('Create directory %s [y/N]: ' % d).lower().strip() == 'y':
 		try:
 			os.mkdir(d)
 		except OSError as e:
 			if 'File exists' in str(e):
-				if raw_input('Directory already exists, use anyway? ' \
+				if PyTis.get_input('Directory already exists, use anyway? ' \
 							 '[y/N]: ').lower().strip() == 'y':
 					return True
 				else:
@@ -1123,12 +1123,15 @@ def config(opts):
 	global __configdir__
 
 	print
-	oldpath = os.path.abspath(__configdir__)
+	oldpath=''
+	if __configdir__:
+		oldpath = os.path.abspath(__configdir__)
+	
 	if __configdir__.strip()	and os.path.isdir(oldpath) and \
 		os.path.exists(oldpath):
 
 		print('CONFIG DIR was already set to: %s' % oldpath)
-		if raw_input('Remove old CONFIG DIR? [y/N]').lower().strip() == 'y':
+		if PyTis.get_input('Remove old CONFIG DIR? [y/N]').lower().strip() == 'y':
 			removeConfigDir(oldpath)
 
 	if PyTis.is_root():
@@ -1141,7 +1144,7 @@ def config(opts):
 	newpath = os.path.abspath(os.path.join(default_configdir, '.mycopyright'))
 	print('DEFAULT: %s' % newpath)
 	print("Path to data dir (leave blank to use default) q to quit ")
-	configdir = raw_input('>>>')
+	configdir = PyTis.get_input('>>>')
 	if not configdir.strip():
 		configdir = newpath
 
@@ -1190,7 +1193,7 @@ def myContinue(fi=None):
 		txt = "Press ENTER to continue... (or q to quit | or s to skip)"
 
 	try:
-		res = raw_input("%s>>> " % (txt))
+		res = PyTis.get_input("%s>>> " % (txt))
 	except (KeyboardInterrupt,EOFError) as e:
 		print("\nInvalid input, press 'q' to quit or 'h' for help.")
 		return myContinue()
