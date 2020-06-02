@@ -7,11 +7,11 @@ echo "/bin/rm -f `find . -iname '*.pyc'` ..."
 /bin/rm -f `find . -iname '*.pyc'`
 
 
-echo "/bin/rm -rf src/build/* ..."
-/bin/rm -rf src/build/*
+#echo "/bin/rm -rf src/build/* ..."
+#/bin/rm -rf src/build/*
 
 #echo "/bin/rm -rf src/dist/* ..."
-/bin/rm -rf src/dist/*
+#/bin/rm -rf src/dist/*
 
 echo "python3 setup.py build ..."
 python3 setup.py build

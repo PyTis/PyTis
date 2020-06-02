@@ -57,10 +57,6 @@ def die(string=None):
 	sys.exit()
 DIE=Die=die
 
-
-
-
-
 def read(*parts):
 	fpath = os.path.abspath(os.path.join(__curdir__, *parts))
 	handle = codecs.open(fpath, 'r')
@@ -79,10 +75,6 @@ def load_pytis():
 	sys.path.append(os.path.abspath(os.path.join(__curdir__,'src/pytis/pylib3')))
 	PyTis=import_by_path(pytis_path, 'pytis')
 	return PyTis
-
-
-	#raise RuntimeError("Unable to find version string.")
-
 
 install_requires = [
 #    'botocore==1.16.12',
@@ -134,7 +126,7 @@ setup_options = dict(
 			'pytis' : [ 'pytis*' ],
 		},
 		data_files = [
-			('', [os.path.abspath(os.path.join(__curdir__,'LICENSE.txt')),
+			('pytis', [os.path.abspath(os.path.join(__curdir__,'LICENSE.txt')),
 						os.path.abspath(os.path.join(__curdir__,'README.md')),
 						os.path.abspath(os.path.join(__curdir__,'PyTis_Logo.jpg'))
 					 ]
@@ -197,22 +189,6 @@ setup_options = dict(
 					'Programming Language :: Python :: 3.8',
     ],
 )
-
-
-if 'py2exe' in sys.argv:
-    # This will actually give us a py2exe command.
-    import py2exe
-    # And we have some py2exe specific options.
-    setup_options['options'] = {
-        'py2exe': {
-            'optimize': 0,
-            'skip_archive': True,
-            'dll_excludes': ['crypt32.dll'],
-            'packages': ['docutils', 'urllib', 'httplib', 'HTMLParser',
-                         'awscli', 'ConfigParser', 'xml.etree', 'pipes'],
-        }
-    }
-    setup_options['console'] = ['bin/aws']
 
 
 setup(**setup_options)

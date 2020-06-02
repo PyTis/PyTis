@@ -176,7 +176,7 @@ __created__ = '06:14pm 09 Sep, 2009'
 __copyright__ = 'PyTis.com'
 __configdir__ = pytis_configure.configdir # '/root/etc'
 __logdir__ = pytis_configure.logdir # '/root/log'
-__version__ = '8.2.2'
+__version__ = '8.2.3'
 
 
 
