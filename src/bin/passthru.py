@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/bin/python3
 """passthru
 ============
 """
@@ -8,23 +8,22 @@ import optparse
 import sys
 import subprocess
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),'..')))
 #
 # Internal
 #
 try:
-	#import pytis as PyTis # Shared GPL/PPL License
-	from bin import PyTis # Shared GPL/PPL License
+  #import pytis as PyTis # Shared GPL/PPL License
+  from pytis import pytis as PyTis # Shared GPL/PPL License
 except ImportError as e:
-	# We cannot go any further than this, we can't use the Parser or Logging tool
-	# to display these errors because those very tools are loaded from PyTis.
-	# Therefore, display errors now and exit with an errored exit code.
-	print("This program requires the PyTis Python library to run.")
-	print("You may download the PyTis library, or do an SVN checkout from:")
-	print("<https://sourceforge.net/projects/pytis/>")
-	print("This program should be installed in the bin directory of the PyTis library.")
-	print(str(e))
-	sys.exit(1)
+  # We cannot go any further than this, we can't use the Parser or Logging tool
+  # to display these errors because those very tools are loaded from PyTis.
+  # Therefore, display errors now and exit with an errored exit code.
+  print("This program requires the PyTis Python library to run.")
+  print("You may download the PyTis library, or do an SVN checkout from:")
+  print("<https://sourceforge.net/projects/pytis/>")
+  print("This program should be installed in the bin directory of the PyTis library.")
+  print(str(e))
+  sys.exit(1)
 
 __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __author__ = 'Josh Lee'

@@ -1,15 +1,20 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """docthis
 =======
 Doc Here"""
-from cStringIO import StringIO
-import compiler
+#import compiler
 import optparse
 import os
 import shutil
 import sys
+python_version = float("%s.%s"%(sys.version_info.major,sys.version_info.minor))
+if python_version >= 3.0:
+  from io import StringIO
+else:
+  from cStringIO import StringIO
+
 import traceback
-import pytis as PyTis
+import pytis.pytis as PyTis
 
 
 __curdir__ = os.path.abspath(os.path.dirname(__file__))
@@ -44,7 +49,7 @@ def ensure_out(outpath):
         os.mkdir(outpath)
     else:
         if not os.path.isdir(outpath):
-            raise OSError, "The provided output path is not a directory."
+            raise OSError("The provided output path is not a directory.")
     return os.path.abspath(outpath)
 
 def run(opts, args):
@@ -59,15 +64,15 @@ def run(opts, args):
     success_files = []
 
     for file in files:
-        curdir = os.path.abspath(os.path.dirname(file))
+        curdir = os.path.abspath(os.path.dirname(os.path.basename(file)))
         fname = os.path.basename(file)
         base = os.path.splitext(fname)[0]
         os.chdir(curdir)
         if not file.endswith('docthis'):
             try:
                 log.debug('attempting: %s' % file)
-                cmd = "pydoc -w %s "  %  os.path.abspath(file)
-                mod = compiler.parseFile(file)
+                cmd = "pydoc3 -w %s "  %  os.path.abspath(file)
+                #mod = compiler.parseFile(file)
             except SyntaxError:
                 log.warn('Syntax Error in %r' % file)
                 if opts.verbose:
@@ -76,29 +81,38 @@ def run(opts, args):
             else:
                 log.info("CMD: %s" % cmd)
                 cmd_out = os.popen(cmd).read(-1)
+                print('cmd_out', cmd_out)
 
 
                 #un-needed cpath
-                cpath = os.path.abspath(os.path.join(os.path.dirname(file),
-                                                     "%sc" % os.path.basename(file)))
+                log.info('"file" : %s' % file)
+                log.info('"dirname: %s' % os.path.dirname(file))
+                cpath = os.path.abspath(os.path.join(os.path.dirname(fname),
+                                                     "%sc" %
+                                                     os.path.basename(fname)))
                 # html path
-                hpath = os.path.abspath(os.path.join(os.path.dirname(file),
+                hpath = os.path.abspath(os.path.join(os.path.dirname(fname),
                                                      "%s.html" % base))
                 # to path (destination)
                 tpath = os.path.abspath(os.path.join(topath,
                                                      "%s.html" % os.path.basename(file)))
+                log.debug('BASENAME: %s' % os.path.basename(file))
                 log.debug('CPATH: %s' % cpath)
                 log.debug('HTML PATH: %s' % hpath)
-                log.debug('TO PATH: %s' % hpath)
+                log.debug('TO PATH: %s' % tpath)
 
-                os.unlink(cpath)
+                #os.unlink(cpath)
                 if 'ImportError' in cmd_out:
-                    print 'ImportError in: %s' % file
+                    print('ImportError in: %s' % file)
                     continue
+                log.info('hpath %s' % hpath)
+                log.info('tpath %s' % tpath)
+
                 shutil.move(hpath, tpath)
                 success_files.append(tpath)
+
     handle = open(os.path.abspath(os.path.join(topath, "OUT_LISTING.htm")), 'w')
-    handle.writelines(write_menu(opts,success_files))
+    handle.writelines(write_menu(opts, success_files))
     handle.close()
 
 def write_menu(opts, success_files):

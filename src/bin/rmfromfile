@@ -2,12 +2,12 @@
 """rmfromfile
 ==========
 Doc Here"""
-import cStringIO
 import pydoc
 import optparse
 import os
 import sys
-import pytis as PyTis
+from pytis import pytis as PyTis
+StringIO = PyTis.StringIO
 
 __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __author__ = 'Josh Lee'
@@ -18,16 +18,16 @@ __version__ = '1.0'
 
 class MyParser(optparse.OptionParser):
     def print_help(self, errors=None):
-        buf = cStringIO.StringIO()
+        buf = StringIO()
         sys.stdout = buf
-        print '='*80
+        print('='*80)
 
         optparse.OptionParser.print_help(self)
-        print """
+        print("""
 examples:    
- """
+ """)
         if errors:
-            print errors 
+            print(errors)
 
         sys.stdout = sys.__stdout__
         pager = pydoc.getpager()
@@ -51,9 +51,10 @@ def run(opts, args):
         handle.close()
 
     if not find.strip().strip("\n"):
-        raise PyTis.EmptyString, "No search string, string or file provided was empty."
+        raise PyTis.EmptyString("No search string, string or file provided " \
+					"was empty.")
     if not files:
-        raise Exception, "No files found to remove from."
+        raise PyTis.NoFiles("No files found to remove from.")
     
     log.debug("SEARCH STRING: \n\n %s\n\n" % find)
 
@@ -61,7 +62,7 @@ def run(opts, args):
         msg = "Searching: %s" % os.path.abspath(file)
         log.debug(msg)
         if opts.verbose:
-            print msg
+            print(msg)
         nhandle = open(os.path.abspath(file), 'r')
         contents = nhandle.read(-1)
         nhandle.close()
@@ -86,7 +87,7 @@ def run(opts, args):
             if doit:
                 msg = "Removing from: %s" % file 
                 log.info(msg)
-                print msg
+                print(msg)
 
                 xhandle = open(os.path.abspath(file), 'wb')
                 xhandle.write(contents.replace(find,''))
@@ -155,8 +156,8 @@ def main():
         log.info("RUNNING: %s" % ' '.join(sys.argv))
         try:
             return run(opts, args)
-        except (OSError, IOError, PyTis.EmptyString, PyTis.NoFiles), e:
-            print str(e)
+        except (OSError, IOError, PyTis.EmptyString, PyTis.NoFiles) as e:
+            print(str(e))
             return False
 
     else:

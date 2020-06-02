@@ -182,8 +182,8 @@ try:
 # Internal
 #
 	try:
-		import pytis as PyTis # Shared GPL/PPL License
-		from pylib.util.functional import any as fany
+		import pytis.pytis as PyTis # Shared GPL/PPL License
+		from pytis.pylib.util.functional import any as fany
 	except ImportError as e:
 		# We cannot go any further than this, we can't use the Parser or Logging tool
 		# to display these errors because those very tools are loaded from PyTis.
@@ -1375,7 +1375,7 @@ VERSION:
 	# ##################################################################### #
 	# BEGIN ERROR CHECKING (to be moved)
 	
-	if opts.frequency <> default_frequency:
+	if opts.frequency != default_frequency:
 		errors.append("YOU MAY NOT PROVIDE A FREQUENCY ARGUMENT!")
 
 	action_set_via_bg = False # for better error handling...
@@ -1413,7 +1413,7 @@ VERSION:
 
 				# uh ohh, it is already specified once,.. hmm.. maybe it is just the
 				# default.
-				elif ttr_set_by_STDIN is False and opts.ttr <> default_times_to_run:
+				elif ttr_set_by_STDIN is False and opts.ttr != default_times_to_run:
 					# uh oh, the user specified ttr as an argument and provided it
 					# blindly on STDIN.
 					errors.append('You cannot provide "times to run" twice, once as ' \

@@ -7138,3 +7138,105 @@
 20200521 01:46:41.651 pyrotate   INFO     [PID: 2018]  Starting pyrotate at 01:46am 05 May, 2020
 20200521 01:46:41.652 pyrotate   INFO     [PID: 2018]  STARTING: pyrotate
 20200521 01:46:41.652 pyrotate   INFO     [PID: 2018]  STARTING: pyrotate
+20200529 14:38:21.331 bulkcopy   INFO     [PID: 2323]  Starting bulkcopy at 02:38pm 05 May, 2020
+20200529 14:38:21.333 bulkcopy   INFO     [PID: 2323]  STARTING: bulkcopy
+20200529 14:38:27.395 bulkmove   INFO     [PID: 2332]  Starting bulkmove at 02:38pm 05 May, 2020
+20200529 14:38:27.395 bulkmove   INFO     [PID: 2332]  STARTING: bulkmove
+20200530 23:23:29.951 findrep    INFO     [PID: 7438]  Starting findrep at 11:23pm 05 May, 2020
+20200530 23:23:29.951 findrep    INFO     [PID: 7438]  STARTING: findrep
+20200530 23:27:08.781 findrep    INFO     [PID: 7609]  Starting findrep at 11:27pm 05 May, 2020
+20200530 23:27:08.781 findrep    INFO     [PID: 7609]  STARTING: findrep
+20200530 23:27:32.767 findrep    INFO     [PID: 7618]  Starting findrep at 11:27pm 05 May, 2020
+20200530 23:27:32.767 findrep    INFO     [PID: 7618]  STARTING: findrep
+20200530 23:29:01.339 findrep    INFO     [PID: 7698]  Starting findrep at 11:29pm 05 May, 2020
+20200530 23:29:01.339 findrep    INFO     [PID: 7698]  STARTING: findrep
+20200530 23:29:21.642 findrep    INFO     [PID: 7715]  Starting findrep at 11:29pm 05 May, 2020
+20200530 23:29:21.642 findrep    INFO     [PID: 7715]  STARTING: findrep
+20200530 23:30:21.841 findrep    INFO     [PID: 7724]  Starting findrep at 11:30pm 05 May, 2020
+20200530 23:30:21.841 findrep    INFO     [PID: 7724]  STARTING: findrep
+20200530 23:30:38.271 findrep    INFO     [PID: 7733]  Starting findrep at 11:30pm 05 May, 2020
+20200530 23:30:38.272 findrep    INFO     [PID: 7733]  STARTING: findrep
+20200530 23:42:54.202 copytest   INFO     [PID: 8208]  STARTING: copytest
+20200530 23:43:36.913 copytest   INFO     [PID: 8217]  STARTING: copytest
+20200530 23:43:45.952 copytest   INFO     [PID: 8226]  STARTING: copytest
+20200530 23:55:52.331 copytest   INFO     [PID: 8606]  STARTING: copytest
+20200530 23:56:02.654 copytest   INFO     [PID: 8606]  Done.
+20200530 23:56:05.539 copytest   INFO     [PID: 8617]  STARTING: copytest
+20200530 23:56:17.792 copytest   INFO     [PID: 8617]  Done.
+20200530 23:56:33.412 copytest   INFO     [PID: 8628]  STARTING: copytest
+20200530 23:56:56.029 copytest   INFO     [PID: 8628]  Done.
+20200531 23:34:13.894 docthis    INFO     [PID: 9362]  Starting docthis at 11:34pm 05 May, 2020
+20200531 23:34:13.895 docthis    INFO     [PID: 9362]  STARTING: docthis
+20200531 23:34:13.896 docthis    INFO     [PID: 9362]  RUNNING: src/bin/docthis src/bin/copytest
+20200531 23:35:17.199 docthis    INFO     [PID: 9396]  Starting docthis at 11:35pm 05 May, 2020
+20200531 23:35:17.199 docthis    INFO     [PID: 9396]  STARTING: docthis
+20200531 23:35:17.200 docthis    INFO     [PID: 9396]  RUNNING: /home/leejo7a/bin/docthis src/bin/benchmark.py src/bin/getip.py src/bin/modpydoc.py src/bin/passthru.py src/bin/pytis3.py src/bin/sandbox.py src/bin/signal-test.py src/bin/single-thread-skel.py src/bin/test.py src/bin/web-passthru.py src/bin/zcore_tmp.py
+20200531 23:35:40.699 docthis    INFO     [PID: 9414]  Starting docthis at 11:35pm 05 May, 2020
+20200531 23:35:40.699 docthis    INFO     [PID: 9414]  STARTING: docthis
+20200531 23:35:40.700 docthis    INFO     [PID: 9414]  RUNNING: /home/leejo7a/bin/docthis src/bin/benchmark.py src/bin/getip.py src/bin/modpydoc.py src/bin/passthru.py src/bin/pytis3.py src/bin/sandbox.py src/bin/signal-test.py src/bin/single-thread-skel.py src/bin/test.py src/bin/web-passthru.py src/bin/zcore_tmp.py docout/
+20200531 23:35:40.702 docthis    INFO     [PID: 9414]  outpath: /home/leejo7a/github/PyTis/docout
+20200531 23:35:40.703 docthis    INFO     [PID: 9414]  CMD: pydoc -w /home/leejo7a/github/PyTis/src/bin/src/bin/benchmark.py 
+20200531 23:39:28.238 docthis    INFO     [PID: 9602]  Starting docthis at 11:39pm 05 May, 2020
+20200531 23:39:28.238 docthis    INFO     [PID: 9602]  STARTING: docthis
+20200531 23:39:28.239 docthis    INFO     [PID: 9602]  RUNNING: /home/leejo7a/bin/docthis src/bin/ docout/
+20200531 23:39:28.404 docthis    INFO     [PID: 9602]  outpath: /home/leejo7a/github/PyTis/docout
+20200531 23:39:43.821 docthis    INFO     [PID: 9612]  Starting docthis at 11:39pm 05 May, 2020
+20200531 23:39:43.821 docthis    INFO     [PID: 9612]  STARTING: docthis
+20200531 23:39:43.822 docthis    INFO     [PID: 9612]  RUNNING: /home/leejo7a/bin/docthis src/bin/benchmark.py src/bin/getip.py src/bin/modpydoc.py src/bin/passthru.py src/bin/pytis3.py src/bin/sandbox.py src/bin/signal-test.py src/bin/single-thread-skel.py src/bin/test.py src/bin/web-passthru.py src/bin/zcore_tmp.py docout/
+20200531 23:39:43.823 docthis    INFO     [PID: 9612]  outpath: /home/leejo7a/github/PyTis/docout
+20200531 23:39:43.824 docthis    INFO     [PID: 9612]  CMD: pydoc -w /home/leejo7a/github/PyTis/src/bin/src/bin/benchmark.py 
+20200601 00:39:19.463 passthru.py INFO     [PID: 10526]  STARTING: passthru.py
+20200601 00:48:46.092 benchmark.py INFO     [PID: 10983]  STARTING: benchmark.py
+20200601 00:50:57.231 docthis    INFO     [PID: 11086]  Starting docthis at 12:50am 06 Jun, 2020
+20200601 00:50:57.231 docthis    INFO     [PID: 11086]  STARTING: docthis
+20200601 00:50:57.232 docthis    INFO     [PID: 11086]  RUNNING: /home/leejo7a/bin/docthis src/bin/passthru docout/
+20200601 00:50:57.234 docthis    INFO     [PID: 11086]  outpath: /home/leejo7a/github/PyTis/docout
+20200601 00:50:57.234 docthis    INFO     [PID: 11086]  CMD: pydoc -w /home/leejo7a/github/PyTis/src/bin/passthru 
+20200601 00:50:57.592 docthis    INFO     [PID: 11086]  "file" : src/bin/passthru
+20200601 00:50:57.592 docthis    INFO     [PID: 11086]  "dirname: src/bin
+20200601 00:50:57.593 docthis    INFO     [PID: 11086]  hpath /home/leejo7a/github/PyTis/passthru.html
+20200601 00:50:57.594 docthis    INFO     [PID: 11086]  tpath /home/leejo7a/github/PyTis/docout/passthru.html
+20200601 00:51:05.845 docthis    INFO     [PID: 11096]  Starting docthis at 12:51am 06 Jun, 2020
+20200601 00:51:05.845 docthis    INFO     [PID: 11096]  STARTING: docthis
+20200601 00:51:05.846 docthis    INFO     [PID: 11096]  RUNNING: /home/leejo7a/bin/docthis src/bin/passthru.py docout/
+20200601 00:51:05.847 docthis    INFO     [PID: 11096]  outpath: /home/leejo7a/github/PyTis/docout
+20200601 00:51:05.847 docthis    INFO     [PID: 11096]  CMD: pydoc -w /home/leejo7a/github/PyTis/src/bin/passthru.py 
+20200601 00:51:06.200 docthis    INFO     [PID: 11096]  "file" : src/bin/passthru.py
+20200601 00:51:06.200 docthis    INFO     [PID: 11096]  "dirname: src/bin
+20200601 00:51:06.201 docthis    INFO     [PID: 11096]  hpath /home/leejo7a/github/PyTis/passthru.html
+20200601 00:51:06.202 docthis    INFO     [PID: 11096]  tpath /home/leejo7a/github/PyTis/docout/passthru.py.html
+20200601 00:51:23.179 docthis    INFO     [PID: 11114]  Starting docthis at 12:51am 06 Jun, 2020
+20200601 00:51:23.179 docthis    INFO     [PID: 11114]  STARTING: docthis
+20200601 00:51:23.180 docthis    INFO     [PID: 11114]  RUNNING: /home/leejo7a/bin/docthis src/bin/passthru.py docout/
+20200601 00:51:23.181 docthis    INFO     [PID: 11114]  outpath: /home/leejo7a/github/PyTis/docout
+20200601 00:51:23.182 docthis    INFO     [PID: 11114]  CMD: pydoc3 -w /home/leejo7a/github/PyTis/src/bin/passthru.py 
+20200601 00:51:23.504 docthis    INFO     [PID: 11114]  "file" : src/bin/passthru.py
+20200601 00:51:23.504 docthis    INFO     [PID: 11114]  "dirname: src/bin
+20200601 00:51:23.505 docthis    INFO     [PID: 11114]  hpath /home/leejo7a/github/PyTis/passthru.html
+20200601 00:51:23.505 docthis    INFO     [PID: 11114]  tpath /home/leejo7a/github/PyTis/docout/passthru.py.html
+20200601 00:56:05.829 rmfromfile INFO     [PID: 11383]  Starting rmfromfile at 12:56am 06 Jun, 2020
+20200601 00:56:05.829 rmfromfile INFO     [PID: 11383]  STARTING: rmfromfile
+20200601 01:00:37.037 rmfromfile INFO     [PID: 11446]  Starting rmfromfile at 01:00am 06 Jun, 2020
+20200601 01:00:37.037 rmfromfile INFO     [PID: 11446]  STARTING: rmfromfile
+20200601 01:00:46.754 rmfromfile INFO     [PID: 11455]  Starting rmfromfile at 01:00am 06 Jun, 2020
+20200601 01:00:46.754 rmfromfile INFO     [PID: 11455]  STARTING: rmfromfile
+20200601 01:00:59.982 rmfromfile INFO     [PID: 11464]  Starting rmfromfile at 01:00am 06 Jun, 2020
+20200601 01:00:59.982 rmfromfile INFO     [PID: 11464]  STARTING: rmfromfile
+20200601 13:32:32.646 copyright  INFO     [PID: 11654]  Starting copyright at 01:32pm 06 Jun, 2020
+20200601 13:32:32.646 copyright  INFO     [PID: 11654]  STARTING: copyright
+20200601 13:32:44.327 copyright  INFO     [PID: 11663]  Starting copyright at 01:32pm 06 Jun, 2020
+20200601 13:32:44.328 copyright  INFO     [PID: 11663]  STARTING: copyright
+20200601 13:32:51.916 copyright  INFO     [PID: 11672]  Starting copyright at 01:32pm 06 Jun, 2020
+20200601 13:32:51.916 copyright  INFO     [PID: 11672]  STARTING: copyright
+20200601 15:08:02.685 copyright  INFO     [PID: 12443]  Starting copyright at 03:08pm 06 Jun, 2020
+20200601 15:08:02.685 copyright  INFO     [PID: 12443]  STARTING: copyright
+20200601 15:09:20.540 copyright  INFO     [PID: 12483]  Starting copyright at 03:09pm 06 Jun, 2020
+20200601 15:09:20.541 copyright  INFO     [PID: 12483]  STARTING: copyright
+20200601 15:11:40.608 copyright  INFO     [PID: 12548]  Starting copyright at 03:11pm 06 Jun, 2020
+20200601 15:11:40.608 copyright  INFO     [PID: 12548]  STARTING: copyright
+20200601 15:14:56.078 copyright  INFO     [PID: 12674]  Starting copyright at 03:14pm 06 Jun, 2020
+20200601 15:14:56.078 copyright  INFO     [PID: 12674]  STARTING: copyright
+20200601 15:15:06.085 copyright  INFO     [PID: 12683]  Starting copyright at 03:15pm 06 Jun, 2020
+20200601 15:15:06.086 copyright  INFO     [PID: 12683]  STARTING: copyright
+20200601 15:15:31.542 copyright  INFO     [PID: 12701]  Starting copyright at 03:15pm 06 Jun, 2020
+20200601 15:15:31.542 copyright  INFO     [PID: 12701]  STARTING: copyright
