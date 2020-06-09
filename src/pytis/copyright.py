@@ -128,6 +128,11 @@ comment_chars = {'php'      :  {'begin'  : '/*',
                   'end'  : '#',
                   'bin'  : 'bash',
                   'ext'  : ['.sh']},
+         'vim'      :  {'begin'  : '"" ',
+                  'middle' : '""',
+                  'end'  : ' ""',
+                  'bin'  : 'vim',
+                  'ext'  : ['vimrc']},
          'sh'      :  {'begin'  : '#',
                   'middle' : '#',
                   'end'  : '#',
@@ -224,6 +229,10 @@ def sh(fi,cp):
 @check
 def bash(fi,cp):
   return generic_check(fi,cp,'bash')
+
+@check
+def vim(fi,cp):
+  return generic_check(fi,cp,'vim')
 
 @check
 def ini(fi,cp):
@@ -448,6 +457,54 @@ def html(fi,cp):
     nhandle.close()
     os.unlink(backup)
     return True
+
+@apply
+def vim(fi,cp):
+  global comment_chars
+
+  # create a backup incase we have some error writting the backup
+  backup = os.path.abspath(os.path.join(os.path.dirname(fi),
+                      ".%s.bak" % os.path.basename(fi)))
+  shutil.copy(fi,backup)
+
+  # get the copyright ready
+  pcp = prettyCopyright(cp,comment_chars['vim'])
+
+  try:
+    handle = open(fi,'r')
+    lines = handle.readlines(-1)
+    handle.close()
+    nhandle = open(fi,'w', encoding='utf-8')
+
+    # BEGIN HANDLE EMPTY
+    # simplest case, the file is empty.
+    if not lines:
+      nhandle.write(pcp)
+    # END HANDLE EMPTY
+
+    else:
+      lines=PyTis.dos2unix(lines)
+      nhandle.write(pcp)
+      nhandle.writelines(lines[0:])
+
+  except Exception as e:
+    print(e)
+    # we messed up, restore from backup
+    try:
+      handle.close()
+    except:
+      pass
+    try:
+      nhandle.close()
+    except:
+      pass
+    shutil.move(backup, fi)
+    raise Exception(e)
+  else:
+    nhandle.close()
+    os.unlink(backup)
+    return True
+
 
 @apply
 def bash(fi,cp):
