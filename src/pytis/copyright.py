@@ -668,7 +668,7 @@ def python(fi,cp):
           nhandle.write(lines[1]) # copy encoding
           #nhandle.write(bytes(pcp, encoding='utf-8'))
           nhandle.write(pcp) # place copyright
-          nhandle.write(lines[2:]) # write everythign else
+          nhandle.writelines(lines[2:]) # write everythign else
         # END HANLDE ENCLDING LINE, WITH SHEBANG LINE
         else:
           nhandle.write(lines[0]) # copy shebang
@@ -932,7 +932,7 @@ def copyright(opts,args):
     not f.endswith('.bak') and \
     not f.endswith('.pyc') and \
     not f.endswith('.swp') and \
-    not f.endswith('.lvimrc') and not f.endswith('.htaccess')]
+    not f.endswith('.htaccess')]
   files.sort()
 
   log.debug("FILES: %s" % files)
