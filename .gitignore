@@ -3,6 +3,10 @@
 *.swo
 *.svn*
 *.log
+src/bin/configure.py
+src/bin/pylib*
+src/bin/pylib3*
+src/bin/pytis.py
 src/log
 src/log/
 src/log/pytis_tools.log
