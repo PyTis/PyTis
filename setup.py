@@ -128,6 +128,7 @@ setup_options = dict(
 		data_files = [
 			('pytis', [os.path.abspath(os.path.join(__curdir__,'LICENSE.txt')),
 						os.path.abspath(os.path.join(__curdir__,'README.md')),
+						os.path.abspath(os.path.join(__curdir__,'src/bin/.lvimrc')),
 						os.path.abspath(os.path.join(__curdir__,'PyTis_Logo.jpg'))
 					 ]
 			),
@@ -136,16 +137,25 @@ setup_options = dict(
 		#license_file=os.path.abspath(os.path.join(__curdir__,'LICENSE')),
 
     scripts=[
+			os.path.abspath(os.path.join(__curdir__, 'src/bin/benchmark')),
+			os.path.abspath(os.path.join(__curdir__, 'src/bin/bulkcopy')),
+			os.path.abspath(os.path.join(__curdir__, 'src/bin/bulkmove')),
 			os.path.abspath(os.path.join(__curdir__, 'src/bin/cleanlogs')), # python
 			os.path.abspath(os.path.join(__curdir__, 'src/bin/cleanpyc')), # bash
 			os.path.abspath(os.path.join(__curdir__, 'src/bin/clean-pyc')), # symlink
 			os.path.abspath(os.path.join(__curdir__, 'src/bin/cnt')), # python
 			os.path.abspath(os.path.join(__curdir__, 'src/bin/colorscheme')), # bash
+			os.path.abspath(os.path.join(__curdir__, 'src/bin/copyright')),
 			os.path.abspath(os.path.join(__curdir__, 'src/bin/csv_split')),
-			os.path.abspath(os.path.join(__curdir__, 'src/bin/flavorflav')), # bash
 			os.path.abspath(os.path.join(__curdir__, 'src/bin/docthis')),
 			os.path.abspath(os.path.join(__curdir__, 'src/bin/doscheck')),
-			os.path.abspath(os.path.join(__curdir__, 'src/bin/copyright')),
+			os.path.abspath(os.path.join(__curdir__, 'src/bin/findrep')),
+			os.path.abspath(os.path.join(__curdir__, 'src/bin/flavorflav')), # bash
+			os.path.abspath(os.path.join(__curdir__, 'src/bin/getip')),
+			os.path.abspath(os.path.join(__curdir__, 'src/bin/lvimrc')), # bash
+			os.path.abspath(os.path.join(__curdir__, 'src/bin/rmfromfile')),
+			os.path.abspath(os.path.join(__curdir__, 'src/bin/toContinue')),
+			os.path.abspath(os.path.join(__curdir__, 'src/bin/wget-diff')),
 #			os.path.abspath(os.path.join(__curdir__, 'src/bin/')),
 #			os.path.abspath(os.path.join(__curdir__, 'src/bin/')),
 #			os.path.abspath(os.path.join(__curdir__, 'src/bin/')),
@@ -156,14 +166,6 @@ setup_options = dict(
 			os.path.abspath(os.path.join(__curdir__, 'src/pytis/bulkmove.py')),
 			os.path.abspath(os.path.join(__curdir__, 'src/pytis/copyright.py')),
 			os.path.abspath(os.path.join(__curdir__, 'src/pytis/toContinue.py')),
-			os.path.abspath(os.path.join(__curdir__, 'src/bin/benchmark')),
-			os.path.abspath(os.path.join(__curdir__, 'src/bin/bulkcopy')),
-			os.path.abspath(os.path.join(__curdir__, 'src/bin/bulkmove')),
-			os.path.abspath(os.path.join(__curdir__, 'src/bin/findrep')),
-			os.path.abspath(os.path.join(__curdir__, 'src/bin/getip')),
-			os.path.abspath(os.path.join(__curdir__, 'src/bin/wget-diff')),
-			os.path.abspath(os.path.join(__curdir__, 'src/bin/toContinue')),
-			os.path.abspath(os.path.join(__curdir__, 'src/bin/rmfromfile')),
 		],
     install_requires=install_requires,
     extras_require={},

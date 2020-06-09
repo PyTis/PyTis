@@ -1,6 +1,7 @@
 /home/leejo7a/github/PyTis/LICENSE.txt
 /home/leejo7a/github/PyTis/PyTis_Logo.jpg
 /home/leejo7a/github/PyTis/README.md
+/home/leejo7a/github/PyTis/src/bin/.lvimrc
 /home/leejo7a/github/PyTis/src/bin/benchmark
 /home/leejo7a/github/PyTis/src/bin/bulkcopy
 /home/leejo7a/github/PyTis/src/bin/bulkmove
@@ -16,6 +17,7 @@
 /home/leejo7a/github/PyTis/src/bin/findrep
 /home/leejo7a/github/PyTis/src/bin/flavorflav
 /home/leejo7a/github/PyTis/src/bin/getip
+/home/leejo7a/github/PyTis/src/bin/lvimrc
 /home/leejo7a/github/PyTis/src/bin/rmfromfile
 /home/leejo7a/github/PyTis/src/bin/toContinue
 /home/leejo7a/github/PyTis/src/bin/wget-diff
