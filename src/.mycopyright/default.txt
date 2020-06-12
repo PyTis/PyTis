@@ -27,7 +27,7 @@ Please direct any questions or concerns via electronic-mail to:
 publicpolicy.law.and.security@one.verizon.com; 
 Attn: Verizon Communications Inc. Legal Department; Subject: Copyright.
 
-    Copyright © {YEAR} Verizon Communications Inc.
+    Copyright (c) {YEAR} Verizon Communications Inc.
 
 
 Software distributed under the License is distributed on an "AS IS"
