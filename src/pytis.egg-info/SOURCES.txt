@@ -31,6 +31,7 @@ pytis/bulkmove.py
 pytis/configure.py
 pytis/copyright.py
 pytis/pytis.py
+pytis/pytis.pyc
 pytis/toContinue.py
 pytis.egg-info/PKG-INFO
 pytis.egg-info/SOURCES.txt
