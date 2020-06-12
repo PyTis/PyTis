@@ -21,7 +21,7 @@
 import os
 import sys
 import shutil
-import pytis as PyTis
+from pytis import PyTis
 
 __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __author__ = 'Josh Lee'
@@ -76,12 +76,12 @@ def _jog(re, force, ingorecase, ftype, backups, fstring, rstring):
     bcommand = "cp %s %s" % (new, bak)
 
     if not force:
-      print '-'*80
-      res = raw_input("VERIFY: Run this command?\n%s\n[Y/n (q to quit)]:" % command)
+      print('-'*80)
+      res = PyTis.get_input("VERIFY: Run this command?\n%s\n[Y/n (q to quit)]:" % command)
       if res == 'q':
-        raise PyTis.QuitNow, 'q to quit was pressed'
+        raise PyTis.QuitNow('q to quit was pressed')
       elif res not in ['Y','y']:
-        print 'skipped...'
+        print('skipped...')
       else:
         shutil.move(old,new)
         if backups:
@@ -100,9 +100,9 @@ def jog(opts, fstring, rstring, ftype):
   try:
     if not ftype:
       if not opts.force:
-        if raw_input("Search all file types [Y/n]:") not in ['Y','y']:
-          print '='*80
-          print 'Please specify a file type (example *.txt)'
+        if PyTis.get_input("Search all file types [Y/n]:") not in ['Y','y']:
+          print('='*80)
+          print('Please specify a file type (example *.txt)')
           return False
       ftype = '*'
 
@@ -116,8 +116,8 @@ def jog(opts, fstring, rstring, ftype):
         files = list(ftype)
         for ftype in files:
           _jog(re, opts.force, opts.case, ftype, opts.backup, fstring, rstring)
-  except PyTis.QuitNow, e:
-    print 'aborted...', str(e)
+  except PyTis.QuitNow as e:
+    print('aborted...', str(e))
     return False
   else:
     return True
@@ -136,12 +136,12 @@ def _run(re, force, ingorecase, ftype, backups, fstring, rstring):
           rstring)
 
   if not force:
-    print '-'*80
-    res = raw_input("VERIFY: Run this command?\n%s\n[Y/n (q to quit)]:" % command)
+    print('-'*80)
+    res = PyTis.get_input("VERIFY: Run this command?\n%s\n[Y/n (q to quit)]:" % command)
     if res == 'q':
-      raise PyTis.QuitNow, 'q to quit was pressed'
+      raise PyTis.QuitNow('q to quit was pressed')
     elif res not in ['Y','y']:
-      print 'skipped...'
+      print('skipped...')
     else:
       os.system(command)
   else:
@@ -158,9 +158,9 @@ def run(opts, fstring, rstring, *ftype):
   try:
     if not ftype:
       if not opts.force:
-        if raw_input("Search all file types [Y/n]:") not in ['Y','y']:
-          print '='*80
-          print 'Please specify a file type (example *.txt)'
+        if PyTis.get_input("Search all file types [Y/n]:") not in ['Y','y']:
+          print('='*80)
+          print('Please specify a file type (example *.txt)')
           return
       ftype = '*'
 
@@ -175,8 +175,8 @@ def run(opts, fstring, rstring, *ftype):
         for ftype in files:
           _run(re, opts.force, opts.case, ftype, backups, fstring, rstring)
 
-  except PyTis.QuitNow, e:
-    print 'aborted...', str(e)
+  except PyTis.QuitNow as e:
+    print('aborted...', str(e))
     return False
   else:
     return True
@@ -192,10 +192,23 @@ printing those commands to the screen, so I can see them and memorize them.
 Also has some nice options and can additinally do file names or portions 
 of file names.
   """
-  global log
+  global log, __author__, __copyright__, __created__, __version__
+
+  help_dict = dict(version=__version__,
+             author=__author__,
+             created=__created__,
+             copyright=__copyright__)
   parser = PyTis.MyParser()
   parser.extra_txt = """
-examples:  
+CHANGE LOG:
+  
+  v3.1 MINOR CHANGES                                              June 12, 2020
+    Updated a few lines to move from Python2.7 to Python3.x
+
+  v3.0 
+    FIRST ADDITION OF THIS CHANGE LOG
+
+EXAMPLES:  
  findrep [FIND] [REPLACE] *.txt  >> prompts each file   [y/N]
  findrep [FIND] [REPLACE] '*.txt' >> prompts only once   [y/N]
  findrep [FIND] [REPLACE]     >> prompts for global *.* [y/N]
@@ -205,7 +218,8 @@ examples:
  findrep [FIND] [REPLACE] *.txt -f  >> no prompts FOCRES ALL *.txt
   same as
  findrep [FIND] [REPLACE] '*.txt' -f >> no prompts FORCES ALL *.txt
-"""
+""" % help_dict
+
   #parser.set_description(__doc__)
   parser.set_usage(main.__doc__)
   parser.formatter.format_description = lambda s:s
@@ -254,7 +268,7 @@ examples:
 
   if len(args) < 2:
     if opts.force:
-      print "ERROR: invalid input %s" % ' '.join(sys.argv[1:])
+      print("ERROR: invalid input %s" % ' '.join(sys.argv[1:]))
       sys.exit(1)
     elif len(args):
       parser.print_help("ERROR: invalid input '%s', look at the examples provided." % ' '.join(sys.argv[1:]))
@@ -271,8 +285,8 @@ examples:
       log.debug("ARGS: %s", args)
       return run(opts, *args)
 
-  except KeyboardInterrupt, e:
-    print 'bye!'
+  except KeyboardInterrupt:
+    print('bye!')
     sys.exit(1)
   else:
     sys.exit(0)
