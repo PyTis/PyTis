@@ -176,7 +176,7 @@ __created__ = '06:14pm 09 Sep, 2009'
 __copyright__ = 'PyTis.com'
 __configdir__ = pytis_configure.configdir # '/root/etc'
 __logdir__ = pytis_configure.logdir # '/root/log'
-__version__ = '8.2.7'
+__version__ = '8.2.8'
 
 
 
@@ -2160,22 +2160,32 @@ class MyParser(optparse.OptionParser):
                usage, option_list, option_class, version, conflict_handler, 
                description, formatter, add_help_option, prog, epilog)
 
+
   def print_out(self, txt):
-    import curses
-    #txt = txt.replace("`$","\n")
-    txt = txt.replace("`$","\n                     ")
-    #txt = txt.replace(":\n",":\n\n")
-    win=curses.initscr()
-    max_x, max_y = win.getmaxyx()
-    curses.endwin()
-    if len(txt.split("\n")) > max_x:
+    try:
+      import curses
+      #txt = txt.replace("`$","\n")
+      txt = txt.replace("`$","\n                     ")
+      #txt = txt.replace(":\n",":\n\n")
+      win=curses.initscr()
+      max_x, max_y = win.getmaxyx()
+      curses.endwin()
+      if len(txt.split("\n")) > max_x:
+        pager = pydoc.getpager()
+        try:
+          pager(txt)
+        except (EOFError, KeyboardInterrupt) as e:
+          pass
+      else:
+        sys.stdout.write("%s\n" % txt)
+    except:
       pager = pydoc.getpager()
       try:
         pager(txt)
       except (EOFError, KeyboardInterrupt) as e:
         pass
-    else:
       sys.stdout.write("%s\n" % txt)
+
 
   def print_help(self, errors=None):
     """

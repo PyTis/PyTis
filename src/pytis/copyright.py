@@ -665,6 +665,7 @@ def python(fi,cp):
       if lines[0].startswith('#!/'): # shebangline
         # BEGIN HANLDE ENCLDING LINE, WITH SHEBANG LINE
         if lines[1].startswith('# encoding='):
+          nhandle.write(lines[0]) # copy shebangline
           nhandle.write(lines[1]) # copy encoding
           #nhandle.write(bytes(pcp, encoding='utf-8'))
           nhandle.write(pcp) # place copyright
