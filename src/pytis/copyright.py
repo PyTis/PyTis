@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ##############################################################################
 # The contents of this file are subject to the PyTis Public License Version    #
@@ -34,7 +34,10 @@ import optparse
 import os
 import shutil
 import sys
-import pytis.pytis as PyTis
+try:
+  import pytis.pytis as PyTis
+except:
+  import pytis as PyTis
 
 import configure as pytis_configure # (imports configdir and logdir)
 
@@ -42,7 +45,7 @@ __author__ = 'Josh Lee'
 __created__ = '06:14pm 09 Sep, 2009'
 __modified__ = '12:14pm 09 Mar, 2020'
 __copyright__ = 'PyTis'
-__version__ = '3.0'
+__version__ = '3.1'
 
 def defaultTemplate():
   return """The contents of this file are subject to the PyTis Public License Version
@@ -829,10 +832,25 @@ def loadCopyright(opts):
   log.debug("template path: %s" % fi)
   try:
     handle = open(fi,'r')
-  except (IOError, OSError) as e:
+    body = handle.read(-1)
+  except UnicodeDecodeError:
+    try:
+      handle = open(fi,'r', encoding='utf-8')
+      body = handle.read(-1)
+    except UnicodeDecodeError:
+      try:
+        handle = open(fi,'r', encoding='ISO-8859-1')
+        body = handle.read(-1)
+      except UnicodeDecodeError as e:
+        raise PyTis.InvalidInput("template file: %s cannot be read, invalid " \
+          "enoding found.\n%s" % (fi, str(e)))
+
+  except (IOError, OSError):
     raise PyTis.FileNotFound('Template not found: %s' % fi)
 
-  body = handle.read(-1)
+        
+
+
   handle.close()
   if not body.strip():
     raise PyTis.EmptyTemplate("ERROR! The copyright template loaded " \
@@ -1080,7 +1098,7 @@ def nfpath(opts, default=False):
 def show(opts):
   try:
     cr, path= loadCopyright(opts)
-  except (PyTis.EmptyTemplate, PyTis.FileNotFound) as e:
+  except (PyTis.EmptyTemplate, PyTis.FileNotFound, PyTis.InvalidInput) as e:
     print(str(e))
     sys.exit(1)
   print(cr)
@@ -1375,6 +1393,11 @@ HISTORY:
   Original Author
 
 CHANGE LOG:
+
+  v3.1 MINOR CHANGE                                             December 8, 2020 
+    I finally figured out the encoding thing, for loading a proper copyright
+    symbol.  All this time it wasn't UTF-8, it was Latin-1 (ISO-8859-1).  I
+    altered the loadCopyright function to try each encoding.
 
   v3.0 MAJOR CHANGE                                                March 31 2020
     I realized today that if an administrator installs this package with pip, a
