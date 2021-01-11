@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # encoding=utf-8
 # ##############################################################################
 # The contents of this file are subject to the PyTis Public License Version    #
@@ -176,13 +176,24 @@ __created__ = '06:14pm 09 Sep, 2009'
 __copyright__ = 'PyTis.com'
 __configdir__ = pytis_configure.configdir # '/root/etc'
 __logdir__ = pytis_configure.logdir # '/root/log'
-__version__ = '8.2.8'
+__version__ = '8.2.9'
 
 
 
 __change_log__ = """
 
 CHANGE LOG
+
+V8.2.9
+  MINOR CHANGE
+   Changes in PyTis.MyLogger to both the warn and warning methods.
+    Tweaked log.warn, as it was depricated and throws a warning itself, which
+    causes a loop if you are overriding the logging.Logger. God the Python3
+    Devs are morons.  On top of this, they want you to replace log.warn with
+    log.warning, three more letters to type.  What is it with Python 3 Devs
+    that want more characters, instead of less?  I fix this by setting
+    logging.Logger.warn=logging.Logger.warning in my override of warn, and
+    within warn, I call warning, which I have also overridden.
 
 v7.2
   MAJOR CHANGES
@@ -608,7 +619,7 @@ limit - default maximum for the number of available file descriptors.
 
     def _close_fds(preserve=None):
       preserve = preserve or []
-      for fd in xrange(0, _maxfd()):
+      for fd in range(0, _maxfd()):
         if fd not in preserve:
           try:
             os.close(fd)
@@ -1217,7 +1228,7 @@ class ConfigFile(COBJ.ConfigObj):
   
   # XXX-TODO: I know I do the same thing as below in a few files to grab the
   # config file, filename.  I could just get it off this class as an attribu
-  # Additionally, I would like to have the filename as one attribute/propert
+  # Additionally, I would like to have the filename as one attribute/property
   # and the filepath as a separate one.  However I can't make this second
   # change just, as I have to ensure backwards compatibility.
     global log
@@ -2040,12 +2051,14 @@ class MyLogger(logging.Logger):
     return logging.Logger.info(self, msg, *args, **kwargs)
 
   def warn(self, msg, *args, **kwargs):
-    self.had_warning = True
+    logging.Logger.warn = logging.Logger.warning
+    return self.warning(msg, *args, **kwargs)
 
+  def warning(self, msg, *args, **kwargs):
+    self.had_warning = True
     if not self.opt_quiet:
       print('WARNING: %s' % msg)
-    return logging.Logger.warn(self, msg, *args, **kwargs)
-  warning = warn
+    return logging.Logger.warning(self, msg, *args, **kwargs)
 
   def error(self, msg, *args, **kwargs):
     self.had_error = True
@@ -3477,12 +3490,15 @@ def add_os_touch():
         return True
 
     elif sys.version_info >=(3, 3):
-      def touch(fname, times=None, ns=None, dir_fd=None):
-        if os.path.isfile(fname) and os.path.exists(fname): return False
-        with os.open(fname, os.O_CREAT, dir_fd=dir_fd) as f:
+      def touch(fname, mode=0o666, dir_fd=None, **kwargs):
+        if os.path.isfile(fname) and os.path.exists(fname):
+          return False
+        flags = os.O_CREAT | os.O_APPEND
+        with os.fdopen(os.open(fname, flags=flags, mode=mode, dir_fd=dir_fd)) as f:
           os.utime(f.fileno() if os.utime in os.supports_fd else fname,
-            times=times, ns=ns, dir_fd=dir_fd)
+            dir_fd=None if os.supports_fd else dir_fd, **kwargs)
         return True
+
     else:
       def touch(fname, times=None):
         if os.path.isfile(fname) and os.path.exists(fname): return False
