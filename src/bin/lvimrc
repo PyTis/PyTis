@@ -4,5 +4,7 @@ if [ -f /usr/local/pytis/.lvimrc ]; then
   cp /usr/local/pytis/.lvimrc .
 elif [ -f ~/.local/pytis/.lvimrc ]; then
   cp ~/.local/pytis/.lvimrc .
+elif [ -f /home/jlee/bin/.lvimrc ]; then
+  cp /home/jlee/bin/.lvimrc .
 fi
 
