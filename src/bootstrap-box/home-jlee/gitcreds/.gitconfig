@@ -5,6 +5,6 @@
 [color]
 	ui = auto
 [credential]
-	helper = store --file /root/.my-credentials
+	helper = store --file ~/.my-credentials
 [push]
 	default = simple
