@@ -1,0 +1,10 @@
+[user]
+	name = PyTis
+	username = PyTis
+	email = GitHub@PyTis.com
+[color]
+	ui = auto
+[credential]
+	helper = store --file /root/.my-credentials
+[push]
+	default = simple

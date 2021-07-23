@@ -1,0 +1,4 @@
+
+	export PATH="/root/bin/:$PATH"
+
+ 	PS1="\n\[\e[30;1m\](\[\e[1;34m\]\u\e[1;30m\]@\e[1;34m\]\h\[\e[30;1m\])-(\[\e[0;31m\]\w\[\e[30;1m\])-(\[\e[1;34m\]\@ \d\[\e[30;1m\])->\[\e[30;1m\]\n(\[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\])--> \[\e[0m\]"

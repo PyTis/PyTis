@@ -1,0 +1,14 @@
+CopyAsHTML=16908288
+RightClickAction=paste
+MiddleClickAction=extend
+CursorColour=255,128,128
+ThemeFile=
+CursorType=block
+FontHeight=14
+Font=Courier
+FontSmoothing=default
+BoldAsFont=no
+ScrollbackLines=90000
+FontWeight=700
+FontIsBold=yes
+BoldAsColour=yes

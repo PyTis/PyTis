@@ -1,0 +1,48 @@
+
+hardstatus on
+hardstatus lastline "%-Lw%{= BW}%50>%n%f* %t%{-}%+Lw%<"
+hardstatus string '%{= kG}[%= %{=kw}%?%-Lw%?%{r}(%{W}%n*%f%t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B}%Y-%m-%d %{W}%c %{g}]'
+caption always
+caption string '%{= kG} [%= %{=kw}%?%-Lw%?%{r}(%{W}%n*%f%t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B}%Y-%m-%d %{W}%c %{g}]'
+deflogin off
+multiuser on
+autodetach on
+
+
+# 256 colors
+attrcolor b ".I"
+termcapinfo xterm 'Co#256:AB=\E[48;5;%dm:AF=\E[38;5;%dm'
+defbce on
+
+
+
+chdir /home/leejo7a/sbash/
+screen -t 'VI. . . . . . . '          0
+stuff "vim -o /home/leejo7a/sbash/pytis.py /home/leejo7a/sbash/benchmark.py  \015"
+
+chdir /home/leejo7a/sbash/
+screen -t 'RUN . . . . . . '          1
+#stuff "tail -f /home/ut3hax/html_log/ut3hax.com.error.log\015"
+
+chdir /home/leejo7a/sbash/log/
+screen -t 'logging . . .   '          2
+stuff " pyrotate pytis_tools.log benchmark.log ; multitail benchmark.log pytis_tools.log\015"
+
+chdir /home/leejo7a/bin/
+screen -t 'pytis bin . .   '          3
+stuff "\015"
+
+chdir /home/leejo7a/
+screen -t 'python . . . . .  '          4
+stuff "python\015"
+
+
+select 0
+
+# Select 0 puts the focus back on window 0.  Placing window zero's block at the
+# end of this file, also works.
+
+
+#
+#chdir /data/jails/lighttpd/domains/torscene.com/www
+#screen -t 'torscene  '       3

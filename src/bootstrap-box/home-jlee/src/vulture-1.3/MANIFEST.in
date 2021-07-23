@@ -1,0 +1,5 @@
+include *.rst
+include *.txt
+include tests/*.py
+include tox.ini
+include vulture/whitelists/*.py

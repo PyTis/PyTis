@@ -1,0 +1,23 @@
+naming convention
+git repo pull order
+aws end points
+logging
+
+ask ray for VPC endpoint to be set up for glacier
+who sets this up?
+example-account-
+thing-accountnumber-timestamp
+YYYYMMDDHHMMSS
+
+# from leejo7a  branch
+
+git fetch
+git pull
+git checkout master
+git fetch 
+git pull
+git checkout leejo7a
+git fetch  # not neccessarly needed
+git pull # not neccessarly needed
+git merge master
+

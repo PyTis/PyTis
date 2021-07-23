@@ -1,0 +1,16 @@
+
+
+# .bashrc unique to Venus
+
+    #alias web='cd /usr/local/www/cmd'
+    #alias cls='cd /usr/local/www/cmd/classes'
+    #alias cron='cd /usr/local/www/cmd/cron'
+    #alias pages='cd /usr/local/www/cmd/pages'
+    #alias reps='cd /usr/local/www/cmd/reports'
+    #alias sql='cd /usr/local/www/cmd/sql'
+    #alias utl='cd /usr/local/www/cmd/util'
+
+    #alias conf='vi /usr/local/www/cmd/config/config.php'
+    #alias vdt='vi /usr/local/www/cmd/classes/dispatch_table.inc'
+
+    PS1="\n\[\e[30;1m\](\[\e[36;1m\]\u\[\e[1;30m\]@\[\e[36;1m\]\h\[\e[30;1m\])-(\[\e[35;1m\]\w\[\e[30;1m\])-(\[\e[36;1m\]\@ \d\[\e[30;1m\])->\[\e[30;1m\]\n(\[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\])--> \[\e[0m\]"

@@ -1,0 +1,77 @@
+# ~/.bashrc: executed by bash(1) for non-login shells.
+
+export PATH="/sbin/:$PATH"
+export PAGER="/usr/bin/less"
+export EDITOR="vim"
+
+
+
+[ -z "$PS1" ] && return
+
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+alias vi='vim'
+alias v='vi'
+
+if [[ "$OSTYPE" == "cygwin" ]]; then
+	alias ping='ping -n 4'
+else
+	alias ping='ping -c 4'
+fi
+
+alias dc='cd ..'
+
+
+alias x='screen -x -U'
+alias list='screen -list'
+alias d='screen -d'
+alias RR='screen -RR'
+alias screen='screen -U'
+alias wipe='screen -wipe'
+
+alias fn='find . -iname '
+alias f='fg'
+alias j='jobs'
+alias p='pwd'
+alias c='/usr/bin/clear'
+
+
+
+# enable color support of ls and also add handy aliases
+if [ -x /usr/bin/dircolors ]; then
+    test -r /usr/bin/dircolors && eval "$(/usr/bin/dircolors -b)" || eval "$(/usr/bin/dircolors -b)"
+    alias ls='ls --color=auto'
+    alias dir='ls --color=auto --format=vertical'
+    alias vdir='ls --color=auto --format=long'
+
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+#else
+#    eval `dircolors -b`
+fi
+
+# important, this allows colors from ls to pull through whne piping to more or less
+alias more='less -R'
+alias less='less -R'
+
+alias grep="grep --exclude='*.swp'"
+alias gr="grep -r --exclude='debug.log*' "
+# some more ls aliases
+alias ll='ls -halF --time-style=long-iso --color=auto'
+alias la='ls -A'
+alias l='ls -shaFl --time-style=long-iso --color'
+#alias l='echo "Dir Size|Perms|Link Count|Owner|Group|Size|Mod. Time|Name"; ls -AFls -h --time-style=long-iso --color --group-directories-first'
+alias l='echo "Dir Size|Perms|Link Count|Owner|Group|Size|Mod. Time|Name"; ls -shaFl --time-style=long-iso --color --group-directories-first'
+
+export svnroot=svn+ssh://file077@svn.code.sf.net/p/pytis/code/trunk
+export SVN_SSH="ssh -l file077"
+export SVNROOT=svnroot
+
+alias svu='svn update'
+alias u='svu'
+alias i='svn commit'
+
+alias notes='vi /home/notes.txt'
+

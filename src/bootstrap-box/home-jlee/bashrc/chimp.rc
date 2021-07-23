@@ -1,0 +1,48 @@
+
+	export SESSION_DIR="/home/jlee/.sessions"
+
+	[ -z "$PS1" ] && return
+
+	alias brc='vi /home/jlee/.bashrc'
+	alias scr='vi /home/jlee/.screenrc'
+	alias vrc='vi /home/jlee/.vimrc'
+	alias src='source /home/jlee/.bashrc'
+
+	alias bin='cd /home/jlee/bin'
+	alias etc='cd /home/jlee/etc'
+	alias log='cd /home/jlee/log'
+
+	alias todo='vi /home/jlee/todo.txt'
+
+	export PATH="/home/jlee/bin/:$PATH"
+	export PATH="/sbin/:/usr/sbin/:/bin/:/usr/bin/:$PATH"
+
+ 	# PS1="\n\[\e[30;1m\](\[\e[1;32m\]\u\[\e[1;30m\]@\[\e[1;34m\]\h\[\e[30;1m\])-(\[\e[1;33m\]\w\[\e[30;1m\])-(\[\e[0;32m\]\@ \d\[\e[30;1m\])->\[\e[30;1m\]\n(\[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\])--> \[\e[0m\]"
+	# much happier, now I have the seconds in the timestamp.
+
+
+
+#  From: https://jakemccrary.com/blog/2015/05/03/put-the-last-commands-run-time-in-your-bash-prompt/
+
+
+	function timer_start {
+		timer=${timer:-$SECONDS}
+	}
+
+	function timer_stop {
+		timer_show=$(($SECONDS - $timer))
+		unset timer
+	}
+
+	trap 'timer_start' DEBUG
+
+	if [ "$PROMPT_COMMAND" == "" ]; then
+		PROMPT_COMMAND="timer_stop"
+	else
+		PROMPT_COMMAND="$PROMPT_COMMAND; timer_stop"
+	fi
+
+
+ 	PS1="\n\[\e[30;1m\](\[\e[1;32m\]\u\[\e[1;30m\]@\[\e[1;34m\]\h\[\e[0;37m\])-[last command: \${timer_show} seconds]-(\[\e[0;32m\]\D{%H:%M:%S %p} \d\[\e[30;1m\])->\[\e[30;1m\]\n(\[\e[1;33m\]\w\[\e[30;1m\] has \[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\]) --> \[\e[0m\]"
+	# ^^^ I AM LOVING THIS! ^^^^^
+

@@ -1,0 +1,13 @@
+
+# .bashrc
+
+    alias web='cd /home/jlee/cmd3'
+    alias cls='cd /home/jlee/cmd3/classes'
+    alias cron='cd /home/jlee/cmd3/cron'
+    alias pages='cd /home/jlee/cmd3/pages'
+    alias reps='cd /home/jlee/cmd3/reports'
+    alias sql='cd /home/jlee/cmd3/sql'
+    alias utl='cd /home/jlee/cmd3/util'
+
+		alias conf='vi /home/jlee/cmd3/config/config.php'
+		alias vdt='vi /home/jlee/cmd3/classes/dispatch_table.inc'	

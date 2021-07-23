@@ -1,0 +1,7 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhistcnt =5
+let g:netrw_dirhist_5='/cygdrive/c/Development/workspace/zctrl/src/zctrl'
+let g:netrw_dirhist_4='/cygdrive/c/Development/workspace/zctrl/src/zctrl/form'
+let g:netrw_dirhist_3='/cygdrive/c/Development/workspace/zctrl/src/zctrl'
+let g:netrw_dirhist_2='/cygdrive/c/Development/workspace/zctrl/src/zctrl/db'
+let g:netrw_dirhist_1='/cygdrive/c/Development/workspace/zctrl/src/zctrl/cp2'

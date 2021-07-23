@@ -1,0 +1,14 @@
+[user]
+	name = leejo7a
+  username = PyTis
+	email = Joshua.Lee1@verizon.com
+[color]
+  ui = auto
+[credential]
+  helper = store --file /home/leejo7a/.my-credentials
+[push]
+  default = simple
+[core]
+  editor = vim
+[http]
+	postBuffer = 524288000

@@ -1,0 +1,11 @@
+
+#export PATH="/home/ut3hax/bin/:$PATH"
+#alias tacc='tail -f /var/log/apache2/access.log'
+#alias terr='tail -f /var/log/apache2/error.log'
+#alias mlog='tail -f /var/log/mail.log'
+alias web='cd /data/cell/web/mars/domains/vpnet/decentralhost/dev/www'
+#   \033[38;5;95;4m \033[m
+#   \[\033[38;5;95;4m\]
+#PS1="\n\[\e[30;1m\](\[\033[38;5;95;4m\]\u\[\033[m\]\[\e[1;30m\]@\[\033[m\]\[\033[38;5;95;4m\]\h\[\033[m\]\[\e[30;1m\])-(\[\033[38;5;196;5m\]\w\[\e[30;1m\])-(\[\033[38;5;95;4m\]\@ \d\[\e[30;1m\]\[\033[m\])->\[\e[30;1m\]\n(\[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\])-->\[\e[0m\]\[\033[m\] "
+PS1="\n\[\e[30;1m\](\[\033[38;5;95;4m\]\u\[\033[m\]\[\e[1;30m\]@\[\033[m\]\[\033[38;5;95;1m\]\h\[\033[m\]\[\e[30;1m\])-(\[\033[38;5;196;1m\]\w\[\e[30;1m\])-(\[\033[38;5;95;1m\]\@ \d\[\e[30;1m\]\e[30;1m\])->\[\e[30;1m\]\n(\[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 2 total | /bin/sed 's/total //')b\[\e[30;1m\])-->\[\e[0m\]\[\033[m\] "
+#PS1="\n\[\e[30;1m\](\[\e[32;1m\]\u\[\e[1;30m\]@\[\e[32;1m\]\h\[\e[30;1m\])-(\[\e[34;1m\]\w\[\e[30;1m\])-(\[\e[32;1m\]\@ \d\[\e[30;1m\])->\[\e[30;1m\]\n(\[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\])--> \[\e[0m\]"

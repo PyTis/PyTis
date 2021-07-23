@@ -1,0 +1,6 @@
+
+#export PATH="/home/ut3hax/bin/:$PATH"
+#alias tacc='tail -f /var/log/apache2/access.log'
+#alias terr='tail -f /var/log/apache2/error.log'
+alias mlog='tail -f /var/log/mail.log'
+PS1="\n\[\e[30;1m\](\[\e[32;1m\]\u\[\e[1;30m\]@\[\e[32;1m\]\h\[\e[30;1m\])-(\[\e[34;1m\]\w\[\e[30;1m\])-(\[\e[32;1m\]\@ \d\[\e[30;1m\])->\[\e[30;1m\]\n(\[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\])--> \[\e[0m\]"
