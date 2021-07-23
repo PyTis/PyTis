@@ -37,8 +37,108 @@ alias p='pwd'
 alias c='/usr/bin/clear'
 
 
-
 # enable color support of ls and also add handy aliases
+# -----------------------------------------------------------------------------
+# Project shortcuts ##
+############################################################################
+##  XXX-TODO (next version)
+## In the next version, I would like to keep up to 20 lines in the file.
+## Without giving a number, prj would just load the top line. setprj would
+## shift all lines down one, and add a new top line, prj again would load the
+## top line, but prj 1 or prj 2 would go back one or 2 lines down and read
+## those instead (basically allowing you to keep history).  I think the
+## trickiest part would be to keep it from growing too much, and keeping it to
+## 20 lines only.
+##
+############################################################################
+
+   function _setProject() {
+     old="$PROJECT";
+     if [ "$*" == '' ]; then
+       input=`pwd`;
+       input=`realpath $input`;
+     else
+       input=`realpath $*`;
+     fi 
+
+     if [[ "$input" == "$PROJECT" ]]; then
+       echo "NO CHANGE, PROJECT ALREADY SET TO: $PROJECT";
+     elif [[ "$input" != "" ]]; then
+       export PROJECT=$input;
+       echo "PROJECT WAS: $old";
+       echo "PROJECT IS NOW: '$PROJECT' ";
+     else
+       noinput=`pwd`;
+       if [[ "$noinput" == "$PROJECT" ]]; then
+         echo "NO CHANGE, PROJECT ALREADY SET TO: $PROJECT";
+       else
+         export PROJECT="$noinput";
+         echo "PROJECT WAS: $old";
+         echo "PROJECT IS NOW: '$PROJECT' ";
+       fi
+     fi
+
+     echo $PROJECT > ~/.project.set
+
+     _setPrompt;
+   }
+   function _loadProject() {
+     if [ -f  ~/.project.set ]; then
+       export PROJECT=`cat ~/.project.set`
+     else
+       export PROJECT="~/"
+     fi
+     _setPrompt;
+   }
+   function _showProject() {
+     echo "$PROJECT";
+   }
+   function _prj() {
+     _loadProject;
+     if [ $PROJECT == "~/" ]; then
+       cd
+     else
+       cd $PROJECT;
+     fi
+
+     _setPrompt;
+
+   }
+   function _getProject() {
+     _loadProject;
+     echo "PROJECT IS: ";
+     _showProject;
+   }
+
+   alias setproject='_setProject';
+   alias setProject='_setProject';
+
+   alias setprj='_setProject';
+   alias setPrj='_setProject';
+
+   alias showProject='_showProject';
+   alias showproject='_showProject';
+   alias showprj='_showProject';
+   alias showPrj='_showProject';
+   alias getprj='_showProject';
+   alias getPrj='_showProject';
+
+   alias sp='_setProject';
+
+   alias loadProject='_loadProject';
+   alias loadproject='_loadProject';
+   alias loadprj='_loadProject';
+   alias loadPrj='_loadProject';
+
+   alias getProject='_getProject';
+   alias getproject='_getProject';
+   alias getprj='_getProject';
+   alias getPrj='_getProject';
+#   alias prj='cd "$PROJECT"'
+   alias prj='_prj';
+#
+# -----------------------------------------------------------------------------
+
 if [ -x /usr/bin/dircolors ]; then
     test -r /usr/bin/dircolors && eval "$(/usr/bin/dircolors -b)" || eval "$(/usr/bin/dircolors -b)"
     alias ls='ls --color=auto'
@@ -73,5 +173,5 @@ alias svu='svn update'
 alias u='svu'
 alias i='svn commit'
 
-alias notes='vi /home/notes.txt'
+alias notes='vi ~/notes.txt'
 
