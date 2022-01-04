@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
+# -*- coding: ISO-8859-1 -*-
 # ##############################################################################
 # The contents of this file are subject to the PyTis Public License Version    #
 # 1.0 (the "License"); you may not use this file except in compliance with     #
@@ -34,10 +34,7 @@ import optparse
 import os
 import shutil
 import sys
-try:
-  import pytis.pytis as PyTis
-except:
-  import pytis as PyTis
+import pytis.pytis as PyTis
 
 import configure as pytis_configure # (imports configdir and logdir)
 
@@ -45,7 +42,7 @@ __author__ = 'Josh Lee'
 __created__ = '06:14pm 09 Sep, 2009'
 __modified__ = '12:14pm 09 Mar, 2020'
 __copyright__ = 'PyTis'
-__version__ = '3.1'
+__version__ = '3.0'
 
 def defaultTemplate():
   return """The contents of this file are subject to the PyTis Public License Version
@@ -272,7 +269,7 @@ def javascript(fi,cp):
     handle = open(fi,'r')
     lines = handle.readlines(-1)
     handle.close()
-    nhandle = open(fi,'w', encoding='utf-8')
+    nhandle = open(fi,'w', encoding='ISO-8859-1')
 
     # BEGIN HANDLE EMPTY
     # simplest case, the file is empty.
@@ -282,7 +279,7 @@ def javascript(fi,cp):
 
     else:
       lines=PyTis.dos2unix(lines)
-      #nhandle.write(bytes(pcp, encoding='utf-8'))
+      #nhandle.write(bytes(pcp, encoding='ISO-8859-1'))
       nhandle.write(pcp)
       nhandle.writelines(lines[0:])
 
@@ -320,7 +317,7 @@ def ini(fi,cp):
     handle = open(fi,'r')
     lines = handle.readlines(-1)
     handle.close()
-    nhandle = open(fi,'w', encoding='utf-8')
+    nhandle = open(fi,'w', encoding='ISO-8859-1')
 
     # BEGIN HANDLE EMPTY
     # simplest case, the file is empty.
@@ -367,7 +364,7 @@ def css(fi,cp):
     handle = open(fi,'r')
     lines = handle.readlines(-1)
     handle.close()
-    nhandle = open(fi,'w', encoding='utf-8')
+    nhandle = open(fi,'w', encoding='ISO-8859-1')
 
     # BEGIN HANDLE EMPTY
     # simplest case, the file is empty.
@@ -414,7 +411,7 @@ def html(fi,cp):
     handle = open(fi,'r')
     lines = handle.readlines(-1)
     handle.close()
-    nhandle = open(fi,'w', encoding='utf-8')
+    nhandle = open(fi,'w', encoding='ISO-8859-1')
 
     # BEGIN HANDLE EMPTY
     # simplest case, the file is empty.
@@ -477,7 +474,7 @@ def vim(fi,cp):
     handle = open(fi,'r')
     lines = handle.readlines(-1)
     handle.close()
-    nhandle = open(fi,'w', encoding='utf-8')
+    nhandle = open(fi,'w', encoding='ISO-8859-1')
 
     # BEGIN HANDLE EMPTY
     # simplest case, the file is empty.
@@ -529,7 +526,7 @@ def bash(fi,cp):
     handle = open(fi,'r')
     lines = handle.readlines(-1)
     handle.close()
-    nhandle = open(fi,'w', encoding='utf-8')
+    nhandle = open(fi,'w', encoding='ISO-8859-1')
 
     # BEGIN HANDLE EMPTY
     # simplest case, the file is empty.
@@ -589,7 +586,7 @@ def sh(fi,cp):
     handle = open(fi,'r')
     lines = handle.readlines(-1)
     handle.close()
-    nhandle = open(fi,'w', encoding='utf-8')
+    nhandle = open(fi,'w', encoding='ISO-8859-1')
 
     # BEGIN HANDLE EMPTY
     # simplest case, the file is empty.
@@ -657,7 +654,7 @@ def python(fi,cp):
     if not lines:
       print('a')
       sys.exit()
-      #nhandle.write(bytes(pcp, encoding='utf-8'))
+      #nhandle.write(bytes(pcp, encoding='ISO-8859-1'))
       nhandle.write(pcp)
     # END HANDLE EMPTY
 
@@ -670,13 +667,13 @@ def python(fi,cp):
         if lines[1].startswith('# encoding='):
           nhandle.write(lines[0]) # copy shebangline
           nhandle.write(lines[1]) # copy encoding
-          #nhandle.write(bytes(pcp, encoding='utf-8'))
+          #nhandle.write(bytes(pcp, encoding='ISO-8859-1'))
           nhandle.write(pcp) # place copyright
           nhandle.writelines(lines[2:]) # write everythign else
         # END HANLDE ENCLDING LINE, WITH SHEBANG LINE
         else:
           nhandle.write(lines[0]) # copy shebang
-          #nhandle.write(bytes(pcp, encoding='utf-8'))
+          #nhandle.write(bytes(pcp, encoding='ISO-8859-1'))
           nhandle.write(pcp) # place copyright
           nhandle.writelines(lines[1:]) # write everything else
       # END HANDLE SHEBANG
@@ -684,13 +681,13 @@ def python(fi,cp):
         # BEGIN HANDLE ENCODING LINE, WITHOUT SHEBANG LINE
         if lines[0].startswith('# encoding='):
           nhandle.write(lines[0]) # copy over encoding line
-          #nhandle.write(bytes(pcp, encoding='utf-8'))
+          #nhandle.write(bytes(pcp, encoding='ISO-8859-1'))
           nhandle.write(pcp) # place copyright
           nhandle.write(lines[1:]) # write everything else
         # END HANDLE ENCODING LINE, WITHOUT SHEBANG LINE
         else:
           # No SHEBANG, NO ENCODING
-          #nhandle.write(bytes(pcp, encoding='utf-8'))
+          #nhandle.write(bytes(pcp, encoding='ISO-8859-1'))
           nhandle.write(pcp) # place copyright
           nhandle.writelines(lines[0:]) # write everything else
 
@@ -729,7 +726,7 @@ def php(fi, cp):
     handle = open(fi,'r')
     lines = handle.readlines(-1)
     handle.close()
-    nhandle = open(fi,'w', encoding='utf-8')
+    nhandle = open(fi,'w', encoding='ISO-8859-1')
 
     # BEGIN HANDLE EMPTY
     # simplest case, the file is empty.
@@ -831,26 +828,11 @@ def loadCopyright(opts):
   fi = tpath(opts,opts.file==None)
   log.debug("template path: %s" % fi)
   try:
-    handle = open(fi,'r')
-    body = handle.read(-1)
-  except UnicodeDecodeError:
-    try:
-      handle = open(fi,'r', encoding='utf-8')
-      body = handle.read(-1)
-    except UnicodeDecodeError:
-      try:
-        handle = open(fi,'r', encoding='ISO-8859-1')
-        body = handle.read(-1)
-      except UnicodeDecodeError as e:
-        raise PyTis.InvalidInput("template file: %s cannot be read, invalid " \
-          "enoding found.\n%s" % (fi, str(e)))
-
-  except (IOError, OSError):
+    handle = open(fi,'r',encoding='ISO-8859-1')
+  except (IOError, OSError) as e:
     raise PyTis.FileNotFound('Template not found: %s' % fi)
 
-        
-
-
+  body = handle.read(-1)
   handle.close()
   if not body.strip():
     raise PyTis.EmptyTemplate("ERROR! The copyright template loaded " \
@@ -1098,7 +1080,7 @@ def nfpath(opts, default=False):
 def show(opts):
   try:
     cr, path= loadCopyright(opts)
-  except (PyTis.EmptyTemplate, PyTis.FileNotFound, PyTis.InvalidInput) as e:
+  except (PyTis.EmptyTemplate, PyTis.FileNotFound) as e:
     print(str(e))
     sys.exit(1)
   print(cr)
@@ -1149,7 +1131,7 @@ License."""
     "**Please rename or remove this file first.\n" % __configdir__)
     return PyTis.toContinue()
 
-  handle = open(fi, 'w', encoding='utf-8')
+  handle = open(fi, 'w', encoding='ISO-8859-1')
   txt = createDefault.__doc__ % datetime.datetime.now().year
   handle.writelines(txt)
   handle.close()
@@ -1252,7 +1234,7 @@ def setConfig(d):
       line = "__configdir__ = '%s'\n" % d
     nfile_lines.append(line)
 
-  handle = open(mpath,'w', encoding='utf-8')
+  handle = open(mpath,'w', encoding='ISO-8859-1')
   handle.writelines(nfile_lines)
   handle.close()
   
@@ -1393,11 +1375,6 @@ HISTORY:
   Original Author
 
 CHANGE LOG:
-
-  v3.1 MINOR CHANGE                                             December 8, 2020 
-    I finally figured out the encoding thing, for loading a proper copyright
-    symbol.  All this time it wasn't UTF-8, it was Latin-1 (ISO-8859-1).  I
-    altered the loadCopyright function to try each encoding.
 
   v3.0 MAJOR CHANGE                                                March 31 2020
     I realized today that if an administrator installs this package with pip, a
