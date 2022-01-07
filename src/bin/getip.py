@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 # encoding=utf-8
 # ##############################################################################
 # The contents of this file are subject to the PyTis Public License Version    #
@@ -61,7 +61,7 @@ Lastly, I wrote this program, so that it itself (getip.py) can be
 imported by other programs.  This way you can call "run_funcs," or, if
 you wish, run a specific one.
 This tool will automatically edit files and add your copyright loaded from a 
-template.	The use of this "template" can be over-ridden using the -t flag.
+template.  The use of this "template" can be over-ridden using the -t flag.
 
 """
 import json
@@ -73,10 +73,10 @@ import sys
 from threading import Timer
 python_version = float("%s.%s"%(sys.version_info.major,sys.version_info.minor))
 if python_version >= 3.0:
-	from urllib.request import urlopen
-	from urllib.error import URLError
+  from urllib.request import urlopen
+  from urllib.error import URLError
 else:
-	from urllib2 import urlopen, URLError
+  from urllib2 import urlopen, URLError
 
 
 import logging; log=logging.getLogger('getip')
@@ -93,50 +93,50 @@ __version__ = 1.2
 funcs = []
 # I like this way more, but the other is easier to understand
 def collector(func):
-	global funcs
-	funcs.append(func) #[func.__name__][method] = func
-	return func # this is important, if you don't do this... you cannot call the function EXCEPT through the collector
+  global funcs
+  funcs.append(func) #[func.__name__][method] = func
+  return func # this is important, if you don't do this... you cannot call the function EXCEPT through the collector
 
 def run_cmd(cmd, timeout_sec):
-	proc = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE)
+  proc = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE)
 
-	#iN, out, err = os.popen3('curl ipinfo.io/ip')
-	#iN.close() ; err.close()
-	#ip = out.read().strip()
+  #iN, out, err = os.popen3('curl ipinfo.io/ip')
+  #iN.close() ; err.close()
+  #ip = out.read().strip()
 
-	timer = Timer(timeout_sec, proc.kill)
-	try:
-		timer.start()
-		stdout, stderr = proc.communicate()
-	finally:
-		timer.cancel()
-	return stdout
+  timer = Timer(timeout_sec, proc.kill)
+  try:
+    timer.start()
+    stdout, stderr = proc.communicate()
+  finally:
+    timer.cancel()
+  return stdout
 
 def validate_ip(s):
-	a = s.split('.')
-	if len(a) != 4:
-		return '' 
-	for x in a:
-		if not x.isdigit():
-			return ''
-		i = int(x)
-		if i < 0 or i > 255:
-			return ''
-	return s
+  a = s.split('.')
+  if len(a) != 4:
+    return '' 
+  for x in a:
+    if not x.isdigit():
+      return ''
+    i = int(x)
+    if i < 0 or i > 255:
+      return ''
+  return s
 
 def valid_ip(ip):
-	if ip:
-		if type(ip) != type(str('string')):
-			ip = ip.decode('utf-8')
-		ip=str(ip).strip().replace("\\n","")
-	else:
-		ip=''
-	try:
-		socket.inet_aton(ip)
-	except socket.error as e:
-		return ''
-	else:
-		return validate_ip(ip)
+  if ip:
+    if type(ip) != type(str('string')):
+      ip = ip.decode('utf-8')
+    ip=str(ip).strip().replace("\\n","")
+  else:
+    ip=''
+  try:
+    socket.inet_aton(ip)
+  except socket.error as e:
+    return ''
+  else:
+    return validate_ip(ip)
 
 class Timeout(Exception): pass
 
@@ -147,319 +147,318 @@ class Timeout(Exception): pass
 
 @collector
 def hostip(log, timeout=default_timeout):
-	#ol_level = logging.getLogger().getLevel()
-	#logging.getLogger.setLevel(level=logging.CRITICAL)
-	try:
-		url = 'http://api.hostip.info/get_json.php'
-		info = json.loads(urlopen(url,
-			timeout=timeout).read().decode('utf-8'))
-		ip = info['ip']
-		'''
-		if ip: 
-			ip = str(ip).strip()
-			print('about to test: %s' % ip)
-			#socket.inet_aton(ip)
-		'''
-	except URLError as e:
-		#log.error(e.reason) # e.g. 'timed out'
-		#log.error('(are you connected to the internet?)')
-		raise Timeout(str(e))
-	except KeyboardInterrupt:
-		return None
-	else:
-		log.debug('hostip: "%s"' % str(ip).strip())
-		return valid_ip(ip)
-		return ip
+  #ol_level = logging.getLogger().getLevel()
+  #logging.getLogger.setLevel(level=logging.CRITICAL)
+  try:
+    url = 'http://api.hostip.info/get_json.php'
+    info = json.loads(urlopen(url,
+      timeout=timeout).read().decode('utf-8'))
+    ip = info['ip']
+    '''
+    if ip: 
+      ip = str(ip).strip()
+      print('about to test: %s' % ip)
+      #socket.inet_aton(ip)
+    '''
+  except URLError as e:
+    #log.error(e.reason) # e.g. 'timed out'
+    #log.error('(are you connected to the internet?)')
+    raise Timeout(str(e))
+  except KeyboardInterrupt:
+    return None
+  else:
+    log.debug('hostip: "%s"' % str(ip).strip())
+    return valid_ip(ip)
+    return ip
 
 
 @collector
 def ipecho(log, timeout=default_timeout):
 
-	try:
-		response = urlopen('http://ipecho.net/plain', timeout=timeout)
-		ip = response.read()
-		
-	except URLError as e:
-		raise Timeout("timeout 1: %s" % str(e))
-	except socket.timeout as e:
-		raise Timeout("timeout 2: %s" % str(e))
-	else:
-		log.debug('ipecho: "%s"' % str(ip).strip())
-		return valid_ip(ip)
-	
+  try:
+    response = urlopen('http://ipecho.net/plain', timeout=timeout)
+    ip = response.read()
+    
+  except URLError as e:
+    raise Timeout("timeout 1: %s" % str(e))
+  except socket.timeout as e:
+    raise Timeout("timeout 2: %s" % str(e))
+  else:
+    log.debug('ipecho: "%s"' % str(ip).strip())
+    return valid_ip(ip)
+  
 @collector
 def ipinfo(log, timeout=default_timeout):
-	''' on tested system, generally needs on or over -t0.085 timeout
-	'''
-	'''
-	iN, out, err = os.popen3('curl ipinfo.io/ip')
-	iN.close() ; err.close()
-	ip = out.read().strip()
-	'''
+  ''' on tested system, generally needs on or over -t0.085 timeout
+  '''
+  '''
+  iN, out, err = os.popen3('curl ipinfo.io/ip')
+  iN.close() ; err.close()
+  ip = out.read().strip()
+  '''
 
-	ip = run_cmd('curl ipinfo.io/ip', timeout) #.readlines(-1)[0].strip()	# timeout happens at 1 second
-	log.debug('ipinfo: "%s"' % str(ip).strip())
-	return valid_ip(ip)
+  ip = run_cmd('curl ipinfo.io/ip', timeout) #.readlines(-1)[0].strip()  # timeout happens at 1 second
+  log.debug('ipinfo: "%s"' % str(ip).strip())
+  return valid_ip(ip)
 
 @collector
 def opendns(log, timeout=default_timeout):
-	''' on tested system, generally needs on or over 0.0128 timeout
-	'''
-#	ip = os.popen('dig +short myip.opendns.com @resolver1.opendns.com').readlines(-1)[0].strip()
-	ip = run_cmd('dig +short myip.opendns.com @resolver1.opendns.com', timeout) #.readlines(-1)[0].strip()	# timeout happens at 1 second
-	log.debug('opendns: "%s"' % str(ip).strip())
-	return valid_ip(ip)
+  ''' on tested system, generally needs on or over 0.0128 timeout
+  '''
+#  ip = os.popen('dig +short myip.opendns.com @resolver1.opendns.com').readlines(-1)[0].strip()
+  ip = run_cmd('dig +short myip.opendns.com @resolver1.opendns.com', timeout) #.readlines(-1)[0].strip()  # timeout happens at 1 second
+  log.debug('opendns: "%s"' % str(ip).strip())
+  return valid_ip(ip)
 
 def run_funcs(log, echo=True, verbose=False, run_all=False, 
-		timeout=default_timeout, funcs=funcs):
+    timeout=default_timeout, funcs=funcs):
 
-	return_ip = None
-	for func in funcs:
-		try:
-			log.debug("calling: %s" % func.__name__)
-			ip = func(log, timeout)
-		except KeyboardInterrupt as e:
-			log.debug("KeyboardInterrupt:",e)
-			log.info("Script terminated by Control-C")
-			log.info("bye!")
-			# Return Code 130 - Script terminated by Control-C
-			sys.exit(130)
-		except Timeout as e:
-			if verbose > 1:
-				log.error('timeout: %s' % str(e))
-		except Exception as e:
-			log.error('unknown exception')
-			log.error(str(e))
-			log.exception(e)
-		else:
-			if ip:
-				if echo:
-					print(ip)
-				return_ip = ip
-				if not run_all:
-					return ip
+  return_ip = None
+  for func in funcs:
+    try:
+      log.debug("calling: %s" % func.__name__)
+      ip = func(log, timeout)
+    except KeyboardInterrupt as e:
+      log.debug("KeyboardInterrupt:",e)
+      log.info("Script terminated by Control-C")
+      log.info("bye!")
+      # Return Code 130 - Script terminated by Control-C
+      sys.exit(130)
+    except Timeout as e:
+      if verbose > 1:
+        log.error('timeout: %s' % str(e))
+    except Exception as e:
+      log.error('unknown exception')
+      log.error(str(e))
+      log.exception(e)
+    else:
+      if ip:
+        if echo:
+          print(ip)
+        return_ip = ip
+        if not run_all:
+          return ip
 
-	return return_ip 
+  return return_ip 
 
 def main(funcs=funcs):
-	"""usage: %prog <options> (*use '--help' to see the full help text) """
-	global default_timeout, log
-	# ----------------------------
-	parser = optparse.OptionParser(description=__doc__)
-	parser.set_usage(main.__doc__)
-	parser.formatter.format_description = lambda s:s
+  """usage: %prog <options> (*use '--help' to see the full help text) """
+  global default_timeout, log
+  # ----------------------------
+  parser = optparse.OptionParser(description=__doc__)
+  parser.set_usage(main.__doc__)
+  parser.formatter.format_description = lambda s:s
 
-	# ----------------------------
-#	parser.add_option("-D", "--debug", action="store_true", default=False, help="Enable debugging")
+  # ----------------------------
+#  parser.add_option("-D", "--debug", action="store_true", default=False, help="Enable debugging")
 
-	vrs = optparse.OptionGroup(parser, "Main",' ')
+  vrs = optparse.OptionGroup(parser, "Main",' ')
 
-	vrs.add_option("-a", "--all", action="store_true", default=False, dest='all',
-		help='Run all available methods.')
+  vrs.add_option("-a", "--all", action="store_true", default=False, dest='all',
+    help='Run all available methods.')
 
-	vrs.add_option('-L', '--list', action='store_true', default=False, 
-		dest='list', help="List methods we have available to get the IP. " \
-		"[-L/-l or --list]")
+  vrs.add_option('-L', '--list', action='store_true', default=False, 
+    dest='list', help="List methods we have available to get the IP. " \
+    "[-L/-l or --list]")
 
-	vrs.add_option('-l', '', action='store_true', default=False, 
-		dest='list', help=optparse.SUPPRESS_HELP)
+  vrs.add_option('-l', '', action='store_true', default=False, 
+    dest='list', help=optparse.SUPPRESS_HELP)
 
-	vrs.add_option('-t', '--timeout', action='store', type='float', 
-		default=default_timeout, metavar='[TIMEOUT]', dest='timeout', 
-		help="Amount of time to allow an attempted thread query for your IP. " \
-		"(example: -t3)")
+  vrs.add_option('-t', '--timeout', action='store', type='float', 
+    default=default_timeout, metavar='[TIMEOUT]', dest='timeout', 
+    help="Amount of time to allow an attempted thread query for your IP. " \
+    "(example: -t3)")
 
-	vrs.add_option("-d", "--debug", action="store_true", default=False,
-		dest='debug', help="Enable debugging`$")
+  vrs.add_option("-d", "--debug", action="store_true", default=False,
+    dest='debug', help="Enable debugging`$")
 
-	vrs.add_option("-q", "--quiet", action="store_true", default=False, 
-		dest='quiet', help="be vewwy quiet (I'm hunting wabbits)`$")
+  vrs.add_option("-q", "--quiet", action="store_true", default=False, 
+    dest='quiet', help="be vewwy quiet (I'm hunting wabbits)`$")
 
-	vrs.add_option('-v', '--verbose', dest='verbose', action='count', default=0,
-		help="Verbosity, numeric, -vvv is less verbose than -vv which is less " \
-		"than -v.")
+  vrs.add_option('-v', '--verbose', dest='verbose', action='count', default=0,
+    help="Verbosity, numeric, -vvv is less verbose than -vv which is less " \
+    "than -v.")
 
-	vrs.add_option("-V", "--version", action="store_true", default=False,
-		dest='version', help="show program's version number and exit")
+  vrs.add_option("-V", "--version", action="store_true", default=False,
+    dest='version', help="show program's version number and exit")
 
-	parser.add_option_group(vrs)
+  parser.add_option_group(vrs)
 
-	help_dict = dict(version=__version__,
-						 author=__author__,
-						 created=__created__,
-						 copyright=__copyright__)
+  help_dict = dict(version=__version__,
+             author=__author__,
+             created=__created__,
+             copyright=__copyright__)
 
-	if '--help' in sys.argv:
-		extra = """
+  if '--help' in sys.argv:
+    extra = """
 CODE:
-	Flag vs. Argument:
-		Flag - an option that accepts no input.
-		Argument - an option that requires input.
+  Flag vs. Argument:
+    Flag - an option that accepts no input.
+    Argument - an option that requires input.
 
 SEE ALSO:
 
-	dyndns
-	powerdns-update
+  dyndns
+  powerdns-update
 
 COPYRIGHT:
 
-	%(copyright)s
+  %(copyright)s
 
 AUTHOR:
 
-	%(author)s
+  %(author)s
 
 HISTORY:
 
-	Original Author
+  Original Author
 
 CHANGE LOG:
-	
-	v1.2 MINOR CHANGE																					       May 29, 2020
-		Updated urllib2 import to support both Python2 and Python3
+  
+  v1.2 MINOR CHANGE                                                 May 29, 2020
+    Updated urllib2 import to support both Python2 and Python3
 
-	v1.1 MINOR CHANGE																					   October 15, 2018
-		Better error handling.
+  v1.1 MINOR CHANGE                                             October 15, 2018
+    Better error handling.
 
-	v1.0 ORIGINAL RELEASE																					October 1, 2018
+  v1.0 ORIGINAL RELEASE                                          October 1, 2018
     Original Publish.
 
 
-EXAMPLES:	
+EXAMPLES:  
 
-	getip ipecho
+  getip ipecho
 
-	getip 3
+  getip 3
 
-	getip
+  getip
 
-	getip --list
+  getip --list
 
-	getip -dv
+  getip -dv
 
-	getip -v
+  getip -v
 
-	getip -vv
+  getip -vv
 
-	getip -vvv
+  getip -vvv
 
 
 BUGS - KNOWN ISSUES:
 
-	NONE (at tis time).
+  NONE (at tis time).
 
 CREATED:
 
-	%(created)s
+  %(created)s
 
 VERSION:
 
-	%(version)s
+  %(version)s
 
 """  % help_dict
 
-		parser.set_description(__doc__ + extra)
-		parser.print_help()
-		print("\n\n")
-		parser.print_usage()
-		return 0
-	elif '-h' in sys.argv:
-		parser.print_usage()
-		return 0
+    parser.set_description(__doc__ + extra)
+    parser.print_help()
+    print("\n\n")
+    parser.print_usage()
+    return 0
+  elif '-h' in sys.argv:
+    parser.print_usage()
+    return 0
 
-	(opts, args) = parser.parse_args()
-	
-	if opts.version:
-		print("getip v%s" % __version__)
-		return 0
-	# ----------------------------
-	if opts.verbose >= 3:
-		opts.debug=True
+  (opts, args) = parser.parse_args()
+  
+  if opts.version:
+    print("getip v%s" % __version__)
+    return 0
+  # ----------------------------
+  if opts.verbose >= 3:
+    opts.debug=True
 
-	log.setLevel(0)
-	formatter = ' %(name)s | %(asctime)s | %(levelname)-8s | %(message)s'
-	logging.basicConfig(level=logging.ERROR, format=formatter, datefmt="%Y%m%d %H:%M:%S")
+  log.setLevel(0)
+  formatter = ' %(name)s | %(asctime)s | %(levelname)-8s | %(message)s'
+  logging.basicConfig(level=logging.ERROR, format=formatter, datefmt="%Y%m%d %H:%M:%S")
 
-	if opts.verbose:			 logging.getLogger().setLevel(level=logging.WARNING)
-	if opts.verbose > 1:	 logging.getLogger().setLevel(level=logging.INFO)
-	if opts.verbose > 2:	 logging.getLogger().setLevel(level=logging.DEBUG)
-	if opts.verbose >= 3:	 logging.getLogger().setLevel(level=logging.NOTSET)
-	if opts.debug:				 logging.getLogger().setLevel(level=logging.DEBUG)
-	if opts.quiet:				 logging.getLogger().setLevel(level=logging.CRITICAL)
+  if opts.verbose:       logging.getLogger().setLevel(level=logging.WARNING)
+  if opts.verbose > 1:   logging.getLogger().setLevel(level=logging.INFO)
+  if opts.verbose > 2:   logging.getLogger().setLevel(level=logging.DEBUG)
+  if opts.verbose >= 3:   logging.getLogger().setLevel(level=logging.NOTSET)
+  if opts.debug:         logging.getLogger().setLevel(level=logging.DEBUG)
+  if opts.quiet:         logging.getLogger().setLevel(level=logging.CRITICAL)
 
-	'''
-	log.debug('debug')
-	log.info('info')
-	log.warn('warn')
-	log.error('error')
-	log.fatal('fatal')
-	log.critical('critical')
-	log.warning('warning')
-	'''
-	funcs.sort(key=lambda x: x.__name__)
-
-
-	try:
-		if len(args) > 1:
-			log.error('Please only choose one method.')
-			return 1
-		elif len(args) == 1:
-			possible = args[0]
-
-			try:
-				possible = int(possible)
-			except (IndexError,ValueError):
-				pass
-			else:
-				possible-=1
-
-			try:
-				if type(possible) is type(1):
-					if possible < 0 or possible > len(funcs):
-						raise IndexError
-					func = funcs[possible]
-				else:
-					func = [f for f in funcs if f.__name__ == possible][0]
-			except IndexError:
-				log.error('Function not found.')
-				return 1
-			else:
-				if opts.verbose > 0:
-					print('%s:' % func.__name__)
-				try:
-					print(func(log, opts.timeout))
-				except Timeout as e:
-					if opts.verbose > 1:
-						log.error(e)
-					else:
-						return 1
-				return 0
+  '''
+  log.debug('debug')
+  log.info('info')
+  log.warn('warn')
+  log.error('error')
+  log.fatal('fatal')
+  log.critical('critical')
+  log.warning('warning')
+  '''
+  funcs.sort(key=lambda x: x.__name__)
 
 
-		if opts.list:
-			st = '%' + str(len(str(len(funcs)))+1) + 'd. %s'
-			for i, func in enumerate(funcs):
-				print(st % (i+1, func.__name__))
-		else:
-			ip = run_funcs(log, True, opts.verbose, opts.all, opts.timeout, funcs)
-			print(ip)
-			if ip:
-				return 0
-			else:
-				return 1
-	except KeyboardInterrupt as e:
-		log.debug("KeyboardInterrupt:",e)
-		log.info("Script terminated by Control-C")
-		log.info("bye!")
-		# Return Code 130 - Script terminated by Control-C
-		# sys.exit(130)
-		return 130
+  try:
+    if len(args) > 1:
+      log.error('Please only choose one method.')
+      return 1
+    elif len(args) == 1:
+      possible = args[0]
+
+      try:
+        possible = int(possible)
+      except (IndexError,ValueError):
+        pass
+      else:
+        possible-=1
+
+      try:
+        if type(possible) is type(1):
+          if possible < 0 or possible > len(funcs):
+            raise IndexError
+          func = funcs[possible]
+        else:
+          func = [f for f in funcs if f.__name__ == possible][0]
+      except IndexError:
+        log.error('Function not found.')
+        return 1
+      else:
+        if opts.verbose > 0:
+          print('%s:' % func.__name__)
+        try:
+          print(func(log, opts.timeout))
+        except Timeout as e:
+          if opts.verbose > 1:
+            log.error(e)
+          else:
+            return 1
+        return 0
+
+
+    if opts.list:
+      st = '%' + str(len(str(len(funcs)))+1) + 'd. %s'
+      for i, func in enumerate(funcs):
+        print(st % (i+1, func.__name__))
+    else:
+      ip = run_funcs(log, True, opts.verbose, opts.all, opts.timeout, funcs)
+      if ip:
+        return 0
+      else:
+        return 1
+  except KeyboardInterrupt as e:
+    log.debug("KeyboardInterrupt:",e)
+    log.info("Script terminated by Control-C")
+    log.info("bye!")
+    # Return Code 130 - Script terminated by Control-C
+    # sys.exit(130)
+    return 130
 
 if __name__ == '__main__':
-	try:
-		sys.exit(main())
-	except Exception as e:
-		print("An error has occured.\n")
-		print(str(e))
-		sys.exit(1)
+  try:
+    sys.exit(main())
+  except Exception as e:
+    print("An error has occured.\n")
+    print(str(e))
+    sys.exit(1)
 
