@@ -92,4 +92,10 @@ if username != original_username:
 
 	os.system(command3)
 
+	command4 = "find . -type f -name '.vimrc' | egrep -v " \
+		"'home-jlee|bootstrap' | xargs sed  -i 's/%s/%s/g'" % (original_username,
+		username)
+
+	os.system(command4)
+
 print("\ndone.")
