@@ -40,7 +40,7 @@ if not os.path.exists(target):
 	print("ERROR!")
 	print("This script is for installing your user settings to a LINUX " \
 		"operating system.  It appers that the home directory for \"%s\" does " \
-		"not exist as the path \"%s\" cannot be found." % (username, target)
+		"not exist as the path \"%s\" cannot be found." % (username, target))
 	sys.exit(1)
 
 
