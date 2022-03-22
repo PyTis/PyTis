@@ -58,7 +58,19 @@ os.system('/bin/cp -rf home-jlee/.vimrc ../')
 
 
 if username != original_username:
-	os.system("find .  -type f -name '*' |xargs sed  -i 's/%s/%s/g'" % (
+	os.system("find .  -type f -name '*' | egrep -v 'home-jlee' |xargs sed  -i 's/%s/%s/g'" % (
 		original_username, username))
+
+	os.system("find .  -type f  | egrep -v 'home-jlee' | xargs sed  -i 's/%s/%s/g'" % (
+		original_username, username))
+
+	os.system("find .  -type f -name '.netrwhist'  | egrep -v 'home-jlee' |xargs sed  -i 's/%s/%s/g'" % (
+		original_username, username))
+
+	os.system("find .  -type f -name 'php.vim'  | egrep -v 'home-jlee' |xargs sed  -i 's/%s/%s/g'" % (
+		original_username, username))
+
+
+
 
 print("\ndone.")
