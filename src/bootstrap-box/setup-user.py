@@ -71,8 +71,8 @@ if username != original_username:
 
 	os.chdir(target)
 
-	command1 = "find .  -type f | egrep -v 'home-jlee'  |xargs sed -i " \
-		"'s/%s/%s/g'" % (original_username, username)
+	command1 = "find .  -type f | egrep -v 'home-jlee|bootstrap' | " \
+		"xargs sed -i 's/%s/%s/g'" % (original_username, username)
 
 	if not os.path.abspath(os.curdir) == os.path.abspath(target):
 		print('ERROR: we are in the wrong directory to run the following command:')
@@ -81,12 +81,14 @@ if username != original_username:
 	else:
 		os.system(command1)
 
-	command2 = "find . -type f -name '.netrwhist' | egrep -v 'home-jlee' | " \
-		"xargs sed -i 's/%s/%s/g'" % (original_username, username)
+	command2 = "find . -type f -name '.netrwhist' | egrep -v " \
+		"'home-jlee|bootstrap' | xargs sed -i 's/%s/%s/g'" % (original_username,
+		username)
 	os.system(command2)
 
-	command3 = "find . -type f -name 'php.vim' | egrep -v 'home-jlee' | " \
-		"xargs sed  -i 's/%s/%s/g'" % (original_username, username)
+	command3 = "find . -type f -name 'php.vim' | egrep -v " \
+		"'home-jlee|bootstrap' | xargs sed  -i 's/%s/%s/g'" % (original_username,
+		username)
 
 	os.system(command3)
 
