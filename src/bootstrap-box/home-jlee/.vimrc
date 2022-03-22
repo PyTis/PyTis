@@ -61,14 +61,14 @@ filetype plugin on
 "endif
 "filetype plugin indent on
 "syn on
-" source /home/leejo7a/.vim.php/syntax/php.vim
+" source /home/jlee/.vim.php/syntax/php.vim
 
 "
 "
 hi Comment ctermbg=black ctermfg=darkgreen cterm=bold
 syntax match Tab /\t/
 hi Tab gui=underline guifg=blue ctermbg=blue 
-source /home/leejo7a/.vim/syntax/tabcolor.vim
+source /home/jlee/.vim/syntax/tabcolor.vim
 
 " Whitespace handling
 "set expandtab

@@ -48,7 +48,7 @@ l /tmp/
 ./dynamo_db_encryption.py 
 ./dynamo_db_encryption.py -k
 l /tmp/
-rm /home/leejo7a/gitlab/aws_violations_dynamodb-084135731370-11062020021540.csv
+rm /home/jlee/gitlab/aws_violations_dynamodb-084135731370-11062020021540.csv
 ./dynamo_db_encryption.py -k
 l /tmp/
 l
@@ -60,7 +60,7 @@ rm /tmp/aws_violations_dynamodb-084135731370-110620200*
 ./dynamo_db_encryption.py --keep
 rm /tmp/aws_violations_dynamodb-084135731370-11062020095457.csv 
 ./dynamo_db_encryption.py --keep
-cp /tmp/aws_violations_dynamodb-084135731370-11062020095607.csv /home/leejo7a/
+cp /tmp/aws_violations_dynamodb-084135731370-11062020095607.csv /home/jlee/
 l
 git-status 
 git-commit dynamo_db_encryption.py 
@@ -74,7 +74,7 @@ which python3
 python --version
 pip3.8 install --user psycopg2.binary
 ./bootstrap.py 
-vi "/home/leejo7a/gitlab/aws-lambda/ACSR-3435/auto-remediations/dynamodb/csisutil/apicaller.py"
+vi "/home/jlee/gitlab/aws-lambda/ACSR-3435/auto-remediations/dynamodb/csisutil/apicaller.py"
 ./bootstrap.py 
 fg
 ./bootstrap.py 
@@ -141,7 +141,7 @@ l
 ./ami_encryption_violations.py -q
 l /tmp/
 ./ami_encryption_violations.py -k
-cp /tmp/aws_violations_ami_encryption-084135731370-15062020114129.csv /home/leejo7a/
+cp /tmp/aws_violations_ami_encryption-084135731370-15062020114129.csv /home/jlee/
 git-status 
 dc
 git status
@@ -184,7 +184,7 @@ fg
 jobs
 fg
 ./ami_encryption_violations.py 
-cp /tmp/aws_violations_ami_encryption-084135731370-15062020144656.csv /home/leejo7a/
+cp /tmp/aws_violations_ami_encryption-084135731370-15062020144656.csv /home/jlee/
 git-status 
 git-diff ami_encryption_violations.py 
 git commit ami_encryption_violations.py 
@@ -955,7 +955,7 @@ jobs
  pyrotate pytis_tools.log benchmark.log ; multitail benchmark.log pytis_tools.log
 x
 screen
-vim -o /home/leejo7a/sbash/pytis.py /home/leejo7a/sbash/benchmark.py  
+vim -o /home/jlee/sbash/pytis.py /home/jlee/sbash/benchmark.py  
 python
 cd gitlab/
 cd aws-lambda/
@@ -967,7 +967,7 @@ l
 ls
 x
 screen
-vim -o /home/leejo7a/sbash/pytis.py /home/leejo7a/sbash/benchmark.py  
+vim -o /home/jlee/sbash/pytis.py /home/jlee/sbash/benchmark.py  
 l
 cd gitlab/
 l
@@ -983,14 +983,14 @@ cd kinesis_firehose/
 l
 pwd
 vi kinesis_firehose.py 
-cd /vzwhome/leejo7a/gitlab/acs-auto-remediation/ACSR-4239/aws/lambdas/kinesis_firehose
+cd /vzwhome/jlee/gitlab/acs-auto-remediation/ACSR-4239/aws/lambdas/kinesis_firehose
 l
 ./bootstrap.py -v
 ./kinesis_firehose.py -v
 ./bootstrap.py 
 ./bootstrap.py -d -v
  pyrotate pytis_tools.log benchmark.log ; multitail benchmark.log pytis_tools.log
-cd /vzwhome/leejo7a/gitlab/acs-auto-remediation/ACSR-4239/aws/lambdas/kinesis_firehose
+cd /vzwhome/jlee/gitlab/acs-auto-remediation/ACSR-4239/aws/lambdas/kinesis_firehose
 l
 rm .bootstrap.py.swp 
 vi .swp 
