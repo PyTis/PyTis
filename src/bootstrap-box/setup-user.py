@@ -3,7 +3,7 @@
 import getpass
 import os, sys
 
-username = 'jlee'
+username = 'pytis'
 original_username = username
 
 print('INIT...')
@@ -13,7 +13,7 @@ if len(sys.argv) > 1:
 	if str(u).lower() in \
 		('-h','/h','h','/?','-?','?','-help','/help','help'):
 		print('USAGE: ./setup-user.py [optional: <username>]')
-		print('this script will by default, install for the "jlee" user, unless ' \
+		print('this script will by default, install for the "pytis" user, unless ' \
 			'you provide a different username (you must be logged in as that ' \
 			'user, to override the username).')
 
@@ -34,43 +34,60 @@ if not os.path.exists('/home/%s/bashrc.orig' % username):
 	print('making backup of .bashrc file')
 	os.system('cp /home/%s/.bashrc /home/%s/bashrc.orig' % (username, username))
 
-print('copying all files from bootstrap/home-jlee to /home/%s' % username)
-os.system('/bin/cp -rf home-jlee/* ../')
-os.system('/bin/cp -rf home-jlee/.sessions/ ../')
-os.system('/bin/cp -rf home-jlee/.ssh ../')
-os.system('/bin/cp -rf home-jlee/.vim ../')
-os.system('/bin/cp -rf home-jlee/.vim.php ../')
+target = os.path.abspath('/home/%s' % username)
 
-os.system('/bin/cp -rf home-jlee/.bash_profile ../')
-os.system('/bin/cp -rf home-jlee/.bashrc ../')
-os.system('/bin/cp -rf home-jlee/.dir_colors ../')
-os.system('/bin/cp -rf home-jlee/.gitconfig ../')
-os.system('/bin/cp -rf home-jlee/.git-credentials ../')
-os.system('/bin/cp -rf home-jlee/.kshrc ../')
-os.system('/bin/cp -rf home-jlee/.lesshst ../')
-os.system('/bin/cp -rf home-jlee/.minttyrc ../')
-os.system('/bin/cp -rf home-jlee/.multitail ../')
-os.system('/bin/cp -rf home-jlee/.my-credentials ../')
-os.system('/bin/cp -rf home-jlee/.profile ../')
-os.system('/bin/cp -rf home-jlee/.pypirc ../')
-os.system('/bin/cp -rf home-jlee/.screenrc ../')
-os.system('/bin/cp -rf home-jlee/.vimrc ../')
+if not os.path.exists(target):
+	print("ERROR!")
+	print("This script is for installing your user settings to a LINUX " \
+		"operating system.  It appers that the home directory for \"%s\" does " \
+		"not exist as the path \"%s\" cannot be found." % (username, target)
+	sys.exit(1)
+
+
+print('copying all files from bootstrap/home-pytis to /home/%s' % username)
+os.system('/bin/cp -rf home-pytis/* %s/' % target)
+os.system('/bin/cp -rf home-pytis/.sessions/ %s/' % target)
+os.system('/bin/cp -rf home-pytis/.ssh %s/' % target)
+os.system('/bin/cp -rf home-pytis/.vim %s/' % target)
+os.system('/bin/cp -rf home-pytis/.vim.php %s/' % target)
+
+os.system('/bin/cp -rf home-pytis/.bash_profile %s/' % target)
+os.system('/bin/cp -rf home-pytis/.bashrc %s/' % target)
+os.system('/bin/cp -rf home-pytis/.dir_colors %s/' % target)
+os.system('/bin/cp -rf home-pytis/.gitconfig %s/' % target)
+os.system('/bin/cp -rf home-pytis/.git-credentials %s/' % target)
+os.system('/bin/cp -rf home-pytis/.kshrc %s/' % target)
+os.system('/bin/cp -rf home-pytis/.lesshst %s/' % target)
+os.system('/bin/cp -rf home-pytis/.minttyrc %s/' % target)
+os.system('/bin/cp -rf home-pytis/.multitail %s/' % target)
+os.system('/bin/cp -rf home-pytis/.my-credentials %s/' % target)
+os.system('/bin/cp -rf home-pytis/.profile %s/' % target)
+os.system('/bin/cp -rf home-pytis/.pypirc %s/' % target)
+os.system('/bin/cp -rf home-pytis/.screenrc %s/' % target)
+os.system('/bin/cp -rf home-pytis/.vimrc %s/' % target)
 
 
 if username != original_username:
-	os.system("find .  -type f -name '*' | egrep -v 'home-jlee' |xargs sed  -i 's/%s/%s/g'" % (
-		original_username, username))
 
-	os.system("find .  -type f  | egrep -v 'home-jlee' | xargs sed  -i 's/%s/%s/g'" % (
-		original_username, username))
+	os.chdir(target)
 
-	os.system("find .  -type f -name '.netrwhist'  | egrep -v 'home-jlee' |xargs sed  -i 's/%s/%s/g'" % (
-		original_username, username))
+	command1 = "find .  -type f | egrep -v 'home-pytis'  |xargs sed -i " \
+		"'s/%s/%s/g'" % (original_username, username)
 
-	os.system("find .  -type f -name 'php.vim'  | egrep -v 'home-jlee' |xargs sed  -i 's/%s/%s/g'" % (
-		original_username, username))
+	if not os.path.abspath(os.curdir) == os.path.abspath(target):
+		print('ERROR: we are in the wrong directory to run the following command:')
+		print(command1)
+		sys.exit(1)
+	else:
+		os.system(command1)
 
+	command2 = "find . -type f -name '.netrwhist' | egrep -v 'home-pytis' | " \
+		"xargs sed -i 's/%s/%s/g'" % (original_username, username)
+	os.system(command2)
 
+	command3 = "find . -type f -name 'php.vim' | egrep -v 'home-pytis' | " \
+		"xargs sed  -i 's/%s/%s/g'" % (original_username, username)
 
+	os.system(command3)
 
 print("\ndone.")
