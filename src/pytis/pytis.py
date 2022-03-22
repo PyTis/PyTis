@@ -176,13 +176,22 @@ __created__ = '06:14pm 09 Sep, 2009'
 __copyright__ = 'PyTis.com'
 __configdir__ = pytis_configure.configdir # '/root/etc'
 __logdir__ = pytis_configure.logdir # '/root/log'
-__version__ = '8.2.9'
+__version__ = '8.3.0'
 
 
 
 __change_log__ = """
 
 CHANGE LOG
+
+V8.3.0
+  MINOR CHANGE
+    I've fixed getip so that it doesn't print the IP address out twice.
+    I've also moved a few items around, so that the getip.py is in the pytis
+    directory, so that the python get's installed under the python3 directory,
+    while the "program" just imports pytis's getip and runs the "main"
+    function.
+    Also, fixed colorize so that it has the correct log prefix.
 
 V8.2.9
   MINOR CHANGE

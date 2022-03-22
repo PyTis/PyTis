@@ -71,7 +71,7 @@ examples:
 
 	(opts, args) = parser.parse_args()
 
-	log = PyTis.set_logging(opts, 'findrep')
+	log = PyTis.set_logging(opts, 'colorize')
 	# Logging Configuration
 	log.setLevel(0) 
 	formatter = '%(levelname)-8s %(message)s'
