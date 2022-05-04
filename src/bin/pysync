@@ -27,8 +27,8 @@ import optparse
 import tempfile
 import subprocess
 
-import pytis as PyTis
-from pylib import configobj as COBJ
+from pytis import pytis as PyTis
+from pytis.pylib3 import configobj as COBJ
 
 
 __curdir__ = os.path.abspath(os.path.dirname(__file__))
@@ -93,7 +93,7 @@ def validate_opt(opts,config,key):
 	dig_config=False
 	try:
 		getattr(opts,key)
-	except AttributeError,e:
+	except AttributeError as e:
 		dig_config=True
 
 	if dig_config or not getattr(opts,key):
@@ -101,7 +101,7 @@ def validate_opt(opts,config,key):
 			if not config.get(key):
 				raise PyTis.EmptyString('%s not provided, and could not be found in the config file.' % key.title())
 			setattr(opts,key,config[key])
-		except OSError,e:
+		except OSError as e:
 			raise PyTis.EmptyString('%s not provided, and a config file could not me found.' % key.title())
 	else:
 		test=getattr(opts,key) 
@@ -113,25 +113,25 @@ def validate_opt(opts,config,key):
 def validate(opts, config):
 #	fields = ['address','flags','forced_dir','disable_all','backup_dir','rsyncpath','sshkey','test_local','test_remote','user','wait']
 	fields=['flags','user','backup_dir','rsyncpath','sshkey','wait']
-	for opt, value in opts.__dict__.items():
+	for opt, value in list(opts.__dict__.items()):
 		if opt.lower() in fields:
 			validate_opt(opts,config,opt.lower())	
-	for opt, value in opts.__dict__.items():
+	for opt, value in list(opts.__dict__.items()):
 		log.debug("VALIDATED OPTIONS %s: %s" % (opt,value))
 	log.debug('-'*80) 
 
 def valid_config(config):
-	if 'all' not in config.keys():
+	if 'all' not in list(config.keys()):
 		raise PyTis.EmptyTemplate('The "all" section is missing from your ini file at: "%s"' % config.filename) 
 
 	try:
 		all_includes = config['all']['include']
-	except KeyError, e:
+	except KeyError as e:
 		raise PyTis.EmptyTemplate('The "all" section is is missing an include sub-section in the ini file at: "%s"' % config.filename)
 
 	try:
 		all_excludes = config['all']['exclude']
-	except ValueError, e:
+	except ValueError as e:
 		raise PyTis.EmptyTemplate('The "all" section is is missing an exclude sub-section in the ini file at: "%s"' % config.filename)
 
 	if type(all_includes) == type(str('')):
@@ -143,7 +143,7 @@ def valid_config(config):
 		all_excludes = [all_excludes]
 
 
-	for server in config.keys():
+	for server in list(config.keys()):
 		if server == 'all':
 			pass
 		else:
@@ -152,24 +152,24 @@ def valid_config(config):
 			if str(type(sub)) == "<class 'pylib.configobj.Section'>":
 				try:
 					action = sub['action']
-				except KeyError, e:
+				except KeyError as e:
 					action = 'use'
 				if str(action).strip() == 'ignore':
 					continue
 
 				try:
 					sub['address']
-				except KeyError, e:
+				except KeyError as e:
 					raise PyTis.EmptyTemplate('Section "%s" is missing a valid address in the ini file at: "%s"' % (server,config.filename))
 
-				for key in sub.keys():
+				for key in list(sub.keys()):
 					try:
 						includes = sub['include']
-					except KeyError, e:
+					except KeyError as e:
 						raise PyTis.EmptyTemplate('Section "%s" is missing an include sub-section in the ini file at: "%s"' % (server,config.filename))
 					try:
 						excludes = sub['exclude']
-					except KeyError, e:
+					except KeyError as e:
 						raise PyTis.EmptyTemplate('Section "%s" is missing an exclude sub-section in the ini file at: "%s"' % (server,config.filename))
 
 					if type(includes) == type(str('')):
@@ -215,7 +215,7 @@ def get_value(opts, config, key, server=None):
 		try:
 			section = config[server]
 			#log.debug("found server in config: %s" % server)
-		except KeyError, e:
+		except KeyError as e:
 			section = config
 			#log.debug("server not found, using root of config")
 	else:
@@ -225,10 +225,10 @@ def get_value(opts, config, key, server=None):
 		retval = section[key] 
 		#log.debug("found %s in config" % key)
 		#log.debug("value of: %s" % retval)
-	except KeyError, e:
+	except KeyError as e:
 		try:
 			retval = config[key]
-		except KeyError, e:
+		except KeyError as e:
 			pass
 		else:
 			return retval
@@ -240,7 +240,7 @@ def get_value(opts, config, key, server=None):
 		retval =  getattr(opts,key)
 		#log.debug("found %s in opts" % key)
 		#log.debug("value of: %s" % retval)
-	except AttributeError, e:
+	except AttributeError as e:
 		#log.warn(error)
 		retval = None
 		pass
@@ -275,13 +275,13 @@ def run(opts, config, test_now=False, section_to_test=None):
 	if opts.niceness:
 		try:
 			nicety="nice -n%s" % str(int(opts.niceness))
-		except ValueError, e:
+		except ValueError as e:
 			nicety=''
 	else:
 		nicety=''
 
 	servers = []
-	for server_name in config.keys():
+	for server_name in list(config.keys()):
 		server = config[server_name]
 		halt_because_of_failed_test = False
 		skip_because_of_failed_test = False
@@ -292,7 +292,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 
 				try:
 					action = server['action']
-				except KeyError, e:
+				except KeyError as e:
 					# action is not set, and the default is 'use'
 					action = 'use'
 
@@ -330,7 +330,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 
 				try:
 					address = server['address']
-				except KeyError, e:
+				except KeyError as e:
 					err = 'Address not found for server %s' % server_name
 					if trim(action) == 'test' or test_now:
 						log.warn(err)
@@ -354,17 +354,17 @@ def run(opts, config, test_now=False, section_to_test=None):
 
 				try:
 					testfile_local = get_value(opts,config,'test_local',server_name)
-				except PyTis.EmptyString, e:
+				except PyTis.EmptyString as e:
 					testfile_local = None
 
 				try:
 					testfile_remote = get_value(opts,config,'test_remote',server_name)
-				except PyTis.EmptyString, e:
+				except PyTis.EmptyString as e:
 					testfile_remote = None
 	
 				try:
 					disable_all = os.path.abspath(get_value(opts, config, 'disable_all', server_name))
-				except PyTis.EmptyString, e:
+				except PyTis.EmptyString as e:
 					disable_all = False 
 	
 
@@ -403,7 +403,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 				
 				try:
 					forced_dir = get_value(opts,config,'forced_dir',server_name)
-				except PyTis.EmptyString, e:
+				except PyTis.EmptyString as e:
 					forced_dir = False
 
 				if str(forced_dir).strip().lower() == 'true':
@@ -555,7 +555,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 							log.debug("# server: %s, address: %s" % (server_name, address))
 							log.debug(cmd)
 							execute(cmd, server_name, address, lookfor_exit_codes)
-						except PyTis.FileNotFound, t:
+						except PyTis.FileNotFound as t:
 							log.info("")
 							log.info("# REMOTE TESTFILE")
 							log.info("# server: %s, address: %s" % (server_name, address))
@@ -569,7 +569,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 				if type(server['exclude']) == type(str('')): server['exclude'] = [server['exclude']]
 
 				excludes_tempname = None
-				if 'exclude' in server.keys():
+				if 'exclude' in list(server.keys()):
 					exclude_temp = tempfile.NamedTemporaryFile(delete=False)
 					excludes_tempname = exclude_temp.name
 					for x in server['exclude']:
@@ -582,7 +582,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 					exclude = ''
 
 				includes_tempname = None
-				if 'include' in server.keys():
+				if 'include' in list(server.keys()):
 					include_temp = tempfile.NamedTemporaryFile(delete=False)
 					includes_tempname = include_temp.name
 					for x in server['include']:
@@ -591,7 +591,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 						else: xx=x
 						next_root = os.path.abspath(os.path.join(root,os.path.dirname(xx)))
 						if not os.path.exists(next_root):
-							os.makedirs(next_root,0754)
+							os.makedirs(next_root,0o754)
 					include_temp.flush()
 					include_temp.seek(0)
 					include_temp.close()
@@ -633,7 +633,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 						log.info("# server: %s, address: %s" % (server_name, address))
 						log.debug(cmd)
 						execute(cmd, server_name, address)
-					except PyTis.FileNotFound, t:
+					except PyTis.FileNotFound as t:
 						if (opts.verbose or opts.had_verbose) and not opts.quiet:
 							log.info("")
 						log.info("# server: %s, address: %s" % (server_name, address))
@@ -649,7 +649,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 
 		try:
 			disable_all = os.path.abspath(get_value(opts, config, 'disable_all', 'all'))
-		except PyTis.EmptyString, e:
+		except PyTis.EmptyString as e:
 			disable_all = False 
 		if disable_all:
 			return
@@ -659,7 +659,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 			return
 		try:
 			action=get_value(opts,config,'action','all')
-		except PyTis.EmptyString, e:
+		except PyTis.EmptyString as e:
 			action = 'use'
 
 		if opts.section and opts.section != 'all' and not opts.force:
@@ -753,7 +753,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 				exclude = ''
 
 			includes_tempname = None
-			if 'include' in server.keys():
+			if 'include' in list(server.keys()):
 				include_temp = tempfile.NamedTemporaryFile(delete=False)
 				includes_tempname = include_temp.name
 				for i in all_includes:
@@ -762,7 +762,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 					else: ii=i
 					next_root = os.path.abspath(os.path.join(root,os.path.dirname(ii)))
 					if not os.path.exists(next_root):
-						os.makedirs(next_root,0754)
+						os.makedirs(next_root,0o754)
 				include_temp.flush()
 				include_temp.seek(0)
 				include_temp.close()
@@ -857,7 +857,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 					log.info("# 'all' >> server: %s, address: %s" % (server_name, server_address))
 					log.debug(cmd1)
 					execute(cmd1, server_name, server_address)
-				except PyTis.FileNotFound, t:
+				except PyTis.FileNotFound as t:
 					if (opts.verbose or opts.had_verbose) and not opts.quiet:
 						log.info("")
 					log.info("# 'all' >> server: %s, address: %s" % (server_name, server_address))
@@ -872,7 +872,7 @@ def run(opts, config, test_now=False, section_to_test=None):
 					log.info("# 'all' << server: %s, address: %s" % (server_name, server_address))
 					log.debug(cmd2)
 					execute(cmd2, server_name, server_address)
-				except PyTis.FileNotFound, t:
+				except PyTis.FileNotFound as t:
 					if (opts.verbose or opts.had_verbose) and not opts.quiet:
 						log.info("")
 					log.info("# 'all' << server: %s, address: %s" % (server_name, server_address))
@@ -1504,7 +1504,7 @@ VERSION:
 
 	try:
 		os.nice(self.opts.niceness)
-	except (AttributeError, NameError), e:
+	except (AttributeError, NameError) as e:
 		pass
 
 	log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
@@ -1518,43 +1518,43 @@ VERSION:
 	if opts.list:
 		L = []
 		maxL = len('SECTION NAME')
-		for server in config.keys():
+		for server in list(config.keys()):
 			sub = config[server]
 			if str(type(sub)) == "<class 'pylib.configobj.Section'>":
 				try:
 					action = sub['action']
-				except KeyError, e:
+				except KeyError as e:
 					action = 'use'
 				L.append((str(server),action))
 				if maxL < len(str(server)):
 					maxL = len(str(server))
 		x=' '*(maxL/2)
 		y="SECTION NAME%sACTION" % x
-		print y
-		print '='*len(y)
+		print(y)
+		print('='*len(y))
 		L.sort()
 		for s in L:
-			print "%s%s%s%s" % (s[0],x,' '*(maxL-len(s[0])),s[1])
+			print("%s%s%s%s" % (s[0],x,' '*(maxL-len(s[0])),s[1]))
 		return
 	if opts.list_out:
 		try:
 			sub = config[opts.list_out]
-		except KeyError, e:
+		except KeyError as e:
 			log.error("Section not found, it is case-sensative.  Try the --list command to see a list of available sections.")
 			return
 		else:
 			if str(type(sub)) == "<class 'pylib.configobj.Section'>":
-				print opts.list_out
-				print '='*len(opts.list_out)
-				for key in sub.keys():
+				print(opts.list_out)
+				print('='*len(opts.list_out))
+				for key in list(sub.keys()):
 					value = sub[key]
 					if type(value) == type(list([])):
-						print "%s: \n%s" % (key,"\n".join([" %s" % v for v in value]))
-						print
+						print("%s: \n%s" % (key,"\n".join([" %s" % v for v in value])))
+						print()
 					else:
-						print "%s: %s" % (key,sub[key])
+						print("%s: %s" % (key,sub[key]))
 			else:
-				print "%s: %s" % (opts.list_out, sub)
+				print("%s: %s" % (opts.list_out, sub))
 		return
 
 
@@ -1625,9 +1625,9 @@ VERSION:
 					errors.append("Actions may not be specified in the 'all' section.")
 				else:
 					try:
-						if 'action' in config[opts.section.strip()].keys():
+						if 'action' in list(config[opts.section.strip()].keys()):
 							del config[opts.section.strip()]['action']
-					except KeyError, e:
+					except KeyError as e:
 						errors.append("Section '%s' does not yet exist, please add it first, before saving actions." % opts.section.strip())
 			else:
 				errors.append("Actions may not be specified in the Global section.")
@@ -1641,7 +1641,7 @@ VERSION:
 			errors.append("You cannot specify an IP address for the global section, this script was designed to PULL to the server it is ran from.")
 
 		if opts.section and opts.section.strip() and not errors:
-			if opts.section.strip() not in config.keys():
+			if opts.section.strip() not in list(config.keys()):
 				config[opts.section.strip()] = {'include':[],'exclude':[]}
 			#update_with.update({'section':opts.section.strip()})
 			if not TEST_NOW:
@@ -1669,21 +1669,21 @@ VERSION:
 		try:
 			try:
 				valid_config(config)
-			except PyTis.EmptyTemplate, e:
+			except PyTis.EmptyTemplate as e:
 				errors.append(str(e))
 				parser.print_usage()
 				log.warn(str(e))
 				return
 			try:
 				run(opts, config, TEST_NOW, TEST_SECTION)
-			except KeyboardInterrupt,e:
+			except KeyboardInterrupt as e:
 				if not opts.quiet:
-					print "\nbye!"
+					print("\nbye!")
 				return
 			else:
 				log.info("Done.")
 				return
-		except PyTis.EmptyString, e:
+		except PyTis.EmptyString as e:
 			errors.append(str(e))
 	
 	if errors:
@@ -1694,7 +1694,7 @@ VERSION:
 	if not errors:	
 		try:
 			valid_config(config)
-		except PyTis.EmptyTemplate, e:
+		except PyTis.EmptyTemplate as e:
 			errors.append(str(e))
 			parser.print_usage()
 			log.warn(str(e))
@@ -1702,7 +1702,7 @@ VERSION:
 
 	try:
 		validate(opts, config)
-	except PyTis.EmptyString, e:
+	except PyTis.EmptyString as e:
 		errors.append(str(e))
 		parser.print_usage()
 		log.warn(str(e))
@@ -1712,14 +1712,14 @@ VERSION:
 	if not errors and len(sys.argv) > 0:
 		try:
 			run(opts, config)
-		except PyTis.EmptyString, e:
+		except PyTis.EmptyString as e:
 			errors.append(str(e))
 			parser.print_usage()
 			log.warn(str(e))
 			return
-		except KeyboardInterrupt,e:
+		except KeyboardInterrupt as e:
 			if not opts.quiet:
-				print "\nbye!"
+				print("\nbye!")
 			return
 		else:
 			log.info("Done.")
