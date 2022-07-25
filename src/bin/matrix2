@@ -22,7 +22,7 @@ import os
 import curses
 import time
 import optparse
-import commands
+import subprocess as commands
 import random
 import warnings
 import xml.etree.ElementTree as etree
