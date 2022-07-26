@@ -141,9 +141,9 @@ alias c='/usr/bin/clear'
 
 if [ -x /usr/bin/dircolors ]; then
     test -r /usr/bin/dircolors && eval "$(/usr/bin/dircolors -b)" || eval "$(/usr/bin/dircolors -b)"
-    alias ls='ls --color=auto'
-    alias dir='ls --color=auto --format=vertical'
-    alias vdir='ls --color=auto --format=long'
+    alias ls='ls --color=always'
+    alias dir='ls --color=always --format=vertical'
+    alias vdir='ls --color=always --format=long'
 
     alias grep='grep --color=auto'
     alias fgrep='fgrep --color=auto'
@@ -159,11 +159,26 @@ alias less='less -R'
 alias grep="grep --exclude='*.swp'"
 alias gr="grep -r --exclude='debug.log*' "
 # some more ls aliases
-alias ll='ls -halF --time-style=long-iso --color=auto'
+alias ll='ls -halF --time-style=long-iso --color=always'
 alias la='ls -A'
 alias l='ls -shaFl --time-style=long-iso --color'
-#alias l='echo "Dir Size|Perms|Link Count|Owner|Group|Size|Mod. Time|Name"; ls -AFls -h --time-style=long-iso --color --group-directories-first'
-alias l='echo "Dir Size|Perms|Link Count|Owner|Group|Size|Mod. Time|Name"; ls -shaFl --time-style=long-iso --color --group-directories-first'
+alias l='echo "Dir Size|Perms|Link Count|Owner|Group|Size|Mod. Time|Name"; ls -shaFl --time-style=long-iso --color --group-directories-first --format=long'
+
+
+# BOOM goes the dynomite!!! I am SO glad I fixed this!!!!! :-D 
+function _bestLS() {
+  echo 'MODE|Dir Size|Perms|Link Count|Owner|Group|Size|Mod.  Time|Name';
+
+ if [ "$*" == '' ]; then
+   alias _awk4ls="awk '{k=0;s=0;for(i=0;i<=8;i++){;k+=((substr(\$2,i+2,1)~/[rwxst]/)*2^(8-i));};j=4;for(i=4;i<=10;i+=3){;s+=((substr(\$1,i,1)~/[stST]/)*j);j/=2;};if(k){;printf(\"%0o%0o \",s,k);};print;}'";
+   output=`ls -shaFl --time-style=long-iso --color=always -F --group-directories-first --format=long | _awk4ls`;
+ else
+   output=`ls -shaFl --time-style=long-iso --color=always -F --group-directories-first --format=long $* | _awk4ls`;
+ fi
+ echo "$output"
+}
+alias l="_bestLS"
+
 
 export svnroot=svn+ssh://file077@svn.code.sf.net/p/pytis/code/trunk
 export SVN_SSH="ssh -l file077"
