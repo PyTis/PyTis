@@ -175,7 +175,7 @@ function _bestLS() {
  else
    output=`ls -shaFl --time-style=long-iso --color=always -F --group-directories-first --format=long $* | _awk4ls`;
  fi
- echo "$output"
+ echo "$output" | grep -v '^total';
 }
 alias l="_bestLS"
 
