@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import optparse
 import os
@@ -16,7 +17,7 @@ __created__ = '01:07pm 09 Sep, 2009'
 __version__ = '1.0'
 
 def version():
-    print  __version__
+    print(__version__)
 
 
 def _commafy(s):
@@ -29,6 +30,7 @@ def _commafy(s):
 
 def run(opts):
     c = 0
+    global log
     if opts.file:
         if os.path.isfile(os.path.abspath(opts.file)) and \
         os.path.exists(os.path.abspath(opts.file)):
@@ -37,16 +39,17 @@ def run(opts):
             lines = handle.readlines(-1)
             handle.close()
 
+            if opts.linebreaks:
+                return len(lines)
+
             for line in lines:
-                if opts.linebreaks:
-                    line = line.replace("\n",'')
                 if opts.spaces:
                     line = line.strip(" ")
                 c = c + len(line)
             return c
 
         else:
-            print "ERROR: file not found: ", opts.file
+            print("ERROR: file not found: ", opts.file)
             sys.exit(1)
 
     if opts.string:
@@ -57,7 +60,7 @@ def run(opts):
         return len(opts.string)
 
     # shouldn't reach this
-    print "Bad file or string"
+    print("Bad file or string")
     sys.exit(1)
 
 def main():
@@ -73,6 +76,7 @@ cnt TEXT OR cnt foo.txt OR cnt -ffoo.txt
 ===============================================================================
     
     """
+    global log
     parser = optparse.OptionParser(description=__doc__)
     parser.set_usage(main.__doc__)
     parser.formatter.format_description = lambda s:s
@@ -118,13 +122,13 @@ cnt TEXT OR cnt foo.txt OR cnt -ffoo.txt
 
     if not opts.file and not opts.string and not len(sys.argv) > 1:
         parser.print_help()
-        print 'NO file or string specified - no input, no output.'
+        print('NO file or string specified - no input, no output.')
         return 
 
 
     if opts.file and opts.string:
         parser.print_help()
-        print "Specified file to read, and string, please only specify one."
+        print("Specified file to read, and string, please only specify one.")
         return
 
     if not opts.file and not opts.string:
@@ -140,9 +144,9 @@ cnt TEXT OR cnt foo.txt OR cnt -ffoo.txt
         cnt = run(opts)
         if opts.pretty:
             locale.setlocale(locale.LC_ALL, "")
-            print _commafy(cnt)
+            print(_commafy(cnt))
         else:
-            print cnt
+            print(cnt)
         return
     parser.print_help()
 
