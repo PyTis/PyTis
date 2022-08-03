@@ -56,7 +56,7 @@ SEMANTICS:
     Argument - an option that requires input.
 
 CODE:
-	...
+  ...
 
 UNDERSTANDING LOGGING and OUTPUT:
 
@@ -144,67 +144,68 @@ default_frequency = 1
 # -----------------------------------------------------------------------------
 # builtin
 try:
-	import sys
+  import sys
 except KeyboardInterrupt as e:
-	print("KeyboardInterrupt: %s" % str(repr(e)))
-	print("Script terminated by Control-C")
-	print("bye!")
-	exit(1)
+  print("KeyboardInterrupt: %s" % str(repr(e)))
+  print("Script terminated by Control-C")
+  print("bye!")
+  exit(1)
 # builtin
 try:
-	import os
-	import subprocess
-	import shlex
-	import optparse
-	import getpass
-	import time
-	import datetime
-	import atexit
-	from random import randint as rand
+  import os
+  import subprocess
+  import shlex
+  import optparse
+  import getpass
+  import time
+  import datetime
+  import atexit
+  from random import randint as rand
 #import pam
-	import logging
+  import logging
 
 
-	# This program needs to import PyTis(2) v4.1, which imports modules from the
-	# sub-package pylib, this program also needs to import from the sub-package
-	# cobj, pylib.cobj itself, has to import from the parent, pytis, which it
-	# can only do if the parent directory is a package, turning the parent (bin)
-	# into a package breaks importing pytis for this program in the first place
-	# and caused severe circular import errors.	To fix this, we have to adjust 
-	# the path.
-	# vvvv XXX-TODO may not need this here, dunno, remove at end and try it. vvvv
+  # This program needs to import PyTis(2) v4.1, which imports modules from the
+  # sub-package pylib, this program also needs to import from the sub-package
+  # cobj, pylib.cobj itself, has to import from the parent, pytis, which it
+  # can only do if the parent directory is a package, turning the parent (bin)
+  # into a package breaks importing pytis for this program in the first place
+  # and caused severe circular import errors.  To fix this, we have to adjust 
+  # the path.
+  # vvvv XXX-TODO may not need this here, dunno, remove at end and try it. vvvv
 
-	sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
-		'..')))
-	# ^^^^ XXX-TODO may not need this here, dunno, remove at end and try it. ^^^^
+  sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
+    '..')))
+  # ^^^^ XXX-TODO may not need this here, dunno, remove at end and try it. ^^^^
 
 #
 # Internal
 #
-	try:
-		import pytis.pytis as PyTis # Shared GPL/PPL License
-		from pytis.pylib.util.functional import any as fany
-	except ImportError as e:
-		# We cannot go any further than this, we can't use the Parser or Logging tool
-		# to display these errors because those very tools are loaded from PyTis.
-		# Therefore, display errors now and exit with an errored exit code.
-		print("This program requires the PyTis Python library to run.")
-		print("You may download the PyTis library, or do an SVN checkout from:")
-		print("<https://sourceforge.net/projects/pytis/>")
-		print("This program should be installed in the bin directory of the PyTis " \
-			"library.")
-		print(str(e))
-		sys.exit(1)
+  try:
+#    import pytis.pytis as PyTis # Shared GPL/PPL License
+    from pytis import pytis as PyTis # Shared GPL/PPL License
+  except ImportError as e:
+    print('poop'*80)
+    # We cannot go any further than this, we can't use the Parser or Logging tool
+    # to display these errors because those very tools are loaded from PyTis.
+    # Therefore, display errors now and exit with an errored exit code.
+    print("This program requires the PyTis Python library to run.")
+    print("You may download the PyTis library, or do an SVN checkout from:")
+    print("<https://sourceforge.net/projects/pytis/>")
+    print("This program should be installed in the bin directory of the PyTis " \
+      "library.")
+    print(str(e))
+    sys.exit(1)
 
 #
 # Third-Party
 #
 except KeyboardInterrupt as e:
-	print("KeyboardInterrupt: %s" % str(repr(e)))
-	print("Script terminated by Control-C")
-	print("bye!")
-	# Return Code 130 - Script terminated by Control-C
-	sys.exit(130)
+  print("KeyboardInterrupt: %s" % str(repr(e)))
+  print("Script terminated by Control-C")
+  print("bye!")
+  # Return Code 130 - Script terminated by Control-C
+  sys.exit(130)
 
 # -----------------------------------------------------------------------------
 # End Imports
@@ -228,7 +229,7 @@ __version__ = '0.15'
 # __version__ = 0.6 --> test everything we can, try to break it with bad input
 # __version__ = 0.7 --> apply bug fixes
 # __version__ = 0.8 --> document bug fixes, apply spell checking and cleanup to
-#												documentation.
+#                        documentation.
 # __version__ = 0.9 --> run importnanny, and ensure it is properly copyrighted! 
 # __version__ = 0.9? -> ready for release, just needs packaged up 
 # this is where confusion sets in, I still need to finish / complete jhelp, and
@@ -242,23 +243,37 @@ __version__ = '0.15'
 # Begin HELPER Functions
 # -----------------------------------------------------------------------------
 
+def fany(sequence, test_func = None):
+    """
+    Returns 1 if for any member of a sequence, test_func returns a non-zero
+    result. If test_func is not supplied, returns 1 if any member of the
+    sequence is nonzero (e.g., not one of (), [], None, 0).
+    """
+    for item in sequence:
+        if test_func:
+            if test_func(item):
+                return 1
+        elif item:
+            return 1
+    return 0
+
 already_returned = []
 def rnd(passwd, ar=already_returned, large_change=True):
-	""" This is used with the PyTis.protect function, to when turning a password
-	to stars.  You may change 'secret' to '******'.  However, a malitious user
-	reading a log file, would at the least, know how many charecters the password
-	is.  This picks a random number, -5 to 5, to add on or subtract from the
-	length of your password, as it replaces it with stars.  Now 'secret' may end
-	up being '***' the first time you run this program, and '**************' the
-	second.  If this function has already returned a value, and that value would
-	work (getting to why it wouldn't in a second), then it will return that
-	random number again.  In a few cases, the number is too large.  This could
-	happen when the password is short.  If it is only 3 charecters long, and this
-	function suggests subtracting 4 charecters, well then that just wouldn't
-	work.  In this cases, it simply runs again, until it finds one that will
-	work.  Below, you can see 13 test passwords, the code used to call them, and
-	the output.  I have left the print statements in place, however they are
-	commented out.
+  """ This is used with the PyTis.protect function, to when turning a password
+  to stars.  You may change 'secret' to '******'.  However, a malitious user
+  reading a log file, would at the least, know how many charecters the password
+  is.  This picks a random number, -5 to 5, to add on or subtract from the
+  length of your password, as it replaces it with stars.  Now 'secret' may end
+  up being '***' the first time you run this program, and '**************' the
+  second.  If this function has already returned a value, and that value would
+  work (getting to why it wouldn't in a second), then it will return that
+  random number again.  In a few cases, the number is too large.  This could
+  happen when the password is short.  If it is only 3 charecters long, and this
+  function suggests subtracting 4 charecters, well then that just wouldn't
+  work.  In this cases, it simply runs again, until it finds one that will
+  work.  Below, you can see 13 test passwords, the code used to call them, and
+  the output.  I have left the print statements in place, however they are
+  commented out.
 
 password1 = 't-1'
 password2 = 'this-2'
@@ -396,148 +411,148 @@ print('-'*80)
 >> rnd of "pwasdsadf-13" is: -5
 >> ---------------------------------------------------------------------------
 >> 
-	"""
+  """
 
 
-	if large_change: rand_key_chop_ = [-5,-4,-3,-2,-1,1,2,3,4,5]
-	#if large_change: rand_key_chop_ = [-5,-4,-3,3,4,5]
-	else: rand_key_chop_ = [-2,-1,0,1,2]
-	rand_key_chop_i = rand(0, len(rand_key_chop_)-1)
-	rand_key_chop = rand_key_chop_[rand_key_chop_i]
+  if large_change: rand_key_chop_ = [-5,-4,-3,-2,-1,1,2,3,4,5]
+  #if large_change: rand_key_chop_ = [-5,-4,-3,3,4,5]
+  else: rand_key_chop_ = [-2,-1,0,1,2]
+  rand_key_chop_i = rand(0, len(rand_key_chop_)-1)
+  rand_key_chop = rand_key_chop_[rand_key_chop_i]
 
 
 
-	if ar:
-		if abs(ar[0]) < len(str(passwd)): 
-			#print("ar: %s" % ar[0])
-			#print("already_returned a value that will work.")
-			return ar[0]
-		else:
-			#print("there is an ar, but it's value is too large.")
-			#print("continuing...")
-			pass
-	else:
-		#print("NO AR")
-		ar.append(rand_key_chop)
-		#print("appending '%s' now" % rand_key_chop)
+  if ar:
+    if abs(ar[0]) < len(str(passwd)): 
+      #print("ar: %s" % ar[0])
+      #print("already_returned a value that will work.")
+      return ar[0]
+    else:
+      #print("there is an ar, but it's value is too large.")
+      #print("continuing...")
+      pass
+  else:
+    #print("NO AR")
+    ar.append(rand_key_chop)
+    #print("appending '%s' now" % rand_key_chop)
 
-	if abs(rand_key_chop) >= len(str(passwd)):
-		# won't work, try again
-		#print("TRUE: abs(rand_key_chop: %s) > len(str(passwd: '%s' is %s))" % 
-		#	(rand_key_chop, passwd, len(str(passwd))))
+  if abs(rand_key_chop) >= len(str(passwd)):
+    # won't work, try again
+    #print("TRUE: abs(rand_key_chop: %s) > len(str(passwd: '%s' is %s))" % 
+    #  (rand_key_chop, passwd, len(str(passwd))))
 
-		#print("Trying again...")
-		return rnd(passwd)
-	else:
-		#print("FALSE: abs(rand_key_chop: %s) > len(str(passwd: '%s' is %s))" % 
-		#	(rand_key_chop, passwd, len(str(passwd))))
-		#print("this is a good thing, the rand_key_chop is not too big")
-		pass
-	#print('returning rand_key_chop: %s' % rand_key_chop)
-	return rand_key_chop
+    #print("Trying again...")
+    return rnd(passwd)
+  else:
+    #print("FALSE: abs(rand_key_chop: %s) > len(str(passwd: '%s' is %s))" % 
+    #  (rand_key_chop, passwd, len(str(passwd))))
+    #print("this is a good thing, the rand_key_chop is not too big")
+    pass
+  #print('returning rand_key_chop: %s' % rand_key_chop)
+  return rand_key_chop
 
 def protect(dic):
-	""" This utilizes the list of dict keys to protect, found in PyTis's 
-			"protected_options" list.  The difference is that it utilizes the above, 
-			"rnd" function, to add or remove a few stars, so that an 8 char password
-			may show with 5 stars one time, and 9 another.  Making the log files even
-			safer, as not only will they hide passwords, sneaky hacker spies won't
-			know the real length of the password, from counting the stars.
-	"""
-	global log
-	for thing in PyTis.protected_options:
-		if thing in dic.keys():
-			#chops
-			random_chop = rnd(dic[thing])
-			dic[thing] = '*'*(len(dic[thing])-random_chop)
-			log.debug('random chomp of: %s' % random_chop)
-	return dic
+  """ This utilizes the list of dict keys to protect, found in PyTis's 
+      "protected_options" list.  The difference is that it utilizes the above, 
+      "rnd" function, to add or remove a few stars, so that an 8 char password
+      may show with 5 stars one time, and 9 another.  Making the log files even
+      safer, as not only will they hide passwords, sneaky hacker spies won't
+      know the real length of the password, from counting the stars.
+  """
+  global log
+  for thing in PyTis.protected_options:
+    if thing in dic.keys():
+      #chops
+      random_chop = rnd(dic[thing])
+      dic[thing] = '*'*(len(dic[thing])-random_chop)
+      log.debug('random chomp of: %s' % random_chop)
+  return dic
 
 
 def pidfile():
-	""" :-/  hmm,... what if a user runs this as a service (backgrounded),... 
-	and, um, is benchmarkign script 'A', then also wants to run a backgrounded
-	benchmarking script 'B' at the same time?  We may want to have slightly
-	unique PID file names (which could be very dangerous, if done incorrectly).
-	"""
-	# XXX:TODO, read above docstring
-	return os.path.splitext(os.path.basename(__file__))[0]
+  """ :-/  hmm,... what if a user runs this as a service (backgrounded),... 
+  and, um, is benchmarkign script 'A', then also wants to run a backgrounded
+  benchmarking script 'B' at the same time?  We may want to have slightly
+  unique PID file names (which could be very dangerous, if done incorrectly).
+  """
+  # XXX:TODO, read above docstring
+  return os.path.splitext(os.path.basename(__file__))[0]
 
 def pid_filename():
-	""" In keeping with the naming convention of the PyTis.Pidfile properties, 
-	the "filename" includes the extension, whereas the above "pidfile" function,
-	would be the path, without the extension.
-	"""
-	return "%s.pid" % pidfile()
+  """ In keeping with the naming convention of the PyTis.Pidfile properties, 
+  the "filename" includes the extension, whereas the above "pidfile" function,
+  would be the path, without the extension.
+  """
+  return "%s.pid" % pidfile()
 
 def pidpath():
-	""" maybe not... """
-	pass
+  """ maybe not... """
+  pass
 
 def calibrate(opts):
-	
-	if not opts.calibrate: return None
+  
+  if not opts.calibrate: return None
 
-	i = 0
-	run_times = []
-	str_cmd = 'sleep 1.000001'
-	str_cmd = 'sleep 0.0001'
-	str_cmd = 'sleep 0.000001'
-	log.info2('calibrating...')
-	while i < 15:
-		start_time = time.time()
+  i = 0
+  run_times = []
+  str_cmd = 'sleep 1.000001'
+  str_cmd = 'sleep 0.0001'
+  str_cmd = 'sleep 0.000001'
+  log.info2('calibrating...')
+  while i < 15:
+    start_time = time.time()
 
-		output_retcode = subprocess.Popen(shlex.split(str_cmd), 
-			stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+    output_retcode = subprocess.Popen(shlex.split(str_cmd), 
+      stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
 
-		if output_retcode is not 0:
-			return 0.0
+    if output_retcode != 0:
+      return 0.0
 
-		run_times.append(time.time()-start_time)
-		i+=1
-	
-	calibration = min(run_times)
-	log.info2('calibration time is: %s' % calibration)
-	return calibration
+    run_times.append(time.time()-start_time)
+    i+=1
+  
+  calibration = min(run_times)
+  log.info2('calibration time is (from inside calibrate func): %s' % calibration)
+  return calibration
 
 def formatSecs(ti, opts):
-	""" This will do two separate tasks.  Hmmm,... that cam out wrong.  Shouldn't
-			this only do one thing?, perhaps I should adjust it/or,.. break it into
-			two separate functions.
+  """ This will do two separate tasks.  Hmmm,... that cam out wrong.  Shouldn't
+      this only do one thing?, perhaps I should adjust it/or,.. break it into
+      two separate functions.
 
-			Number One: it takes in the time representation as seconds, and looks at
-			the OPS passed into STDIN.  If the user has selected to imput the
-			optional argument [-H/--human] for human-readable output, then this
-			function will change seconds to miliseconds, or microseconds, when less
-			than a second is input, and where	applicable.  Similarlly, instead of
-			returning "180" seconds, it would just return "3 mins."  If the user  
-			provides the optional arguement [-v/--verbose] "verbose, then this will
-			show both the abreviation, and the name of the messurement unit, not just
-			the abbreviation.  " 
-	"""
-	if opts.human:
-		ti=float(ti)
+      Number One: it takes in the time representation as seconds, and looks at
+      the OPS passed into STDIN.  If the user has selected to imput the
+      optional argument [-H/--human] for human-readable output, then this
+      function will change seconds to miliseconds, or microseconds, when less
+      than a second is input, and where  applicable.  Similarlly, instead of
+      returning "180" seconds, it would just return "3 mins."  If the user  
+      provides the optional arguement [-v/--verbose] "verbose, then this will
+      show both the abreviation, and the name of the messurement unit, not just
+      the abbreviation.  " 
+  """
+  if opts.human:
+    ti=float(ti)
 
-		if ti > 0.1:
-			return "%s seconds" % round(ti, opts.decimals)
+    if ti > 0.1:
+      return "%s seconds" % round(ti, opts.decimals)
 
-		if ti >= 0.001:
+    if ti >= 0.001:
 
-			if float(ti) == float(0.001):
-				label = ''
-			else:
-				label = 's'
-			return "%s milisecond%s OR %s seconds" % (round(1000*ti, opts.decimals+4), 
-				label, round(ti, opts.decimals))
+      if float(ti) == float(0.001):
+        label = ''
+      else:
+        label = 's'
+      return "%s milisecond%s OR %s seconds" % (round(1000*ti, opts.decimals+4), 
+        label, round(ti, opts.decimals))
 
-		if ti >= 0.000001:
-			if float(ti) == float(0.000001):
+    if ti >= 0.000001:
+      if float(ti) == float(0.000001):
 
-				label = " Âµs microsecd"
-			else:
-				label = 'Âµ microseconds'
-			return "%s %s" % (round(ti,4), label)
-	return ti
+        label = " Âµs microsecd"
+      else:
+        label = 'Âµ microseconds'
+      return "%s %s" % (round(ti,4), label)
+  return ti
 
 
 # -----------------------------------------------------------------------------
@@ -549,7 +564,7 @@ def formatSecs(ti, opts):
 
 
 def run(pargs, opts):
-	""" You don't only have to specify a callable program with a shebang line. 
+  """ You don't only have to specify a callable program with a shebang line. 
 
 EXAMPLE of benchmarking a program WITH a shebang line:
   benchmark --times=10 ./my-program <optional arguments for my-program>
@@ -574,175 +589,178 @@ Additionally, this may be the run function, but please remember, this file
 does not need to be called directly.  If you wish, you may import this
 benchmark.py file, and use the benchmark functions/classes.
 
-	"""
-	global log
+  """
+  global log
 
-	# times_to_run = opts.ttr
+  # times_to_run = opts.ttr
 
 
-	#log.info(repr(pargs))
+  #log.info(repr(pargs))
 
-	func=pargs[0]
-	log.debug("FUNC: %s" % repr(func))
-	log.debug("FUNC-TYPE: %s" % type(func))
+  func=pargs[0]
+  log.debug("FUNC: %s" % repr(func))
+  log.debug("FUNC-TYPE: %s" % type(func))
 
-	args=[]; kwargs={}
-	for arg in pargs:
-		if '=' not in arg:
-			args.append(arg)
-		else:
-			k,v = arg.split('=')
-			kwargs[k]=v
+  args=[]; kwargs={}
+  for arg in pargs:
+    if '=' not in arg:
+      args.append(arg)
+    else:
+      k,v = arg.split('=')
+      kwargs[k]=v
 
-	#show_args = str(', '.join([x for x in list(args)[1:]]))
-	show_args = repr(list(args[1:]))
-	show_kwargs = repr(protect(dict(kwargs)))
+  #show_args = str(', '.join([x for x in list(args)[1:]]))
+  show_args = repr(list(args[1:]))
+  show_kwargs = repr(protect(dict(kwargs)))
 
 
 # XXX:FINDME 
-	str_cmd = ' '.join(pargs)
-	the_cmd = pargs[0]
+  str_cmd = ' '.join(pargs)
+  the_cmd = pargs[0]
 
-	log.info1('Starting Benchmark of "%s", running %s times, at %s ' % \
-		(str_cmd, opts.ttr, 
-		datetime.datetime.now().strftime("%-I:%M %p on %b %-m, %Y")))
-
-
-	if opts.no_calibration or opts.calibration == 0:
-		calibration = 0
-	else:
-		calibration = opts.calibration or (calibrate(opts)) or 0.03080070018768308
-
-	log.info4('calibration time is: %s' % calibration)
-	#if opts.calibrate:
-	#	calibration = calibrate(opts)
-	#else:
-	##if opts.calibration:
-#		calibration = opts.calibration or 0
-
-	i = 0
-	start_time = time.time()
-	min_run_time = None
-	max_run_time = None
-	total_run_time = 0
-	log.debug('start time: %f' % start_time)
-
-	#return log.fatal("Testing this float: %s" %
-#		formatSecs(format(float(0.0902309417724609375), '9.99g'), opts))
-
-	while i < opts.ttr:
-		i += 1
-
-		log.info3('='*80)
-		log.info2("Running %s for the %s time." % (str_cmd, i))
-		individual_start_time = time.time()
-		log.info4('Individual Start Time: %s' % 
-			formatSecs(format(individual_start_time, '9.99g'), opts))
-
-		# func(*args, **kwargs)
-		# can NOT NOT NOT use subprocess.Popen, as it backgrounds, and doesn't
-		# time!
-		# log.info2('about to call os.system')
-		# output_retcode = os.system(str_cmd)
-		# log.info2('done with os.system')
-		# this works, but I'd rather use subprocess, since I am already using it...
-		# come to think of it, I should benchmark the two, to see which is more
-		# accurate with the built in "sleep" command.
-
-		if opts.calibrate:
-			log.debug("Calibration is: %s" % calibration)
-		else:
-			if opts.show:
-			# is "SHOW OUTPUT" mode [-s/--show].
-				calibration = 0.13146827220916746
-				calibration = 0.03146827220916746
-				calibration = 0.042413234710693359375
-			else:
-			## QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE
-				calibration = 0.13080070018768308
-				calibration = 0.042413234710693359375
-				calibration = 0.03080070018768308
-			log.debug("Calibration is the default: %s" % calibration)
+  log.info1('Starting Benchmark of "%s", running %s times, at %s ' % \
+    (str_cmd, opts.ttr, 
+    datetime.datetime.now().strftime("%-I:%M %p on %b %-m, %Y")))
 
 
-		log.info3('-'*80)
-		individual_start_time = time.time()
-		log.info4('Individual Start Time: %s' % 
-			formatSecs(format(individual_start_time, '9.99g'), opts))
+  if opts.no_calibration or opts.calibration == 0:
+    calibration = 0
+  else:
+    calibration = opts.calibration or (calibrate(opts)) or 0.03080070018768308
+  log.info4('calibration time is (PERIOD): %s' % calibration)
+  #if opts.calibrate:
+  #  calibration = calibrate(opts)
+  #else:
+  ##if opts.calibration:
+#    calibration = opts.calibration or 0
 
-		if opts.show:
-			# is "SHOW OUTPUT" mode [-s/--show].
-			log.info2('about to call %s with subprossess.call' % str_cmd)
-			output_retcode = subprocess.call(pargs)
-			log.info2('done with subprossess.call calling %s' % str_cmd)
-		else:
-			## QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE
-			log.info2('about to call %s with subprocess.Popen' % str_cmd)
-			proc = subprocess.Popen(shlex.split(str_cmd), stdout=subprocess.PIPE, 
-				stderr=subprocess.PIPE)
-			output_retcode = proc.wait()
-			log.info2('done with subprocess.Popen calling %s' % str_cmd)
+  i = 0
+  start_time = time.time()
+  min_run_time = None
+  max_run_time = None
+  total_run_time = 0
+  log.debug('start time: %f' % start_time)
 
-		log.info3('-'*80)
+  #return log.fatal("Testing this float: %s" %
+#    formatSecs(format(float(0.0902309417724609375), '9.99g'), opts))
 
-		individual_end_time = time.time()
-		log.info4('Individual End Time: %s' % 
-			formatSecs(format(individual_end_time, '9.99g'), opts))
+  while i < opts.ttr:
+    i += 1
+
+    log.info3('='*80)
+    log.info2("Running %s for the %s time." % (str_cmd, i))
+    individual_start_time = time.time()
+    log.info4('Individual Start Time: %s' % 
+      formatSecs(format(individual_start_time, '9.99g'), opts))
+
+    # func(*args, **kwargs)
+    # can NOT NOT NOT use subprocess.Popen, as it backgrounds, and doesn't
+    # time!
+    # log.info2('about to call os.system')
+    # output_retcode = os.system(str_cmd)
+    # log.info2('done with os.system')
+    # this works, but I'd rather use subprocess, since I am already using it...
+    # come to think of it, I should benchmark the two, to see which is more
+    # accurate with the built in "sleep" command.
+
+    if opts.calibrate:
+      log.debug("Calibration is: %s" % calibration)
+    else:
+      if opts.show:
+      # is "SHOW OUTPUT" mode [-s/--show].
+        calibration = 0.13146827220916746
+        calibration = 0.03146827220916746
+        calibration = 0.042413234710693359375
+      else:
+      ## QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE
+        pass
+      log.debug("Calibration is the default: %s" % calibration)
 
 
-		this_run_time = individual_end_time - individual_start_time
-		log.info3('Individual Run Time: %s' % 
-			formatSecs(format(this_run_time, '9.99g'), opts))
+    log.info3('-'*80)
+    individual_start_time = time.time()
+    log.info4('Individual Start Time: %s' % 
+      formatSecs(format(individual_start_time, '9.99g'), opts))
 
-		if output_retcode is not 0:
-			log.warn("EXIT CODE OF %s was %s" % (str_cmd, output_retcode))
-		if min_run_time is None: min_run_time = this_run_time
-		if min_run_time > this_run_time: min_run_time = this_run_time
-		if max_run_time is None: max_run_time = this_run_time
-		if max_run_time < this_run_time: max_run_time = this_run_time
+    if opts.show:
+      # is "SHOW OUTPUT" mode [-s/--show].
+      log.info2('about to call %s with subprossess.call' % str_cmd)
+      output_retcode = subprocess.call(pargs)
+      log.info2('done with subprossess.call calling %s' % str_cmd)
+    else:
+      ## QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE QUIET MODE
+      log.info2('about to call %s with subprocess.Popen' % str_cmd)
+      proc = subprocess.Popen(shlex.split(str_cmd), stdout=subprocess.PIPE, 
+        stderr=subprocess.PIPE)
+      output_retcode = proc.wait()
+      log.info2('done with subprocess.Popen calling %s' % str_cmd)
 
-		total_run_time += this_run_time
+    log.info3('-'*80)
 
-		log.info2('_'*80)
+    individual_end_time = time.time()
+    log.info4('Individual End Time: %s' % 
+      formatSecs(format(individual_end_time, '9.99g'), opts))
 
-	average_run_time = float(total_run_time / opts.ttr)
 
-	log.info1("min_run_time: %s" % formatSecs(format(min_run_time, '9.99g'), opts))
-	log.info3("max_run_time: %s" % formatSecs(format(max_run_time, '9.99g'), opts))
+    this_run_time = individual_end_time - individual_start_time
 
-	if opts.human:
+    # JUST ADDED THIS LINE BELOW
+    this_run_time = float(this_run_time + calibration)
+    # ##
+
+    log.info3('Individual Run Time: %s' % 
+      formatSecs(format(this_run_time, '9.99g'), opts))
+
+    if output_retcode != 0:
+      log.warn("EXIT CODE OF %s was %s" % (str_cmd, output_retcode))
+
+    if min_run_time is None: min_run_time = this_run_time
+    if min_run_time > this_run_time: min_run_time = this_run_time
+    if max_run_time is None: max_run_time = this_run_time
+    if max_run_time < this_run_time: max_run_time = this_run_time
+
+    total_run_time += this_run_time
+
+    log.info2('_'*80)
+
+  average_run_time = float(total_run_time / opts.ttr)
+
+  log.info1("min_run_time: %s" % formatSecs(format(min_run_time, '9.99g'), opts))
+  log.info3("max_run_time: %s" % formatSecs(format(max_run_time, '9.99g'), opts))
+
+  if opts.human:
 # XXX-TODO
-		log.info("HUMAN READABLE: average_run_time: %s" % \
-			formatSecs(format(float(average_run_time), '9.99g'), opts))
+    log.info("HUMAN READABLE: average_run_time: %s" % \
+      formatSecs(format(float(average_run_time), '9.99g'), opts))
 
-	else:
-		log.info2("average_run_time: %s" % 
-			formatSecs(format(average_run_time, '9.99g'), opts))
+  else:
+    log.info2("average_run_time: %s" % 
+      formatSecs(format(average_run_time, '9.99g'), opts))
 
-	end_time = time.time()
-	log.debug('end time -: %f' % end_time)
-	total = end_time - start_time
+  end_time = time.time()
+  log.debug('end time -: %f' % end_time)
+  total = end_time - start_time
 
 
-	log_total = formatSecs(format(float(end_time - start_time), '9.99g'), opts)
-	log.debug('total time: %s' % log_total)
+  log_total = formatSecs(format(float(end_time - start_time), '9.99g'), opts)
+  log.debug('total time: %s' % log_total)
 
-	average = float(round(float(total) / float(opts.ttr), 99))
-
-# XXX-TODO
-	log_average = formatSecs(format(float(average), '9.99g'), opts)
-	log.info("Average time for %s to run '%s' with args: [%s], and kwargs: %s" % 
-		(the_cmd, log_average, show_args, show_kwargs ) )
+  average = float(round(float(total) / float(opts.ttr), 99))
 
 # XXX-TODO
-	log.info("Minimum run time: %s" % \
-		formatSecs(format(min_run_time, '9.99g'), opts))
+  log_average = formatSecs(format(float(average), '9.99g'), opts)
+  log.info("Average time for %s to run '%s' with args: [%s], and kwargs: %s" % 
+    (the_cmd, log_average, show_args, show_kwargs ) )
 
-	log.info1('Benchmark for "%s" remediator is exiting at %s ' % \
-		(the_cmd,
-		datetime.datetime.now().strftime("%-I:%M %p on %b %-m, %Y")))
+# XXX-TODO
+  log.info("Minimum run time: %s" % \
+    formatSecs(format(min_run_time, '9.99g'), opts))
 
-	return 0
+  log.info1('Benchmark for "%s" remediator is exiting at %s ' % \
+    (the_cmd,
+    datetime.datetime.now().strftime("%-I:%M %p on %b %-m, %Y")))
+
+  return 0
 # -----------------------------------------------------------------------------
 # End MAIN PROGRAM FUNCTIONS
 # =============================================================================
@@ -752,43 +770,43 @@ benchmark.py file, and use the benchmark functions/classes.
 
 class SingleThread(PyTis.MyThread):
 
-	"""
-	def buildNice(self):
-		return ['nice', '-n%s' % self.default_niceness]
+  """
+  def buildNice(self):
+    return ['nice', '-n%s' % self.default_niceness]
 
-	def buildIoNice(self):
-		return ['ionice', '-c%s' % self.default_ioniceness_class, '-n%s' % self.default_ioniceness]
-		
-	"""
+  def buildIoNice(self):
+    return ['ionice', '-c%s' % self.default_ioniceness_class, '-n%s' % self.default_ioniceness]
+    
+  """
 
-	def run(self, pargs):
-		"""
-			Extra help goes here...
-		"""
-		self.log.info("I have opts!")
-#		self.log.info(repr(pargs))
-#		self.log.info(repr(self.opts))
-		#self.log.info("Method run ran")
-		self.log.critical("FIND ME, I AM THE RUNNING PROGRAM!")
+  def run(self, pargs):
+    """
+      Extra help goes here...
+    """
+    self.log.info("I have opts!")
+#    self.log.info(repr(pargs))
+#    self.log.info(repr(self.opts))
+    #self.log.info("Method run ran")
+    self.log.critical("FIND ME, I AM THE RUNNING PROGRAM!")
 
-		"""
+    """
 
 
-		# Call function to generate the NMAP targets list
-		argv=[]
-		[argv.extend(arg.split()) for arg in sys.argv]
-		
-		#cmd_list = self.buildIoNice()
-		#cmd_list.extend(self.buildNice())
-		cmd_list=[]
-		cmd_list.extend(argv)
+    # Call function to generate the NMAP targets list
+    argv=[]
+    [argv.extend(arg.split()) for arg in sys.argv]
+    
+    #cmd_list = self.buildIoNice()
+    #cmd_list.extend(self.buildNice())
+    cmd_list=[]
+    cmd_list.extend(argv)
 
-		#print(repr(cmd_list))
-		#print(repr(cmd_list))
-		self.log.info(repr(cmd_list))
-		subprocess.call(cmd_list)
+    #print(repr(cmd_list))
+    #print(repr(cmd_list))
+    self.log.info(repr(cmd_list))
+    subprocess.call(cmd_list)
 
-		"""
+    """
 
 # =============================================================================
 # End MAIN PROGRAM FUNCTION
@@ -801,777 +819,777 @@ class SingleThread(PyTis.MyThread):
 
 
 def main2(times_to_run = 3):
-	global verbose
-	verbose = False 
+  global verbose
+  verbose = False 
 
 
-	
-	return
-	# I don't want to use an option parser, as I feel it would complicate things,
-	# it is unnessecary, for one.  For two, I think it would through errors, IF
-	# you were trying to pass additional options in to the secondary program.
-	# shit, doesn't time do this already?
+  
+  return
+  # I don't want to use an option parser, as I feel it would complicate things,
+  # it is unnessecary, for one.  For two, I think it would through errors, IF
+  # you were trying to pass additional options in to the secondary program.
+  # shit, doesn't time do this already?
 # XXX: TODO 
 # XXX: TODO 
 # XXX: TODO 
 # XXX: TODO  CHECK THIS< WHY ARE BOTH UPPER AND LOWER CASE -v/-V's below?????
 # XXX: TODO 
 # XXX: TODO 
-	# No, I just checkd, it will time a process once, but not run it multiple
-	# times, and then display the average.
-	#if '-v' or '-V' or '--verbose' or '--VERBOSE' in sys.argv:
-	#	verbose = True
+  # No, I just checkd, it will time a process once, but not run it multiple
+  # times, and then display the average.
+  #if '-v' or '-V' or '--verbose' or '--VERBOSE' in sys.argv:
+  #  verbose = True
 
-	if len(sys.argv) > 1:
-		try:
-			ttr = int(sys.argv[1])
-		except ValueError as e:
-			print("ERROR: You may input an integer only, for times to run!")
-			return 1
-			# ttr = times_to_run
+  if len(sys.argv) > 1:
+    try:
+      ttr = int(sys.argv[1])
+    except ValueError as e:
+      print("ERROR: You may input an integer only, for times to run!")
+      return 1
+      # ttr = times_to_run
 
-		else:
-			if ttr < 1:
-				print("ERROR: You must run the benchmark at least once, thus the " \
-					"lowest number you can choose is 1.")
-				return 1
+    else:
+      if ttr < 1:
+        print("ERROR: You must run the benchmark at least once, thus the " \
+          "lowest number you can choose is 1.")
+        return 1
 
-			if ttr > 100:
-				print("STRONG WARNING! You have chosen a VERY large number, this " \
-					"may take too long to run.  You may press CTRL+C to exit if this " \
-					"takes too long.")
+      if ttr > 100:
+        print("STRONG WARNING! You have chosen a VERY large number, this " \
+          "may take too long to run.  You may press CTRL+C to exit if this " \
+          "takes too long.")
 
-			if ttr > 500:
-				print("ERROR!!! You cannot run the benchmark this many times, it " \
-					"would likely take weeks to run.")
-				return 1
+      if ttr > 500:
+        print("ERROR!!! You cannot run the benchmark this many times, it " \
+          "would likely take weeks to run.")
+        return 1
 
-	else:
-		ttr = times_to_run # the default, 
+  else:
+    ttr = times_to_run # the default, 
 
-	return benchmark_these_with_times(ttr)
+  return benchmark_these_with_times(ttr)
 
 def main():
-	"""usage: %prog <options> {benchmarking program or script} <options> """
+  """usage: %prog <options> {benchmarking program or script} <options> """
 
-	global default_times_to_run, errors, log
-	# first arg will be this program name.
-	prog_path = os.path.basename(sys.argv[0]) 
-	prog_name = os.path.splitext(os.path.basename(prog_path))[0] 
+  global default_times_to_run, errors, log
+  # first arg will be this program name.
+  prog_path = os.path.basename(sys.argv[0]) 
+  prog_name = os.path.splitext(os.path.basename(prog_path))[0] 
 
-	parser = PyTis.MyParser()
+  parser = PyTis.MyParser()
 
-	parser.extra_txt = "\n\n%s\n" % run.__doc__ + """
+  parser.extra_txt = "\n\n%s\n" % run.__doc__ + """
 
 -------------------------------------------------------------------------------
 
 SEE ALSO:
 
-	dyndns
-	powerdns-update
+  dyndns
+  powerdns-update
 
 COPYRIGHT:
 
-	%(copyright)s
+  %(copyright)s
 
 AUTHOR:
 
-	%(author)s
+  %(author)s
 
 HISTORY:
 
-	Original Author
+  Original Author
 
 CHANGE LOG:
-	
-	v1.0 ORIGINAL RELEASE																				 February 6, 2019
+  
+  v1.0 ORIGINAL RELEASE                                         February 6, 2019
     Original Publish.
 
-EXAMPLES:	
+EXAMPLES:  
 
-	benchmark ipecho
+  benchmark ipecho
 
-	benchmark 3
+  benchmark 3
 
-	benchmark
+  benchmark
 
-	benchmark --list
+  benchmark --list
 
-	benchmark -dv
+  benchmark -dv
 
-	benchmark -v
+  benchmark -v
 
-	benchmark -vv
+  benchmark -vv
 
-	benchmark -vvv
+  benchmark -vvv
 
 
 BUGS - KNOWN ISSUES:
 
-	NONE (at tis time).
+  NONE (at tis time).
 
 CREATED:
 
-	%(created)s
+  %(created)s
 
 VERSION:
 
-	%(version)s
+  %(version)s
 
 """  % dict(version=__version__,
-						 author=__author__,
-						 created=__created__,
-						 copyright=__copyright__)
-	# ----------------------------
-	parser.formatter.format_description = lambda s:s
-	parser.set_usage(main.__doc__)
+             author=__author__,
+             created=__created__,
+             copyright=__copyright__)
+  # ----------------------------
+  parser.formatter.format_description = lambda s:s
+  parser.set_usage(main.__doc__)
 
-	if '--help' in sys.argv:
-		parser.set_description(__doc__)
+  if '--help' in sys.argv:
+    parser.set_description(__doc__)
 
-		action_help = "Another optional argument that does not require to be " \
-			"prefixed (-a/--action) this can simply be typed out. `$`$" \
-			"		i.e.: pers -DV -u start `$" \
-			"This argument allows you to access the service features of this " \
-			"program. Choices: <start, stop, restart, status>, when using the " \
-			"[-b/--bg/--background] flag, this argument is not required, as the " \
-			"'start' action is automatically implied.`$"
+    action_help = "Another optional argument that does not require to be " \
+      "prefixed (-a/--action) this can simply be typed out. `$`$" \
+      "    i.e.: pers -DV -u start `$" \
+      "This argument allows you to access the service features of this " \
+      "program. Choices: <start, stop, restart, status>, when using the " \
+      "[-b/--bg/--background] flag, this argument is not required, as the " \
+      "'start' action is automatically implied.`$"
 
-		background_help = "This could take hours to run, and you may wish to " \
-			"run it in the background, checking back later to read the results " \
-			"in an output report.	When you get a chance, if you want to know " \
-			"if it is done running, you can simply type in 'benchmark status' to " \
-			"see if it is still running (if you used the [-b/--bg/--background] " \
-			"flag.`$" \
-			"If this flag is used, the 'start' action is implied for the " \
-			"[-a/--action] argument.`$"
+    background_help = "This could take hours to run, and you may wish to " \
+      "run it in the background, checking back later to read the results " \
+      "in an output report.  When you get a chance, if you want to know " \
+      "if it is done running, you can simply type in 'benchmark status' to " \
+      "see if it is still running (if you used the [-b/--bg/--background] " \
+      "flag.`$" \
+      "If this flag is used, the 'start' action is implied for the " \
+      "[-a/--action] argument.`$"
 
-		calibrate_help = "Run a quick calibration algorithm, to make the " \
-			"results more accurate, for this machine.`$"
+    calibrate_help = "Run a quick calibration algorithm, to make the " \
+      "results more accurate, for this machine.`$"
 
-		calibration_help = "Provide a calibration time. `$"
+    calibration_help = "Provide a calibration time. `$"
 
-		no_calibration_help = "Do not calibrate. `$" \
-			'`$*(use "--help" for more details)`$'
+    no_calibration_help = "Do not calibrate. `$" \
+      '`$*(use "--help" for more details)`$'
 
-		debug_help = "Enable debugging.	When debugging is enabled, this " \
-			"program will utilize it's own log file ('pers.log') logging will " \
-			"write to the ('pytis-tools.log') when this option is NOT enabled.	" \
-			"When utilizing the [-D/--debug] flag, debug statements will " \
-			"also print to the screen, unless you suppress them with the " \
-			"[-q/--quiet] flag.`$"
+    debug_help = "Enable debugging.  When debugging is enabled, this " \
+      "program will utilize it's own log file ('pers.log') logging will " \
+      "write to the ('pytis-tools.log') when this option is NOT enabled.  " \
+      "When utilizing the [-D/--debug] flag, debug statements will " \
+      "also print to the screen, unless you suppress them with the " \
+      "[-q/--quiet] flag.`$"
 
-		human_help = ' Human Readable Output. `$'
+    human_help = ' Human Readable Output. `$'
 
-		report_help = 'Show output in report mode.`$'
+    report_help = 'Show output in report mode.`$'
 
-		report_file_help = 'Full, or relative path to the report-file.`$' \
-			'This is the file that (when the [-r/--report] flag is provided, ' \
-			'output from this program will be written to.  You cannot provide the ' \
-			'optional report ([-r/--report]) flag, without also providing the ' \
-			"a file's name and path to write the output to.  This path maybe " \
-			'absolute, or relative.`$' \
-			'`$***see also: report-mode ([-m/--report-file-mode])`$'
+    report_file_help = 'Full, or relative path to the report-file.`$' \
+      'This is the file that (when the [-r/--report] flag is provided, ' \
+      'output from this program will be written to.  You cannot provide the ' \
+      'optional report ([-r/--report]) flag, without also providing the ' \
+      "a file's name and path to write the output to.  This path maybe " \
+      'absolute, or relative.`$' \
+      '`$***see also: report-mode ([-m/--report-file-mode])`$'
 
-		report_file_mode_help = 'Report file modes can be "Append", or ' \
-			'"replace." The default is append, and requires no input on your ' \
-			'behalf.  To select "append" mode, you may provide "+" to the ' \
-			'[-m/--report-file-mode] argument. `$'
+    report_file_mode_help = 'Report file modes can be "Append", or ' \
+      '"replace." The default is append, and requires no input on your ' \
+      'behalf.  To select "append" mode, you may provide "+" to the ' \
+      '[-m/--report-file-mode] argument. `$'
 
-		show_help = "See the output from the program or programs being " \
-			"benchmarked. `$"
+    show_help = "See the output from the program or programs being " \
+      "benchmarked. `$"
 
-		ttr_help = "How many times to run (default %s).`$"  % default_times_to_run
+    ttr_help = "How many times to run (default %s).`$"  % default_times_to_run
 
-		verbose_help=optparse.SUPPRESS_HELP
+    verbose_help=optparse.SUPPRESS_HELP
 
-	else:
-		helpishere=False # to determine help mode (short or full)
-		parser.set_description('')
-		parser.setFullHelpAvaiable()
+  else:
+    helpishere=False # to determine help mode (short or full)
+    parser.set_description('')
+    parser.setFullHelpAvaiable()
 
-		action_help = "Access the service features of this program. `$" \
-			"Choices: <start, stop, restart, status>`$" \
-			'*(use "--help" for more details)`$'
+    action_help = "Access the service features of this program. `$" \
+      "Choices: <start, stop, restart, status>`$" \
+      '*(use "--help" for more details)`$'
 
-		background_help = "Run this process in the Background. `$" \
-			'`$*(use "--help" for more details)`$'
+    background_help = "Run this process in the Background. `$" \
+      '`$*(use "--help" for more details)`$'
 
-		calibrate_help = "Run a quick calibration algorithm. `$" \
-			'`$*(use "--help" for more details)`$'
+    calibrate_help = "Run a quick calibration algorithm. `$" \
+      '`$*(use "--help" for more details)`$'
 
-		calibration_help = "Provide a calibration time. `$" \
-			'`$*(use "--help" for more details)`$'
+    calibration_help = "Provide a calibration time. `$" \
+      '`$*(use "--help" for more details)`$'
 
-		no_calibration_help = "Do not calibrate. `$" \
-			'`$*(use "--help" for more details)`$'
+    no_calibration_help = "Do not calibrate. `$" \
+      '`$*(use "--help" for more details)`$'
 
-		debug_help = "Enable debugging`$" \
-			'`$*(use "--help" for more details)`$'
+    debug_help = "Enable debugging`$" \
+      '`$*(use "--help" for more details)`$'
 
-		human_help = ' Human Readable Output. `$' \
-			'`$*(use "--help" for more details)`$'
+    human_help = ' Human Readable Output. `$' \
+      '`$*(use "--help" for more details)`$'
 
-		report_help = 'Show output in report mode.`$' \
-			'`$*(use "--help" for more details)`$'
+    report_help = 'Show output in report mode.`$' \
+      '`$*(use "--help" for more details)`$'
 
-		report_file_help = 'Full, or relative path to the report file.`$' \
-			'`$*(use "--help" for more details)`$'
+    report_file_help = 'Full, or relative path to the report file.`$' \
+      '`$*(use "--help" for more details)`$'
 
-		report_file_mode_help = 'Report file modes, `$' \
-			"Default replace, or '+' for append.`$" \
-			'`$*(use "--help" for more details)`$'
+    report_file_mode_help = 'Report file modes, `$' \
+      "Default replace, or '+' for append.`$" \
+      '`$*(use "--help" for more details)`$'
 
 
-		show_help = "See the output from the program or programs being " \
-			"benchmarked.  `$" \
-			'`$*(use "--help" for more details)`$'
+    show_help = "See the output from the program or programs being " \
+      "benchmarked.  `$" \
+      '`$*(use "--help" for more details)`$'
 
-		ttr_help = "How many times to run (default %s).`$"  % default_times_to_run
+    ttr_help = "How many times to run (default %s).`$"  % default_times_to_run
 
-		verbose_help="Be more Verbose (make lots of noise).  Off by default, " \
-					 "unless in dry-run.`$"
+    verbose_help="Be more Verbose (make lots of noise).  Off by default, " \
+           "unless in dry-run.`$"
   # ------------------------------------------------------------------------ |
-	# -------------------------------------------------------------------------
-
-  # ------------------------------------------------------------------------ |
-	# runtime variable setting
-  # ------------------------------------------------------------------------ |
-	runtime = optparse.OptionGroup(parser, "-- RUNTIME ARGUMENTS")
-	# ----------------------------
-
-	runtime.add_option("-a", "--action", type="choice", action='store',
-		default=None, dest='action', choices=('start','stop','restart','status'),
-		metavar='[ACTION <start, stop, restart, status>]',
-		help=action_help)
-
-	runtime.add_option("", "--bg", action="store_true",
-		default=False, dest='background',
-		help='')
-
-	runtime.add_option("-b", "--background", action="store_true",
-		default=False, dest='background',
-		help=background_help)
-
-	runtime.add_option("-d", "--decimals", type='int', action="store",
-		default=99, dest='decimals', metavar='[INT <0-99>]',
-		help=human_help)
-
-	runtime.add_option("-H", "--human", action="store_true",
-		default=False, dest='human',
-		help=human_help)
-
-	runtime.add_option('-r', '--report', action='store_true', default=False,
-		dest='report', help=report_help)
-
-	runtime.add_option('-f', '--file', action='store', default=None,
-		type='string', dest='file', metavar='[REPORT FILENAME/FILE PATH]',
-		help=report_file_help)
-
-	runtime.add_option('-m', '--report-file-mode', action='store', 
-		default='', type='string', dest='report_file_mode', 
-		metavar='[MODE: <, +>]',
-		help=report_file_mode_help)
-
-	runtime.add_option('-s', '--show', action='store_true', default=False,
-		dest='show', help=show_help)
-
-	runtime.add_option("", "--times", type="int", action='store',
-		default=default_times_to_run, dest='ttr',  metavar='[INT <0-x>]',
-		help='')
-	runtime.add_option("-t", "--times-to-run", type="int", action='store',
-		default=default_times_to_run, dest='ttr', metavar='[INT <0-x>]',
-		help=ttr_help)
-
-	parser.add_option_group(runtime)
-  # ------------------------------------------------------------------------ |
-  # ------------------------------------------------------------------------ |
-	# configuration variable setting
-  # ------------------------------------------------------------------------ |
-	vars = optparse.OptionGroup(parser, "-- CONFIGURATION SETTINGS")
-	# ----------------------------
-	# ----------------------------
-	vars.add_option("-c", "--calibrate", action="store_true",
-		default=False, dest='calibrate',
-		help=calibrate_help)
-
-	vars.add_option("-C", "--calibration", type='float', action="store",
-		default=None, dest='calibration',
-		metavar='[NUMERIC <CALIBRATION-SECONDS>]',
-		help=calibration_help)
-
-	vars.add_option("", "--zero-calibration", action="store",
-		default=False, dest='no_calibration',
-		help=no_calibration_help)
-
-	vars.add_option("", "--no-calibration", action="store",
-		default=False, dest='no_calibration',
-		help=no_calibration_help)
-
-	vars.add_option("-i", "--ionice", type="int", action='store',
-		 default=PyTis.MyThread.default_ioniceness, metavar='[INT <0 to 7>]',
-		 dest='ioniceness',
-		 help="Niceness range from 0 " \
-					"(most favorable scheduling) to 7 (least favorable).	Default 4.`$" \
-					"for more information, please run: man ionice.`$")
-
-	vars.add_option("-I", "--io-class", type="int", action='store',
-		default=PyTis.MyThread.default_ioniceness_class, 
-		dest='ioniceness_class', metavar='[INT <0-3>]',
-		help="The scheduling class. 0 for none, 1 for real time, 2 for " \
-			"best-effort, 3 for idle. Default: 2`$")
-
-	# ----------------------------
-
-	vars.add_option("-N", "--nice", type="int", action='store',
-		 default=PyTis.MyThread.default_niceness, 
-		 dest='niceness', metavar='[INT <-20 to 19>]',
-		 help="Niceness range from -20 (most favorable scheduling) to 19 " \
-		 "(least favorable).	Default 10.`$" \
-		 "for more information, please run: man nice.`$")
-	# ----------------------------
-	# ----------------------------
-
-	vars.add_option("", "--frequency__", type="int", action='store', 
-		default=default_frequency, dest='frequency', metavar='[INT 0]',
-		help=optparse.SUPPRESS_HELP)
-		# help="This needs to only run once, even if running in the background.
-		# Threfore the frequency will be 0, and the user SHOULD NOT SPECIFY any
-		# different!`$")
-
-	parser.add_option_group(vars)
-
+  # -------------------------------------------------------------------------
 
   # ------------------------------------------------------------------------ |
-	# ----------------------------
-	dbgroup = optparse.OptionGroup(parser, "-- DEBUG")
-	dbgroup.add_option("-D", "--debug", action="store_true",
-					 default=False, dest='debug',
-					 help="Enable debugging`$")
+  # runtime variable setting
+  # ------------------------------------------------------------------------ |
+  runtime = optparse.OptionGroup(parser, "-- RUNTIME ARGUMENTS")
+  # ----------------------------
 
+  runtime.add_option("-a", "--action", type="choice", action='store',
+    default=None, dest='action', choices=('start','stop','restart','status'),
+    metavar='[ACTION <start, stop, restart, status>]',
+    help=action_help)
 
-	# This is a little trick to tell if the user entered the -v/--verbose flag.
-	# We want verbosity on by default, but we also want to know if the user
-	# entered it for debug items, and providing end messages vs informed output.
-	dbgroup.add_option("", "--totaly-verbose", action="store_true",
-		default=False, dest='totally_verbose', 
-		help=optparse.SUPPRESS_HELP)
+  runtime.add_option("", "--bg", action="store_true",
+    default=False, dest='background',
+    help='')
 
-	dbgroup.add_option('-v', '--verbose', action='count', default=0,
-		dest='verbose', help=verbose_help)
+  runtime.add_option("-b", "--background", action="store_true",
+    default=False, dest='background',
+    help=background_help)
 
-	dbgroup.add_option("-q", "--quiet", action="store_true",
-					 default=False, dest='quiet',
-					 help="be vewwy quiet (I'm hunting wabbits).  On by default, " \
-					 "unless in dry-run.`$")
+  runtime.add_option("-d", "--decimals", type='int', action="store",
+    default=99, dest='decimals', metavar='[INT <0-99>]',
+    help=human_help)
 
-	dbgroup.add_option("-V", "--version", action="store_true",
-					 default=False, dest='version',
-					 help="Display Version")
+  runtime.add_option("-H", "--human", action="store_true",
+    default=False, dest='human',
+    help=human_help)
 
-	parser.add_option_group(dbgroup)
-	# ----------------------------
-	# OptParser OPTIONS ABOVE
-	# ##################################################################### #
-	# ##################################################################### #
-	# ##################################################################### #
-	# Unique to this program, we do not (cannot) use the standard sys.argv, #
-	# instead, we have to break sys.argv into two separate parts, one for   #
-	# this program (benchmark.py/benchmark) and one for which ever child    #
-	# program will be called by this program.                               #
-	# Side note, I hate having this code here, and hope to move it to its   #
-	# own function, if not just for readability, to get this program more   #
-	# inline with other PyTis programs.                                     #
-	# ##################################################################### #
+  runtime.add_option('-r', '--report', action='store_true', default=False,
+    dest='report', help=report_help)
 
-	wts = None # where_to_split = wts
+  runtime.add_option('-f', '--file', action='store', default=None,
+    type='string', dest='file', metavar='[REPORT FILENAME/FILE PATH]',
+    help=report_file_help)
 
-	#log.debug("Calculating where_to_split begins here.")
-	#print("Calculating where_to_split begins here.")
+  runtime.add_option('-m', '--report-file-mode', action='store', 
+    default='', type='string', dest='report_file_mode', 
+    metavar='[MODE: <, +>]',
+    help=report_file_mode_help)
 
-	for i, arg in enumerate(sys.argv):
+  runtime.add_option('-s', '--show', action='store_true', default=False,
+    dest='show', help=show_help)
 
-		#log.debug("enumerated i is '%s' and arg is '%s'." % (i, arg))
-		#print("enumerated i is '%s' and arg is '%s'." % (i, arg))
-		if i > 0:
-			if os.path.isfile(arg): 
+  runtime.add_option("", "--times", type="int", action='store',
+    default=default_times_to_run, dest='ttr',  metavar='[INT <0-x>]',
+    help='')
+  runtime.add_option("-t", "--times-to-run", type="int", action='store',
+    default=default_times_to_run, dest='ttr', metavar='[INT <0-x>]',
+    help=ttr_help)
 
-				#log.debug("arg %s is a file" % arg)
-				#print("arg %s is a file" % arg)
+  parser.add_option_group(runtime)
+  # ------------------------------------------------------------------------ |
+  # ------------------------------------------------------------------------ |
+  # configuration variable setting
+  # ------------------------------------------------------------------------ |
+  vars = optparse.OptionGroup(parser, "-- CONFIGURATION SETTINGS")
+  # ----------------------------
+  # ----------------------------
+  vars.add_option("-c", "--calibrate", action="store_true",
+    default=False, dest='calibrate',
+    help=calibrate_help)
 
-				if not arg.startswith('.') and not arg.startswith(os.sep):
-					if os.path.exists(os.path.abspath(os.path.join(os.getcwd(),arg))):
-						# sys.argv[i] = "./%s" % arg
-						# or
-						# sys.argv[i] = os.path.abspath(os.path.join(os.getcwd(),arg))
-						# should be the same thing,... either way, we are fixing the path
-						# to make it an executable.
-						sys.argv[i] = os.path.abspath(os.path.join(os.getcwd(),arg))
+  vars.add_option("-C", "--calibration", type='float', action="store",
+    default=None, dest='calibration',
+    metavar='[NUMERIC <CALIBRATION-SECONDS>]',
+    help=calibration_help)
 
-				# log.debug("wts=%s" % i)
-				#print("wts=%s" % i)
-				# now set where_to_split
-				wts=i
-				break
+  vars.add_option("", "--zero-calibration", action="store",
+    default=False, dest='no_calibration',
+    help=no_calibration_help)
 
-			elif not \
-			(
-				# BEGIN both must be false 
-				( arg.startswith('"') and arg.endswith('"') )
-				or
-				( arg.startswith("'") and arg.endswith("'") )
-				# END  both must be false
-			) \
-			and not arg.startswith('-') and \
-			arg.lower() not in ('start','stop','restart','status'):
-				# log.debug("arg %s doesn't start with a - and isn't an action" % arg)
-				#print("arg %s doesn't start with a - and isn't an action" % arg)
-				x=os.popen("which '%s'" % arg)
-				# log.debug("x.read(): %s" % x.read())
-				#print("x.read(): %s" % x.read())
-				test_path = x.read()
-				# log.debug("test_path: %s" % test_path)
-				#print("test_path: %s" % test_path)
+  vars.add_option("", "--no-calibration", action="store",
+    default=False, dest='no_calibration',
+    help=no_calibration_help)
 
-				#if x.read() and not x.close():
-				if test_path and not x.close():
-					# log.debug("not x.close()")
-					# print("not x.close()")
+  vars.add_option("-i", "--ionice", type="int", action='store',
+     default=PyTis.MyThread.default_ioniceness, metavar='[INT <0 to 7>]',
+     dest='ioniceness',
+     help="Niceness range from 0 " \
+          "(most favorable scheduling) to 7 (least favorable).  Default 4.`$" \
+          "for more information, please run: man ionice.`$")
 
-					sys.argv[i] = test_path.strip()
+  vars.add_option("-I", "--io-class", type="int", action='store',
+    default=PyTis.MyThread.default_ioniceness_class, 
+    dest='ioniceness_class', metavar='[INT <0-3>]',
+    help="The scheduling class. 0 for none, 1 for real time, 2 for " \
+      "best-effort, 3 for idle. Default: 2`$")
 
-					# log.debug("wts=%s" % i)
-					# print("wts=%s" % i)
-					# now set where_to_split
-					wts=i
-					break
-	
-	if not wts:
-		# log.debug("Not wts, so wts=%s" % len(sys.argv))
-		#print("Not wts, so wts=%s" % len(sys.argv))
-		wts = len(sys.argv)
-	else:
-		# log.debug("where_to_split is '%s'." % wts)
-		#print("where_to_split is '%s'." % wts)
-		pass
-		
-	sargs=[]; pargs=[]
-	if wts:
-		sargs = sys.argv[:wts] # sargs:(s)args:(s)ys.argv args 
-		pargs = sys.argv[wts:] # (p)rogram args:(p)assed args:(p)args
+  # ----------------------------
 
+  vars.add_option("-N", "--nice", type="int", action='store',
+     default=PyTis.MyThread.default_niceness, 
+     dest='niceness', metavar='[INT <-20 to 19>]',
+     help="Niceness range from -20 (most favorable scheduling) to 19 " \
+     "(least favorable).  Default 10.`$" \
+     "for more information, please run: man nice.`$")
+  # ----------------------------
+  # ----------------------------
 
-	# A quick fix for executables in our direct path, where the user forgot to
-	# prefix them with the standard ./ to execute them, referencing "this"
-	# directory.  Also, I need to expand this section ensuring that the file has
-	# a shebang line, and if not, call the program ahead of it.
+  vars.add_option("", "--frequency__", type="int", action='store', 
+    default=default_frequency, dest='frequency', metavar='[INT 0]',
+    help=optparse.SUPPRESS_HELP)
+    # help="This needs to only run once, even if running in the background.
+    # Threfore the frequency will be 0, and the user SHOULD NOT SPECIFY any
+    # different!`$")
 
-	if pargs and os.path.isfile(pargs[0]) and not pargs[0].startswith('.') and \
-		not pargs[0].startswith(os.sep):
-		pargs[0] = "./%s" % pargs[0]
+  parser.add_option_group(vars)
 
-	# ##################################################################### #
-	# ##################################################################### #
-	# ##################################################################### #
-	# ##################################################################### #
-
-	# ----------------------------
-	(opts, args) = parser.parse_args(sargs)
-	# ----------------------------
-
-	if opts.verbose: 
-		opts.totally_verbose = True
-
-#	if not opts.quiet and not opts.verbose:
-#		opts.verbose=1
-
-	if opts.quiet: opts.verbose = 0
-	else: opts.totally_verbose = True
-
-	# if opts.dry_run and not opts.quiet and not opts.verbose: opts.verbose = 1
-
-	#if not opts.quiet: opts.verbose = True # Defaults to Verbose
-#	if not opts.verbose: opts.quiet = True # Defaults to Quiet 
-	# ----------------------------
-
-	old_version = opts.version
-	opts.version = True
-	if not old_version: # I bet half of my programs or more are missing this if
-	#	statement
-		log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
-	opts.version = old_version
-
-	if opts.version:
-		"""
-		print("benchmark v%s" % PyTis.getVersion())
-		return 0
-
-		print("benchmark v%s" % __version__)
-		return 0
-
-		return PyTis.printVersion()
-		
-		---------------------------------------
-
-		all work, but the last one is the shortest, and easiest to make standard
-		now, in the output of the "newscript" program.
-		""" 
-		return PyTis.printVersion()
-	# ----------------------------
-
-	log.setLevel(0)
-
-	if opts.quiet:
-		#logging.getLogger().setLevel(level=logging.WARNING)
-		logging.getLogger().setLevel(level=logging.INFO)
-
-	if opts.verbose > 0:
-		logging.getLogger().setLevel(level=logging.INFO)
-
-	if opts.verbose > 1:
-		logging.getLogger().setLevel(level=logging.INFO)
-
-	if opts.verbose > 2:	 
-		opts.totally_verbose=True
-		logging.getLogger().setLevel(level=logging.DEBUG)
-
-	if opts.verbose > 3:	 
-		opts.debug=True
-		logging.getLogger().setLevel(level=logging.NOTSET)
-
-		# logging.getLogger().setLevel(level=logging.DEBUG)
-		# log.setOpts(opts)
-
-	# log.setOpts(opts)
-	# XXX:TODO - 
-	# this is KINDOF a bug, I shouldn't have to reset the OPTS 
-	# IF I have already just set the level, it should respect this.... need to
-	# look into this now.
-
-	if opts.debug:				 logging.getLogger().setLevel(level=logging.DEBUG)
-#	if opts.quiet:				 logging.getLogger().setLevel(level=logging.CRITICAL)
-
-
-	log.setOpts(opts)
-	'''
-	log.debug("Logging debug")
-	log.info("Logging info plain")
-	log.info0("Logging info 0 %s" % logging.getLevelName(20) )
-	log.info1("Logging info 1 %s" % logging.getLevelName(22) )
-	log.info2("Logging info 2 %s" % logging.getLevelName(24) )
-	log.info3("Logging info 3 %s" % logging.getLevelName(26) )
-	log.info4("Logging info 4 %s" % logging.getLevelName(28) )
-	log.warn("Logging a warning")
-	log.error("logging an error")
-	log.critical("Logging Critical")
-	log.fatal("A fatal log entry")
-	'''
-
-	log.debug('sys.argv: %s' % repr(sys.argv))
-	log.debug('passed parent program args: %s' % repr(sargs))
-	log.debug('passed child program args: %s' % repr(pargs))
-
-
-	# ##################################################################### #
-	# BEGIN ERROR CHECKING (to be moved)
-	
-	if opts.frequency != default_frequency:
-		errors.append("YOU MAY NOT PROVIDE A FREQUENCY ARGUMENT!")
-
-	action_set_via_bg = False # for better error handling...
-
-	if opts.action and opts.background:
-		errors.append('You provided the "background" [-b/--background] flag, ' \
-			'which implies the argument "action" [-a/--action] "start".  Yet ' \
-			'you also provided an action.  You do not need to provide an action, ' \
-			'when providing the "background" flag.')
-
-	elif opts.background is True:
-		action_set_via_bg = True
-		opts.action = 'start'
-
-	#remove_me is a list of index pointer INTS to help clean up sys.args as sargs
-	remove_me = [] 
-	# we have to look for actions, and time to run (ttr), on STDIN.
-	ttr_set_by_STDIN = False
-	if len(sargs): 
-		for i, arg in enumerate(sargs):
-			try:
-				ttr = int(arg)
-			except ValueError:
-				pass
-			else:
-				if ttr_set_by_STDIN is True:
-					# now this is interesting, this means we have already caught, and set
-					# it once, this means that EVEN if the provided INT is the same as
-					# the default, we want to catch the second declaration of an INT, and
-					# raise it as an error.
-					errors.append('You have provided two (2) separate integers via ' \
-						'STDIN, "%s" and "%s."  This is silly, you can only specify how ' \
-						'many times to run once.  Otherwise I will not know which ' \
-						'number to use.' % (opts.ttr, arg))
-
-				# uh ohh, it is already specified once,.. hmm.. maybe it is just the
-				# default.
-				elif ttr_set_by_STDIN is False and opts.ttr != default_times_to_run:
-					# uh oh, the user specified ttr as an argument and provided it
-					# blindly on STDIN.
-					errors.append('You cannot provide "times to run" twice, once as ' \
-						"an argument [-t/--times-to-run] (%s) and once without an " \
-						"argument (%s)." % (opts.ttr, arg))
-				else:
-					opts.ttr = int(arg)
-					ttr_set_by_STDIN = True
-
-			if str(arg).lower() in ('start','stop','restart','status'):
-				if opts.action is None: # redundant, but to have it more readable.
-					# action not provided as an attribute, but on STDIN, set opts.action
-					# now
-					if opts.background:
-						# uh oh, we have an action implied, by the background flag, and an
-						# action provided on STDIN.
-						errors.append('You provided the "background" ' \
-							'[-b/--background] flag, which implies the argument ' \
-							'"action" [-a/--action] "start".  Yet you also provided ' \
-							'an action via STDIN.  You do not need to provide an ' \
-							'action, when providing the "background" flag.  This is like ' \
-							'providing an action twice, which confuses me.')
-					else:
-						opts.action = arg.lower()
-						remove_me.append(i)
-				else:
-					# uhoh, we have an action specified twice!
-					if action_set_via_bg:
-						errors.append('Using the optional flag "background" ' \
-							'[-b/--bg/--background] already implies the action ' \
-							'[-a/--action] "start". By also providing the an action on ' \
-							'STDIN, you have provided an action twice, "start" via the ' \
-							'"background" flag, and "%s" via STDIN.  This confuses ' \
-							'me.' % arg.lower())
-					else:
-						errors.append('You have already specified "%s" as an action, ' \
-							'and are also trying to provide the action "%s" via STDIN.\n\n' \
-							'You may only specify ONE action [-a/--action].' % \
-								(opts.action, arg))
-
-		# If we remove ARGS in standard order, the list will immediately shift and
-		# throw off the value of all other index pointers, thus we first must
-		# reverse the list of pointers.
-		remove_me.reverse()
-		for i in remove_me:
-			# then we can remove it from args, no longer needed now that it is set in
-			# opts.action
-			del sargs[i]
-	
-	if opts.ttr < 1:
-		log.error("You must run the benchmark at least once, thus the " \
-			"lowest number you can choose is 1.")
-	elif opts.ttr > 500:
-		errors.append("You cannot run the benchmark this many times, it " \
-			"would likely take weeks to run.")
-		#log.error("You cannot run the benchmark this many times, it " \
-		#	"would likely take weeks to run.")
-	elif opts.ttr > 100:
-		if opts.quiet:
-			log.error("STRONG WARNING! You have chosen a VERY large number, this " \
-				"may take too long to run.  You may press CTRL+C to exit if this " \
-				"takes too long.")
-		else:
-			log.warn("STRONG WARNING! You have chosen a VERY large number, this " \
-				"may take too long to run.  You may press CTRL+C to exit if this " \
-				"takes too long.")
-		time.sleep(3.5) # if the user has high verbosity on, this message might fly
-		# by and be off screen before they even get a chance to read it.
-
-
-	# END ERROR CHECKING (to be moved)
-	# ##################################################################### #
 
   # ------------------------------------------------------------------------ |
-	if not errors and opts.debug and opts.verbose > 3:
-		PyTis.relogOpts(opts, "* VALUES AFTER LOADING *")
-
-	if not errors and not len(pargs) and opts.action not in ('stop', 'restart', 
-	'status'):
-		return parser.print_usage() # returns 0
-		# (same as below 2 lines)
-		#parser.print_usage()
-		#return 0
+  # ----------------------------
+  dbgroup = optparse.OptionGroup(parser, "-- DEBUG")
+  dbgroup.add_option("-D", "--debug", action="store_true",
+           default=False, dest='debug',
+           help="Enable debugging`$")
 
 
+  # This is a little trick to tell if the user entered the -v/--verbose flag.
+  # We want verbosity on by default, but we also want to know if the user
+  # entered it for debug items, and providing end messages vs informed output.
+  dbgroup.add_option("", "--totaly-verbose", action="store_true",
+    default=False, dest='totally_verbose', 
+    help=optparse.SUPPRESS_HELP)
 
-	elif not errors:
-		if opts.action == 'start':
-			if not opts.quiet:
-				log.info("benchmark started at %s" % PyTis.prettyNow())
-		if opts.action == 'status':
-			pass
-			#opts.totally_verbose=True
+  dbgroup.add_option('-v', '--verbose', action='count', default=0,
+    dest='verbose', help=verbose_help)
 
-		if opts.action == 'stop':
-			pass
-			#opts.totally_verbose=True
+  dbgroup.add_option("-q", "--quiet", action="store_true",
+           default=False, dest='quiet',
+           help="be vewwy quiet (I'm hunting wabbits).  On by default, " \
+           "unless in dry-run.`$")
 
-		# um... one, does info print?, I think so....
-#	two.... pargs limited?  missing first arg?
+  dbgroup.add_option("-V", "--version", action="store_true",
+           default=False, dest='version',
+           help="Display Version")
 
-		y = SingleThread()
-		y.setLogFile(log)
-		y.setOpts(opts)
+  parser.add_option_group(dbgroup)
+  # ----------------------------
+  # OptParser OPTIONS ABOVE
+  # ##################################################################### #
+  # ##################################################################### #
+  # ##################################################################### #
+  # Unique to this program, we do not (cannot) use the standard sys.argv, #
+  # instead, we have to break sys.argv into two separate parts, one for   #
+  # this program (benchmark.py/benchmark) and one for which ever child    #
+  # program will be called by this program.                               #
+  # Side note, I hate having this code here, and hope to move it to its   #
+  # own function, if not just for readability, to get this program more   #
+  # inline with other PyTis programs.                                     #
+  # ##################################################################### #
 
-		if opts.action:
-			#y.register(run,pargs,opts)
-			y.register(y.run, pargs)
-			y.service(opts)
-			return
-		else:
-			try:
-				return run(pargs, opts)
-			except KeyboardInterrupt as e:
-				log.debug("KeyboardInterrupt:",e)
-				log.info("Script terminated by Control-C")
-				log.info("bye!")
-				# Return Code 130 - Script terminated by Control-C
-				return 130
-				sys.exit(130)
+  wts = None # where_to_split = wts
 
-		"""
-		
-		argv=[]
-		[argv.extend(arg.split()) for arg in pargs]
-		
-		cmd_list=[]
-		cmd_list.extend(argv)
+  #log.debug("Calculating where_to_split begins here.")
+  #print("Calculating where_to_split begins here.")
 
-		log.info(repr(cmd_list))
-		subprocess.call(cmd_list)
-		"""
-		
-		'''
-		y	= SingleThread()
-		y.run()
-		'''
-		return 0
+  for i, arg in enumerate(sys.argv):
 
-		
-	else: # ( else there are errors)
+    #log.debug("enumerated i is '%s' and arg is '%s'." % (i, arg))
+    #print("enumerated i is '%s' and arg is '%s'." % (i, arg))
+    if i > 0:
+      if os.path.isfile(arg): 
 
-		# odd, printing "\n" creates two line breaks, whereas a space, only one,...
-		print(" ") # therefore, we only print a space.
-		if not pargs:
-			parser.print_usage()
-		for e in errors:
-			log.error("%s\n" % PyTis.wrap(e,71))
+        #log.debug("arg %s is a file" % arg)
+        #print("arg %s is a file" % arg)
 
-		return 1
-	
+        if not arg.startswith('.') and not arg.startswith(os.sep):
+          if os.path.exists(os.path.abspath(os.path.join(os.getcwd(),arg))):
+            # sys.argv[i] = "./%s" % arg
+            # or
+            # sys.argv[i] = os.path.abspath(os.path.join(os.getcwd(),arg))
+            # should be the same thing,... either way, we are fixing the path
+            # to make it an executable.
+            sys.argv[i] = os.path.abspath(os.path.join(os.getcwd(),arg))
+
+        # log.debug("wts=%s" % i)
+        #print("wts=%s" % i)
+        # now set where_to_split
+        wts=i
+        break
+
+      elif not \
+      (
+        # BEGIN both must be false 
+        ( arg.startswith('"') and arg.endswith('"') )
+        or
+        ( arg.startswith("'") and arg.endswith("'") )
+        # END  both must be false
+      ) \
+      and not arg.startswith('-') and \
+      arg.lower() not in ('start','stop','restart','status'):
+        # log.debug("arg %s doesn't start with a - and isn't an action" % arg)
+        #print("arg %s doesn't start with a - and isn't an action" % arg)
+        x=os.popen("which '%s'" % arg)
+        # log.debug("x.read(): %s" % x.read())
+        #print("x.read(): %s" % x.read())
+        test_path = x.read()
+        # log.debug("test_path: %s" % test_path)
+        #print("test_path: %s" % test_path)
+
+        #if x.read() and not x.close():
+        if test_path and not x.close():
+          # log.debug("not x.close()")
+          # print("not x.close()")
+
+          sys.argv[i] = test_path.strip()
+
+          # log.debug("wts=%s" % i)
+          # print("wts=%s" % i)
+          # now set where_to_split
+          wts=i
+          break
+  
+  if not wts:
+    # log.debug("Not wts, so wts=%s" % len(sys.argv))
+    #print("Not wts, so wts=%s" % len(sys.argv))
+    wts = len(sys.argv)
+  else:
+    # log.debug("where_to_split is '%s'." % wts)
+    #print("where_to_split is '%s'." % wts)
+    pass
+    
+  sargs=[]; pargs=[]
+  if wts:
+    sargs = sys.argv[:wts] # sargs:(s)args:(s)ys.argv args 
+    pargs = sys.argv[wts:] # (p)rogram args:(p)assed args:(p)args
+
+
+  # A quick fix for executables in our direct path, where the user forgot to
+  # prefix them with the standard ./ to execute them, referencing "this"
+  # directory.  Also, I need to expand this section ensuring that the file has
+  # a shebang line, and if not, call the program ahead of it.
+
+  if pargs and os.path.isfile(pargs[0]) and not pargs[0].startswith('.') and \
+    not pargs[0].startswith(os.sep):
+    pargs[0] = "./%s" % pargs[0]
+
+  # ##################################################################### #
+  # ##################################################################### #
+  # ##################################################################### #
+  # ##################################################################### #
+
+  # ----------------------------
+  (opts, args) = parser.parse_args(sargs)
+  # ----------------------------
+
+  if opts.verbose: 
+    opts.totally_verbose = True
+
+#  if not opts.quiet and not opts.verbose:
+#    opts.verbose=1
+
+  if opts.quiet: opts.verbose = 0
+  else: opts.totally_verbose = True
+
+  # if opts.dry_run and not opts.quiet and not opts.verbose: opts.verbose = 1
+
+  #if not opts.quiet: opts.verbose = True # Defaults to Verbose
+#  if not opts.verbose: opts.quiet = True # Defaults to Quiet 
+  # ----------------------------
+
+  old_version = opts.version
+  opts.version = True
+  if not old_version: # I bet half of my programs or more are missing this if
+  #  statement
+    log = PyTis.set_logging(opts, os.path.basename(sys.argv[0]))
+  opts.version = old_version
+
+  if opts.version:
+    """
+    print("benchmark v%s" % PyTis.getVersion())
+    return 0
+
+    print("benchmark v%s" % __version__)
+    return 0
+
+    return PyTis.printVersion()
+    
+    ---------------------------------------
+
+    all work, but the last one is the shortest, and easiest to make standard
+    now, in the output of the "newscript" program.
+    """ 
+    return PyTis.printVersion()
+  # ----------------------------
+
+  log.setLevel(0)
+
+  if opts.quiet:
+    #logging.getLogger().setLevel(level=logging.WARNING)
+    logging.getLogger().setLevel(level=logging.INFO)
+
+  if opts.verbose > 0:
+    logging.getLogger().setLevel(level=logging.INFO)
+
+  if opts.verbose > 1:
+    logging.getLogger().setLevel(level=logging.INFO)
+
+  if opts.verbose > 2:   
+    opts.totally_verbose=True
+    logging.getLogger().setLevel(level=logging.DEBUG)
+
+  if opts.verbose > 3:   
+    opts.debug=True
+    logging.getLogger().setLevel(level=logging.NOTSET)
+
+    # logging.getLogger().setLevel(level=logging.DEBUG)
+    # log.setOpts(opts)
+
+  # log.setOpts(opts)
+  # XXX:TODO - 
+  # this is KINDOF a bug, I shouldn't have to reset the OPTS 
+  # IF I have already just set the level, it should respect this.... need to
+  # look into this now.
+
+  if opts.debug:         logging.getLogger().setLevel(level=logging.DEBUG)
+#  if opts.quiet:         logging.getLogger().setLevel(level=logging.CRITICAL)
+
+
+  log.setOpts(opts)
+  '''
+  log.debug("Logging debug")
+  log.info("Logging info plain")
+  log.info0("Logging info 0 %s" % logging.getLevelName(20) )
+  log.info1("Logging info 1 %s" % logging.getLevelName(22) )
+  log.info2("Logging info 2 %s" % logging.getLevelName(24) )
+  log.info3("Logging info 3 %s" % logging.getLevelName(26) )
+  log.info4("Logging info 4 %s" % logging.getLevelName(28) )
+  log.warn("Logging a warning")
+  log.error("logging an error")
+  log.critical("Logging Critical")
+  log.fatal("A fatal log entry")
+  '''
+
+  log.debug('sys.argv: %s' % repr(sys.argv))
+  log.debug('passed parent program args: %s' % repr(sargs))
+  log.debug('passed child program args: %s' % repr(pargs))
+
+
+  # ##################################################################### #
+  # BEGIN ERROR CHECKING (to be moved)
+  
+  if opts.frequency != default_frequency:
+    errors.append("YOU MAY NOT PROVIDE A FREQUENCY ARGUMENT!")
+
+  action_set_via_bg = False # for better error handling...
+
+  if opts.action and opts.background:
+    errors.append('You provided the "background" [-b/--background] flag, ' \
+      'which implies the argument "action" [-a/--action] "start".  Yet ' \
+      'you also provided an action.  You do not need to provide an action, ' \
+      'when providing the "background" flag.')
+
+  elif opts.background is True:
+    action_set_via_bg = True
+    opts.action = 'start'
+
+  #remove_me is a list of index pointer INTS to help clean up sys.args as sargs
+  remove_me = [] 
+  # we have to look for actions, and time to run (ttr), on STDIN.
+  ttr_set_by_STDIN = False
+  if len(sargs): 
+    for i, arg in enumerate(sargs):
+      try:
+        ttr = int(arg)
+      except ValueError:
+        pass
+      else:
+        if ttr_set_by_STDIN is True:
+          # now this is interesting, this means we have already caught, and set
+          # it once, this means that EVEN if the provided INT is the same as
+          # the default, we want to catch the second declaration of an INT, and
+          # raise it as an error.
+          errors.append('You have provided two (2) separate integers via ' \
+            'STDIN, "%s" and "%s."  This is silly, you can only specify how ' \
+            'many times to run once.  Otherwise I will not know which ' \
+            'number to use.' % (opts.ttr, arg))
+
+        # uh ohh, it is already specified once,.. hmm.. maybe it is just the
+        # default.
+        elif ttr_set_by_STDIN is False and opts.ttr != default_times_to_run:
+          # uh oh, the user specified ttr as an argument and provided it
+          # blindly on STDIN.
+          errors.append('You cannot provide "times to run" twice, once as ' \
+            "an argument [-t/--times-to-run] (%s) and once without an " \
+            "argument (%s)." % (opts.ttr, arg))
+        else:
+          opts.ttr = int(arg)
+          ttr_set_by_STDIN = True
+
+      if str(arg).lower() in ('start','stop','restart','status'):
+        if opts.action is None: # redundant, but to have it more readable.
+          # action not provided as an attribute, but on STDIN, set opts.action
+          # now
+          if opts.background:
+            # uh oh, we have an action implied, by the background flag, and an
+            # action provided on STDIN.
+            errors.append('You provided the "background" ' \
+              '[-b/--background] flag, which implies the argument ' \
+              '"action" [-a/--action] "start".  Yet you also provided ' \
+              'an action via STDIN.  You do not need to provide an ' \
+              'action, when providing the "background" flag.  This is like ' \
+              'providing an action twice, which confuses me.')
+          else:
+            opts.action = arg.lower()
+            remove_me.append(i)
+        else:
+          # uhoh, we have an action specified twice!
+          if action_set_via_bg:
+            errors.append('Using the optional flag "background" ' \
+              '[-b/--bg/--background] already implies the action ' \
+              '[-a/--action] "start". By also providing the an action on ' \
+              'STDIN, you have provided an action twice, "start" via the ' \
+              '"background" flag, and "%s" via STDIN.  This confuses ' \
+              'me.' % arg.lower())
+          else:
+            errors.append('You have already specified "%s" as an action, ' \
+              'and are also trying to provide the action "%s" via STDIN.\n\n' \
+              'You may only specify ONE action [-a/--action].' % \
+                (opts.action, arg))
+
+    # If we remove ARGS in standard order, the list will immediately shift and
+    # throw off the value of all other index pointers, thus we first must
+    # reverse the list of pointers.
+    remove_me.reverse()
+    for i in remove_me:
+      # then we can remove it from args, no longer needed now that it is set in
+      # opts.action
+      del sargs[i]
+  
+  if opts.ttr < 1:
+    log.error("You must run the benchmark at least once, thus the " \
+      "lowest number you can choose is 1.")
+  elif opts.ttr > 500:
+    errors.append("You cannot run the benchmark this many times, it " \
+      "would likely take weeks to run.")
+    #log.error("You cannot run the benchmark this many times, it " \
+    #  "would likely take weeks to run.")
+  elif opts.ttr > 100:
+    if opts.quiet:
+      log.error("STRONG WARNING! You have chosen a VERY large number, this " \
+        "may take too long to run.  You may press CTRL+C to exit if this " \
+        "takes too long.")
+    else:
+      log.warn("STRONG WARNING! You have chosen a VERY large number, this " \
+        "may take too long to run.  You may press CTRL+C to exit if this " \
+        "takes too long.")
+    time.sleep(3.5) # if the user has high verbosity on, this message might fly
+    # by and be off screen before they even get a chance to read it.
+
+
+  # END ERROR CHECKING (to be moved)
+  # ##################################################################### #
+
+  # ------------------------------------------------------------------------ |
+  if not errors and opts.debug and opts.verbose > 3:
+    PyTis.relogOpts(opts, "* VALUES AFTER LOADING *")
+
+  if not errors and not len(pargs) and opts.action not in ('stop', 'restart', 
+  'status'):
+    return parser.print_usage() # returns 0
+    # (same as below 2 lines)
+    #parser.print_usage()
+    #return 0
+
+
+
+  elif not errors:
+    if opts.action == 'start':
+      if not opts.quiet:
+        log.info("benchmark started at %s" % PyTis.prettyNow())
+    if opts.action == 'status':
+      pass
+      #opts.totally_verbose=True
+
+    if opts.action == 'stop':
+      pass
+      #opts.totally_verbose=True
+
+    # um... one, does info print?, I think so....
+#  two.... pargs limited?  missing first arg?
+
+    y = SingleThread()
+    y.setLogFile(log)
+    y.setOpts(opts)
+
+    if opts.action:
+      #y.register(run,pargs,opts)
+      y.register(y.run, pargs)
+      y.service(opts)
+      return
+    else:
+      try:
+        return run(pargs, opts)
+      except KeyboardInterrupt as e:
+        log.debug("KeyboardInterrupt:",e)
+        log.info("Script terminated by Control-C")
+        log.info("bye!")
+        # Return Code 130 - Script terminated by Control-C
+        return 130
+        sys.exit(130)
+
+    """
+    
+    argv=[]
+    [argv.extend(arg.split()) for arg in pargs]
+    
+    cmd_list=[]
+    cmd_list.extend(argv)
+
+    log.info(repr(cmd_list))
+    subprocess.call(cmd_list)
+    """
+    
+    '''
+    y  = SingleThread()
+    y.run()
+    '''
+    return 0
+
+    
+  else: # ( else there are errors)
+
+    # odd, printing "\n" creates two line breaks, whereas a space, only one,...
+    print(" ") # therefore, we only print a space.
+    if not pargs:
+      parser.print_usage()
+    for e in errors:
+      log.error("%s\n" % PyTis.wrap(e,71))
+
+    return 1
+  
 
 
 if __name__ == '__main__':
-	try:
-		sys.exit(main())
-	except Exception as e:
-		print("An error has occured.\n")
-		print(str(e))
-		sys.exit(1)
+  try:
+    sys.exit(main())
+  except Exception as e:
+    print("An error has occured.\n")
+    print(str(e))
+    sys.exit(1)
 

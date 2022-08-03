@@ -176,13 +176,19 @@ __created__ = '06:14pm 09 Sep, 2009'
 __copyright__ = 'PyTis.com'
 __configdir__ = pytis_configure.configdir # '/root/etc'
 __logdir__ = pytis_configure.logdir # '/root/log'
-__version__ = '8.3.0'
+__version__ = '8.4.0'
 
 
 
 __change_log__ = """
 
 CHANGE LOG
+
+v8.4.0                                                          January 20, 2022
+  MAJOR CHANGE
+    Major change in getip.py
+    Also fixed broken import issue with bulkmore and bulkcopy.  Now these
+    programs should work properly again.
 
 V8.3.0
   MINOR CHANGE

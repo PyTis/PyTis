@@ -173,7 +173,7 @@ class FuncMethUnion:
 
     def __getattr__(self, name):
         if name [0] == '_' and not name in ('__doc__', '__name__'):
-            raise AttributeError, name
+            raise AttributeError(name)
         if hasattr(self._func, name):
             return getattr(self._func, name)
         if hasattr(self._func, 'im_func'):
@@ -185,7 +185,7 @@ class FuncMethUnion:
                 else:
                     return self._func.im_func.func_code                
             return getattr(self._func.im_func, name)
-        raise AttributeError, name
+        raise AttributeError(name)
 
 
 class SimCode:
@@ -213,7 +213,7 @@ class SimCode:
 
         elif len(name) > 3 and name[:3] == 'co_':
             return getattr(self._func.__call__.func_code, name)
-        raise AttributeError, name
+        raise AttributeError(name)
 
 class Functor:
     """
@@ -269,7 +269,7 @@ class Functor:
             return self.__call__.func_globals
         elif name == "func_name":
             return self.getName()
-        raise AttributeError, name
+        raise AttributeError(name)
 
     def __lshift__(self, other):
         return curry(self, other)
@@ -302,7 +302,7 @@ class Functor:
         return compose(other, self)
 
     def __not__(self):
-        print "NOT!"
+        print("NOT!")
         return complement(self)
 
 class wrap(Functor):
@@ -472,15 +472,19 @@ class rcurry(Functor):
         try:
             self.getArgCount()
         except:
-            raise RuntimeError, "No info about number of args on func, use curry with Blanks instead."
+            raise RuntimeError("No info about number of args on func, use " \
+              "curry with Blanks instead.")
         argcount = Functor.getArgCount(self)
         defs = Functor.getDefaults(self)
         if defs:
-            raise RuntimeError, "Use curry with keyword arguments for callables which take keyword arguments"
+            raise RuntimeError("Use curry with keyword arguments for " \
+              "callables which take keyword arguments")
         if self.getFlags() & 4:
-            raise RuntimeError, "Use curry for callables which take a variable number of arguments"
+            raise RuntimeError("Use curry for callables which take a " \
+              "variable number of arguments")
         if self.getFlags() & 8:
-            raise RuntimeError, "Use curry for callables which take a variable number of keyword arguments"
+            raise RuntimeError("Use curry for callables which take a " \
+              "variable number of keyword arguments")
         argdiff = argcount - len(args)
         if argdiff >= 1:
             self._args = ((Blank,) * argdiff) + args
@@ -555,7 +559,7 @@ class compose(Functor):
         Functor.__init__(self, args[-1])
         args = list(args)
         if not all(args, callable):
-            raise TypeError, "All arguments must be callable."
+            raise TypeError("All arguments must be callable.")
         args.reverse()
         self._funcs = args
 
@@ -597,7 +601,7 @@ class joinfuncs(Functor):
     def __init__(self, *args):
         Functor.__init__(self, args[0])
         if not all(args, callable):
-            raise TypeError, "All arguments must be callable."
+            raise TypeError("All arguments must be callable.")
         self._funcs = args
 
     def __call__(self, *args, **kwargs):
@@ -663,7 +667,7 @@ class conjoin(Functor):
     def __init__(self, *funcs):
         Functor.__init__(self, funcs[0])
         if not all(funcs, callable):
-            raise TypeError, "All arguments must be callable."
+            raise TypeError("All arguments must be callable.")
         self._funcs = funcs
     def __call__(self, *args, **kwargs):
         for func in self._funcs:
@@ -715,7 +719,7 @@ class sequential(Functor):
     """
     def __init__(self, funcs, main = None):
         if not all(funcs, callable):
-            raise TypeError, "All arguments must be callable."
+            raise TypeError("All arguments must be callable.")
         self._funcs = funcs
         if not main:
             main = funcs[0]
@@ -840,7 +844,7 @@ class error_handler(Functor):
     def __init__(self, func, errorfunc = None):
         Functor.__init__(self, func)
         if not callable(func):
-            raise TypeError, "First argument to error_handler must be callable"
+            raise TypeError("First argument to error_handler must be callable")
         self._errorfunc = errorfunc
 
     def __call__(self, *args, **kwargs):
@@ -854,7 +858,7 @@ class error_handler(Functor):
                 else:
                     return self._errorfunc                
             except:
-                raise exc_info[0], exc_info[1], exc_info[2]
+                raise exc_info[0]( exc_info[1],  exc_info[2])
 
 def trap_error(func, on_error = None):
     """
@@ -915,7 +919,7 @@ class attempt(Functor):
     def __init__(self, *funcs):
         Functor.__init__(self, funcs[0])
         if not all(funcs, callable):
-            raise TypeError, "All arguments must be callable."
+            raise TypeError("All arguments must be callable.")
         self._funcs = funcs
 
     def __call__(self, *args, **kwargs):
@@ -1016,14 +1020,14 @@ class Bindings:
     Traceback (most recent call last):
       File "<stdin>", line 1, in ?
       File "functional.py", line 855, in __setattr__
-        raise RuntimeError, "Binding cannot be re-bound."
+        raise RuntimeError("Binding cannot be re-bound.")
     RuntimeError: Binding cannot be re-bound.
     >>>
     """
     
     def __setattr__(self, name, value):
         if self.__dict__.has_key('__hidden_' + name):
-            raise BindingError, "Binding '%s' cannot be modified." % name
+            raise BindingError("Binding '%s' cannot be modified." % name)
         else:
             self.__dict__['__hidden_' + name] = value
 
@@ -1039,7 +1043,7 @@ def namespace(bindings):
     bindings suitable for use with eval().
     """
     return mapdict(
-        lambda (key, value):(key[len('__hidden_'):], value),
+        lambda (key, value): (key[len('__hidden_'):], value),
             bindings.__dict__)
 
 def mapdict(itemfunc, dictionary):

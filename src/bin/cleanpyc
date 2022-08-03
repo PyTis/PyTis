@@ -1,1 +1,27 @@
-clean-pyc
+#!/usr/bin/env bash
+if [ "$1" == '--recursive' ] || [ "$1" == '-r' ] && [ ! "$2" ]; then
+    VAR="ERROR: This will run recursively, but you must pass in a path, as \
+			the second "
+		var="argument. You can pass in a period ('.') for this (your \
+			current) directory."
+		echo ${VAR}
+		echo ${var}
+		exit 1;
+elif [ "$1" == '--recursive' ] || [ "$1" == '-r' ] && [ "$2" ]; then
+    cd $2
+    rm -f `find . -iname '*.pyc'` 
+    echo 'DONE.'
+		exit 0;
+fi
+if [ ! "$1" ]; then
+    VAR="Please pass in a path. Tou can pass in a period ('.') for this \
+			(your "
+		var="current) directory."
+		echo ${VAR}
+		echo ${var}
+		exit 1;
+else
+    cd $1
+    rm -f `find . -maxdepth 1 -iname '*.pyc'` 
+    echo 'DONE.'
+fi

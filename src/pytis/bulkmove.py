@@ -24,7 +24,7 @@ import optparse
 import os
 import shutil
 import sys
-import pytis as PyTis
+import pytis.pytis as PyTis
 
 __curdir__ = os.path.abspath(os.path.dirname(__file__))
 __author__ = 'Josh Lee'

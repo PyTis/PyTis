@@ -16,6 +16,7 @@
 import os
 import re
 import sys
+import datetime
 
 from codecs import BOM_UTF8, BOM_UTF16, BOM_UTF16_BE, BOM_UTF16_LE
 
@@ -119,6 +120,23 @@ OPTION_DEFAULTS = {
     'unrepr': False,
     'write_empty_values': False,
 }
+__license__ = '''# ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; ;
+# The contents of this file are subject to the PyTis Public License Version    ;
+# 2.0 (the "License"); you may not use this file except in compliance with     ;
+# the License. You may obtain a copy of the License at                         ;
+#                                                                              ;
+#     http://www.PyTis.com/License/                                            ;
+#                                                                              ;
+#     Copyright © %s Josh Lee                                                ;
+#                                                                              ;
+# Software distributed under the License is distributed on an "AS IS" basis,   ;
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License     ;
+# for the specific language governing rights and limitations under the         ;
+# License.                                                                     ;
+#                                                                              ;
+# ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; ;
+
+''' % datetime.datetime.now().year
 
 # this could be replaced if six is used for compatibility, or there are no
 # more assertions about items being a string
