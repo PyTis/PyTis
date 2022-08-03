@@ -1,6 +1,12 @@
 # ~/.bashrc: executed by bash(1) for non-login shells.
 
 export PATH="/sbin/:$PATH"
+export PATH="~/.local/bin/:~/bin/:$PATH"
+export PATH="/usr/sbin/:/bin/:/usr/bin/:$PATH"
+export PGPASSFILE='~/.pgpass'
+export MYSQL_HOME='~/' #'~/my.cnf'
+export SESSION_DIR="~/.sessions"
+
 export PAGER="/usr/bin/less"
 export EDITOR="vim"
 
@@ -18,7 +24,7 @@ fi
 
 alias dc='cd ..'
 
-alias x='screen -R'
+alias x='screen -x'
 alias screen='screen -U'
 
 alias cls='/usr/bin/clear'
@@ -34,12 +40,15 @@ alias grep="grep --exclude='*.swp' --exclude='*.swo' --exclude='*.swc' --exclude
 alias diff="diff --exclude='*.swp' --exclude='*.swo' --exclude='*.swc' --exclude='*.pyc' "
 
 alias notes='vi ~/notes.txt'
+alias todo='vi ~/todo.txt'
 
 alias brc='vi ~/.bashrc'
 alias scr='vi ~/.screenrc'
 alias grc='vi ~/bashrc/git-shortcuts.rc'
+alias vrc='vi ~/.vimrc'
 alias src='source ~/.bashrc'
 
+alias ulist='uniquelist'
 
 # -----------------------------------------------------------------------------
 # important, this allows colors from ls to pull through whne piping to more or less
@@ -287,3 +296,4 @@ IP=`LANG=c getip | awk -F: '{print $1}'`
 #
 # -----------------------------------------------------------------------------
 
+_loadProject;
