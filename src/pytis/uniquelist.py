@@ -201,25 +201,20 @@ SYMANTICS:
   Argument - an option that requires input.
 
 SEE ALSO:
-
   cnt
   fixedwidth
   to80
 
 COPYRIGHT:
-
   %(copyright)s
 
 AUTHOR:
-
   %(author)s
 
 HISTORY:
-
   Original Author
 
 CHANGE LOG:
-
   v2.0 MAJOR CHANGE                                               August 3, 2022
       First, added -m/--mp3 as an alias of newly added -w/--winamp optional
     flag.  Because I've found myself once again using this program, but not for
@@ -257,15 +252,12 @@ EXAMPLES:
 
 
 BUGS - KNOWN ISSUES:
-
   NONE (at tis time).
 
 CREATED:
-
   %(created)s
 
 VERSION:
-
   %(version)s
 
 """  % help_dict
