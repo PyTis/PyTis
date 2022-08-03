@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python3.8.exe
 # encoding=utf-8
 # ##############################################################################
 # The contents of this file are subject to the PyTis Public License Version    #
@@ -64,8 +64,10 @@ This tool will automatically edit files and add your copyright loaded from a
 template.  The use of this "template" can be over-ridden using the -t flag.
 
 """
+import curses
 import json
 import optparse
+import pydoc
 import shlex
 import socket
 from subprocess import Popen, PIPE
@@ -75,18 +77,116 @@ python_version = float("%s.%s"%(sys.version_info.major,sys.version_info.minor))
 if python_version >= 3.0:
   from urllib.request import urlopen
   from urllib.error import URLError
+  from io import StringIO
 else:
   from urllib2 import urlopen, URLError
+  from cStringIO import StringIO
 
 
 import logging; log=logging.getLogger('getip')
 
-default_timeout = 1
+default_timeout = 1.5
 __author__ = 'Josh Lee'
 __created__ = '06:14pm 01 October 2018'
 __copyright__ = 'PyTis.com'
-__version__ = 1.2
+__version__ = 2.0
 
+
+class MParser(optparse.OptionParser):
+
+  extra_txt = None
+
+  def print_out(self, txt):
+    try:
+      #txt = txt.replace("`$","\n")
+      txt = txt.replace("`$","\n                     ")
+      #txt = txt.replace(":\n",":\n\n")
+      win=curses.initscr()
+      max_x, max_y = win.getmaxyx()
+      curses.endwin()
+      if len(txt.split("\n")) > max_x:
+        pager = pydoc.getpager()
+        try:
+          pager(txt)
+        except (EOFError, KeyboardInterrupt) as e:
+          pass
+      else:
+        sys.stdout.write("%s\n" % txt)
+    except:
+      pager = pydoc.getpager()
+      try:
+        pager(txt)
+      except (EOFError, KeyboardInterrupt) as e:
+        pass
+      sys.stdout.write("%s\n" % txt)
+
+
+  def print_help(self, errors=None):
+    """
+    NAME
+    SYNOPSIS
+    DESCRIPTION
+    OPTIONS
+    COMMANDS
+    ENVIRONMENT
+    SEE ALSO
+    AUTHOR
+    HISTORY
+    VERSION
+    """
+    buf = StringIO()
+    sys.stdout = buf
+
+    # The user did not enter --help, they only entered -h, show short help and
+    # instructions on howto view full help.
+    if '--help' not in sys.argv and self.extra_txt is not None:
+      # print the short usage.
+      self.set_usage("%s\n%s" % (self.get_usage(), "*** USE '--help' for the full help page. ***"))
+
+    # If NOT (--help was typed in, and there is extra_text to show, and
+    # full_help_available)
+    if not ('--help' in sys.argv and self.extra_txt is not None and 
+      self.full_help_available):
+      # print help as the OptionParser normally would, without extra goodies
+      optparse.OptionParser.print_help(self)
+
+
+    extras = ''
+    if '--help' in sys.argv and self.extra_txt is not None and errors is None:
+      """
+      try: extras = "Created: %s\n" % __created__
+      except NameError: pass
+      try: extras = "%sAuthor: %s\n" % (extras,__author__)
+      except NameError: pass
+      try: extras = "%sCopyright: %s\n" % (extras,__copyright__)
+      except NameError: pass
+      try: extras = "%sVersion: %s\n" % (extras,__version__)
+      except NameError: pass
+      if extras:
+        self.extra_txt = "\n%s\n\n%s" % (self.extra_txt, extras)
+      """
+      #print self.extra_txt
+      self.print_out(self.extra_txt)
+
+    if not errors:
+      errrors = []
+    elif not isinstance(errors, list):
+      errors = [errors]
+
+    sys.stdout = sys.__stdout__
+    # XXX:TODO - 2 Weeks ago I was writing a ManPage builder.  Afer looking
+    # back at this method I wrote years ago.  I realized it would be easy to
+    # alter this code just slightly to have it generate manpages.  It may be
+    # better to just add a similar method for generating manpages, easier than
+    # what I was doing.
+    self.print_out(buf.getvalue().replace("Options:\n","OPTIONS:\n").replace(":\n",":\n\n"))
+    #txt = txt.replace(":\n",":\n\n")
+
+    if errors:
+      sys.stderr.write("\n")
+      for error in errors:
+        sys.stderr.write(wrap("ERROR: %s\n" % error))
+    sys.stderr.flush()
 # =============================================================================
 # Begin Helpers
 # -----------------------------------------------------------------------------
@@ -245,7 +345,7 @@ def main(funcs=funcs):
   """usage: %prog <options> (*use '--help' to see the full help text) """
   global default_timeout, log
   # ----------------------------
-  parser = optparse.OptionParser(description=__doc__)
+  parser = MParser()
   parser.set_usage(main.__doc__)
   parser.formatter.format_description = lambda s:s
 
@@ -290,6 +390,7 @@ def main(funcs=funcs):
              copyright=__copyright__)
 
   if '--help' in sys.argv:
+    parser.set_description(__doc__)
     extra = """
 CODE:
   Flag vs. Argument:
@@ -311,9 +412,27 @@ AUTHOR:
 
 HISTORY:
 
+
   Original Author
 
 CHANGE LOG:
+
+  v2.0 MAJOR CHANGE                                             January 20, 2022
+    I noticed this does NOT import my pytis library like MOST of my programs
+    do, so I wanted to keep it this way (so it can be exported as a stand alone
+      program easily) however, I also wanted to have the "-h" and "--help"
+      function as it does with my PyTis.MyParser (custom optparse.OptionParser)
+      where --help will work similarly to a manpage, allowing the user to
+      search, almost as if it were piped to MORE.  Also, the user doesn't have
+      to scroll.  This would be about the same as NOT having a custom parser,
+      but running "getip.py --help | more"  I have just the simple help
+      displayed when the user uses "-h" and the full help with examples,
+      docstrings, etc. being displayed when the user inputs "--help."  Since
+      the output IS longer than my window (it doesn't all fit), and I wish not
+      only to be able to easily PAGEUP/PAGEDOWN but also search the help (JUST
+      like a manpage) I simply created a custom parser class here, copying the
+      2 methods from the pytis parser, that perform this task for me, keeping
+      the pytis library separate.
   
   v1.2 MINOR CHANGE                                                 May 29, 2020
     Updated urllib2 import to support both Python2 and Python3
@@ -362,9 +481,10 @@ VERSION:
     parser.print_help()
     print("\n\n")
     parser.print_usage()
+    os.system(" | more")
     return 0
   elif '-h' in sys.argv:
-    parser.print_usage()
+    parser.print_help()
     return 0
 
   (opts, args) = parser.parse_args()
