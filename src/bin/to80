@@ -43,7 +43,7 @@ __copyright__ = 'PyTis.com'
 __version__ = '2.0'
 
 def version():
-	print	__version__
+	print(__version__)
 
 def tolen(instr, i=80):
 	""" Reads the input string :instr: and reformatts to an specified length :i:
@@ -82,7 +82,7 @@ def run(opts, args):
 		return tolen(" ".join(args), opts.width)
 
 def main():
-	"""usage: to80 """
+	"""usage: to80 FILE_WITH_TEXT.txt """
 	parser = optparse.OptionParser(description=__doc__)
 	parser.set_usage(main.__doc__)
 	parser.formatter.format_description = lambda s:s
@@ -106,11 +106,11 @@ def main():
 	try:
 		if len(args) < 1:
 			parser.print_help()
-			print 'ERROR: No file or text provided'
+			print('ERROR: No file or text provided')
 		else:
-			print run(opts,args)
-	except KeyboardInterrupt, e:
-		print 'bye!'
+			print(run(opts,args))
+	except KeyboardInterrupt as e:
+		print('bye!')
 		sys.exit(1)
 	sys.exit(0)
 

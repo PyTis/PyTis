@@ -176,7 +176,7 @@ __created__ = '06:14pm 09 Sep, 2009'
 __copyright__ = 'PyTis.com'
 __configdir__ = pytis_configure.configdir # '/root/etc'
 __logdir__ = pytis_configure.logdir # '/root/log'
-__version__ = '8.4.0'
+__version__ = '8.4.2' # changed 2 files, so 8.4.0 to 8.4.2
 
 
 
@@ -3527,7 +3527,7 @@ if not getattr(os,'touch',None):
   add_os_touch()
 
 def main(): #global __version__
-  hello()
+  #hello()
   print("PyTis toolkit library, version: %s" % str(__version__))
 
 if __name__ == '__main__': 

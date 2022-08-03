@@ -9,14 +9,14 @@ example-account-
 thing-accountnumber-timestamp
 YYYYMMDDHHMMSS
 
-# from leejo7a  branch
+# from jlee  branch
 
 git fetch
 git pull
 git checkout master
 git fetch 
 git pull
-git checkout leejo7a
+git checkout jlee
 git fetch  # not neccessarly needed
 git pull # not neccessarly needed
 git merge master

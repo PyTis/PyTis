@@ -204,24 +204,24 @@ alias ls='ls -hF --color=tty'                 # classify files in colour
 
 
 # If not running interactively, don't do anything
-if [ -f /home/leejo7a/bashrc/common.rc ]; then
-    . /home/leejo7a/bashrc/common.rc
+if [ -f /home/jlee/bashrc/common.rc ]; then
+    . /home/jlee/bashrc/common.rc
 fi
 
-if [ -f /home/leejo7a/bashrc/.verizon-chimp.serv ]; then
-    if [ -f /home/leejo7a/bashrc/verizon-chimp.rc ]; then
-	    . /home/leejo7a/bashrc/verizon-chimp.rc
+if [ -f /home/jlee/bashrc/.verizon-chimp.serv ]; then
+    if [ -f /home/jlee/bashrc/verizon-chimp.rc ]; then
+	    . /home/jlee/bashrc/verizon-chimp.rc
     fi
 fi
 
-if [ -f /home/leejo7a/bashrc/.chimp.serv ]; then
-    if [ -f /home/leejo7a/bashrc/chimp.rc ]; then
-	    . /home/leejo7a/bashrc/chimp.rc
+if [ -f /home/jlee/bashrc/.chimp.serv ]; then
+    if [ -f /home/jlee/bashrc/chimp.rc ]; then
+	    . /home/jlee/bashrc/chimp.rc
     fi
 fi
 
-if [ -f /home/leejo7a/bashrc/git-shortcuts.rc ]; then
-    . /home/leejo7a/bashrc/git-shortcuts.rc
+if [ -f /home/jlee/bashrc/git-shortcuts.rc ]; then
+    . /home/jlee/bashrc/git-shortcuts.rc
 fi
 
 
@@ -291,9 +291,9 @@ fi
 }
 
 alias sr='sudo su - '
-alias pyt='cd /home/leejo7a/github/PyTis/src/bin/'
+alias pyt='cd /home/jlee/github/PyTis/src/bin/'
 #alias setup="/cygdrive/c/Program\ Files/PuTTY/setup-x86_64.exe"
 alias setup="/cygdrive/c/ProgramData/SourceInstallers/CygwinX/setup-x86_64.exe"
-alias prj='cd /home/leejo7a/gitlab/aws-lambda/ACSR-3443/auto-remediations/vzsec-csis-glue-remediation/'
-alias grc='vi /home/leejo7a/bashrc/.git-shortcuts.rc'
+alias prj='cd /home/jlee/gitlab/aws-lambda/ACSR-3443/auto-remediations/vzsec-csis-glue-remediation/'
+alias grc='vi /home/jlee/bashrc/.git-shortcuts.rc'
 

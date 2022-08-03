@@ -1,11 +1,11 @@
 [user]
-	name = leejo7a
+	name = jlee
   username = PyTis
 	email = Joshua.Lee1@verizon.com
 [color]
   ui = auto
 [credential]
-  helper = store --file /home/leejo7a/.my-credentials
+  helper = store --file /home/jlee/.my-credentials
 [push]
   default = simple
 [core]

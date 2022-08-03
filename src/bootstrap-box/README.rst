@@ -1,15 +1,55 @@
-git clone --branch leejo7a https://gitlab.verizon.com/leejo7a/rehydration-bootsrapers.git
+
+git clone --branch development https://github.com/PyTis/PyTis.git
+cd PyTis/src/bootstrap-box
+
+REHYDRATION-BOOTSTRAPPERS
+=========================
+
+
+USAGE
+-----
+
+As yourself, clone repo into your home dir, by running:
+  git clone --branch development https://github.com/PyTis/PyTis.git
+	cd PyTis/src/bootstrap-box
+
+Then switch to root:
+  pbrun beroot
+
+Change directories into the repo, and run setup root:
+  cd rehydration-bootstrapers/
+  ./setup-root.py 
+  
+("./setup-root.py" is the same as "python3 setup-root.py")
+
+Then exit root user:
+    exit
+
+As your user change directories into the repo and run setup user:
+  cd rehydration-bootstrapers/
+  ./setup-user.py
+
+Done.
+
+I need to change the root-setup.py to FIRST add the export paths to
+.bash_profile and then to source that file (execute said lines, EXPORTING
+proxies), before continuing.
 
 
 REHYDRATION-BOOTSTRAPPERS
 =========================
 
+If there is a setup-root.(py/sh) script in the master branch, this is code 
+we want deployed on every machine, globally.  Setup unique to you, should be 
+located within your branch.
+
+
 Synopsis
 --------
 
-For each user, you may store your "bootstrapping" code, to easily rebuild a newly
-deployed box after rehydration.  A user can simply clone their specific branch of
-this project onto their machine, and run their bootstrapping code.  
+For each user, you may store your "bootstrapping" code, to easily rebuild a
+newly deployed box after rehydration.  A user can simply clone their specific
+branch of this project onto their machine, and run their bootstrapping code.  
 
 Suggestion For Maintenance
 --------------------------
@@ -48,5 +88,5 @@ tarball (rootfiles.tar.gz) can contain any files you wish to have in the root
 environment.  On Linux, one would run "pbrun beroot", authenticate, then you
 can run ./setup-root.py and you are done.
 
-*Please feel free to reference the leejo7a branch as an example.
+*Please feel free to reference the "development" branch as an example.
 

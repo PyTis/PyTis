@@ -481,7 +481,6 @@ VERSION:
     parser.print_help()
     print("\n\n")
     parser.print_usage()
-    os.system(" | more")
     return 0
   elif '-h' in sys.argv:
     parser.print_help()
