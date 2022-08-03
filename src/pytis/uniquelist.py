@@ -151,7 +151,10 @@ def parse(lines):
 
 
 def main():
-  """usage: `cat` somefile.txt | uniquelist """
+  """usage: `cat` somefile.txt | uniquelist 
+
+** uniquelist also removes lines that start with a hashtag (#) and blanklines.
+  """
   global __version__, log
   # ----------------------------
   parser = MParser()
