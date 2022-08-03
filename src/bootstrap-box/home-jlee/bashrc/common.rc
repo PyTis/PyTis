@@ -4,10 +4,6 @@ export PATH="/sbin/:$PATH"
 export PAGER="/usr/bin/less"
 export EDITOR="vim"
 
-
-
-[ -z "$PS1" ] && return
-
 alias rm='rm -i'
 alias cp='cp -i'
 alias mv='mv -i'
@@ -22,23 +18,64 @@ fi
 
 alias dc='cd ..'
 
-
-alias x='screen -x -U'
-alias list='screen -list'
-alias d='screen -d'
-alias RR='screen -RR'
+alias x='screen -R'
 alias screen='screen -U'
-alias wipe='screen -wipe'
 
-alias fn='find . -iname '
+alias cls='/usr/bin/clear'
+alias c='/usr/bin/clear'
 alias f='fg'
 alias j='jobs'
 alias p='pwd'
-alias c='/usr/bin/clear'
+
+alias more='less -R'
+alias less='less -R'
+
+alias grep="grep --exclude='*.swp' --exclude='*.swo' --exclude='*.swc' --exclude='*.pyc' "
+alias diff="diff --exclude='*.swp' --exclude='*.swo' --exclude='*.swc' --exclude='*.pyc' "
+
+alias notes='vi ~/notes.txt'
+
+alias brc='vi ~/.bashrc'
+alias scr='vi ~/.screenrc'
+alias grc='vi ~/bashrc/git-shortcuts.rc'
+alias src='source ~/.bashrc'
 
 
-# enable color support of ls and also add handy aliases
 # -----------------------------------------------------------------------------
+# important, this allows colors from ls to pull through whne piping to more or less
+if [ -x /usr/bin/dircolors ]; then
+    test -r /usr/bin/dircolors && eval "$(/usr/bin/dircolors -b)" || eval "$(/usr/bin/dircolors -b)"
+    alias ls='ls --color=always'
+    alias dir='ls --color=always --format=vertical'
+    alias vdir='ls --color=always --format=long'
+
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+# enable color support of ls and also add handy aliases
+
+alias ll='ls -halF --time-style=long-iso --color=always'
+alias la='ls -A'
+
+# BOOM!!!!
+function _bestLS() {
+  echo '';
+  echo 'MODE|Dir Size|Perms|Link Count|Owner|Group|Size|Mod.  Time|Name';
+  echo '';
+  alias _awk4ls="awk '{k=0;s=0;for(i=0;i<=8;i++){;k+=((substr(\$2,i+2,1)~/[rwxst]/)*2^(8-i));};j=4;for(i=4;i<=10;i+=3){;s+=((substr(\$1,i,1)~/[stST]/)*j);j/=2;};if(k){;printf(\"%0o%0o \",s,k);};print;}'";
+
+  if [ "$*" == '' ]; then
+    ls_output=`ls -shaFl --time-style=long-iso --color=always -F --group-directories-first --format=long | _awk4ls`;
+  else
+    ls_output=`ls -shaFl --time-style=long-iso --color=always -F --group-directories-first --format=long $* | _awk4ls`;
+  fi
+  echo "$ls_output" | grep -v '^total';
+  #echo ''; # I don't need this, now that: export PS4="\n"
+}
+alias l="_bestLS"
+
+
 # Project shortcuts ##
 ############################################################################
 ##  XXX-TODO (next version)
@@ -51,7 +88,118 @@ alias c='/usr/bin/clear'
 ## 20 lines only.
 ##
 ############################################################################
+# This version explained:  This is for bookmarking a single project direcotry.
+# Many times when working on a server, the user must change directories many
+# times, however, your purpose for being on said server, is to work on a
+# specific project.  Perhaps you'll end up in /etc/apache2/sites-available/
+# for editing the sites http conf, and then in /var/bind9/xyz, then perhaps in
+# /var/lib/mysql.  Eventually however, you will always be circling back to your
+# primary project.  To save the time of typing out the path with "cd" (change
+# direcory you now have the follwoing commands available:
+# Author: Josh Lee
+# Copyright: PyTis.com
+# License: GPL
+# Created: June 1st, 2016
+#
+# *** The only 2 commands you will want to memorize are: "setPrj" and "prj" ***
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 
+# setPrj/setProject, setprj/setproject; 
+#
+# setPrj is simply an alias of setProject, these are case insensative;
+# These commands are for settting the current project.  Look at is as
+# bookmarking your project.  You can call it one of 2 ways, by passing the
+# current path in with '.' as the input argument, or by passing a specific path
+# in, regardless of your current path (expressed with `pwd`).  The path will be
+# stored in your home directory in a file named .project.set 
+# i.e.: ~/.project.set
+#
+#   examples:
+#     > setPrj
+#     > setPrj .
+#     > setPrj /some/path/to/a/project
+#
+# Actual Use Example:
+# [ CURRENT PROJECT: ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:19:33 PM Thu Jul 28)
+# (~/bitbucket/src_igb has 41 files, 46Kb) --> setPrj
+# PROJECT WAS:
+# PROJECT IS NOW: '/home/jlee38/bitbucket/src_igb'
+# 
+# Actual Use Example:
+# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:17:16 PM Thu Jul 28)
+# (~/bitbucket/src_igb has 41 files, 46Kb) --> setPrj
+# NO CHANGE, PROJECT ALREADY SET TO: /home/jlee38/bitbucket/src_igb
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# showPrj/showProject, showprj/showproject; 
+#
+# showPrj is simply an alias of showProject, these are case insensative;
+# This command reads the current project path from your user's environmental
+# varialbe $PROJECT and prints it to screen; WITHOUT reading it from the user's
+# ~/.project.set file.
+#
+# Actual Use Example:
+# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:19:52 PM Thu Jul 28)
+# (~/bitbucket/src_igb has 41 files, 46Kb) --> showPrj
+# /home/jlee38/bitbucket/src_igb
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# loadPrj/loadProject, loadprj/loadproject these are case insensative
+#
+# This command will first read the path stored in your ~/.project.set file,
+# load it into the environmental variable $PROJECT, then reset the project in
+# your current prompt, by calling _setPrompt.
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# getPrj/getProject, getprj/getproject:
+#
+# getPrj is simply an alias of getProject, these are case insensative;
+# This command will first read the path stored in your ~/.project.set file,
+# load it into the environmental variable $PROJECT, then reset the project in
+# your current prompt, then print it to screen.
+# Same as calling loadPrj, _setPrompt, then this prints the project to the
+# screen.
+#
+# Actual Use Example:
+# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:29:19 PM Thu Jul 28)
+# (~/bitbucket/src_igb has 41 files, 46Kb) --> getPrj
+# PROJECT IS:
+# /home/jlee38/bitbucket/src_igb
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# prj
+#
+# This command is used to jump (change directories) to the current project.
+# 
+# Actual Use Example:
+# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:37:39 PM Thu Jul 28)
+# (~ has 35 files, 5.8Mb) --> prj
+#
+# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:37:44 PM Thu Jul 28)
+# (~/bitbucket/src_igb has 41 files, 46Kb) -->
+#
+############################################################################
+############################################################################
 
+
+IP=`LANG=c getip | awk -F: '{print $1}'`
+
+ 	PS1="\n\[\e[37;0m\](\[\e[1;32m\]\u\[\e[0;37m\]@IP:$IP)-[last command: \${timer_show} seconds]-(\[\e[0;32m\]\D{%H:%M:%S %p} \d\[\e[37;1m\])->\[\e[37;1m\]\n(\[\e[1;33m\]\w\[\e[35;1m\] has \[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[37;0m\]) ->\n --> \[\e[0m\]"
+
+ function _setPrompt() {
+	 PS1="\n[CURRENT PROJECT: $PROJECT ]\n\[\e[30;1m\](\[\e[1;32m\]\u\[\e[1;30m\]@IP:$IP)-[last command: \${timer_show} seconds]-(\[\e[0;32m\]\D{%H:%M:%S %p} \d\[\e[30;1m\])->\[\e[30;1m\]\n(\[\e[1;33m\]\w\[\e[30;1m\] has \[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\]) --> \[\e[0m\]"
+	 # ^^^ I AM LOVING THIS! ^^^^^
+ }
    function _setProject() {
      old="$PROJECT";
      if [ "$*" == '' ]; then
@@ -138,55 +286,4 @@ alias c='/usr/bin/clear'
    alias prj='_prj';
 #
 # -----------------------------------------------------------------------------
-
-if [ -x /usr/bin/dircolors ]; then
-    test -r /usr/bin/dircolors && eval "$(/usr/bin/dircolors -b)" || eval "$(/usr/bin/dircolors -b)"
-    alias ls='ls --color=always'
-    alias dir='ls --color=always --format=vertical'
-    alias vdir='ls --color=always --format=long'
-
-    alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
-#else
-#    eval `dircolors -b`
-fi
-
-# important, this allows colors from ls to pull through whne piping to more or less
-alias more='less -R'
-alias less='less -R'
-
-alias grep="grep --exclude='*.swp'"
-alias gr="grep -r --exclude='debug.log*' "
-# some more ls aliases
-alias ll='ls -halF --time-style=long-iso --color=always'
-alias la='ls -A'
-alias l='ls -shaFl --time-style=long-iso --color'
-alias l='echo "Dir Size|Perms|Link Count|Owner|Group|Size|Mod. Time|Name"; ls -shaFl --time-style=long-iso --color --group-directories-first --format=long'
-
-
-# BOOM goes the dynomite!!! I am SO glad I fixed this!!!!! :-D 
-function _bestLS() {
-  echo 'MODE|Dir Size|Perms|Link Count|Owner|Group|Size|Mod.  Time|Name';
-
- if [ "$*" == '' ]; then
-   alias _awk4ls="awk '{k=0;s=0;for(i=0;i<=8;i++){;k+=((substr(\$2,i+2,1)~/[rwxst]/)*2^(8-i));};j=4;for(i=4;i<=10;i+=3){;s+=((substr(\$1,i,1)~/[stST]/)*j);j/=2;};if(k){;printf(\"%0o%0o \",s,k);};print;}'";
-   output=`ls -shaFl --time-style=long-iso --color=always -F --group-directories-first --format=long | _awk4ls`;
- else
-   output=`ls -shaFl --time-style=long-iso --color=always -F --group-directories-first --format=long $* | _awk4ls`;
- fi
- echo "$output" | grep -v '^total';
-}
-alias l="_bestLS"
-
-
-export svnroot=svn+ssh://file077@svn.code.sf.net/p/pytis/code/trunk
-export SVN_SSH="ssh -l file077"
-export SVNROOT=svnroot
-
-alias svu='svn update'
-alias u='svu'
-alias i='svn commit'
-
-alias notes='vi ~/notes.txt'
 
