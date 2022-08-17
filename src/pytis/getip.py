@@ -89,7 +89,7 @@ default_timeout = 1.5
 __author__ = 'Josh Lee'
 __created__ = '06:14pm 01 October 2018'
 __copyright__ = 'PyTis.com'
-__version__ = 2.0
+__version__ = 2.1
 
 
 class MParser(optparse.OptionParser):
@@ -264,6 +264,8 @@ def hostip(log, timeout=default_timeout):
     #log.error(e.reason) # e.g. 'timed out'
     #log.error('(are you connected to the internet?)')
     raise Timeout(str(e))
+  except socket.timeout as e:
+    raise Timeout("timeout: %s" % str(e))
   except KeyboardInterrupt:
     return None
   else:
@@ -280,9 +282,9 @@ def ipecho(log, timeout=default_timeout):
     ip = response.read()
     
   except URLError as e:
-    raise Timeout("timeout 1: %s" % str(e))
+    raise Timeout("timeout: %s" % str(e))
   except socket.timeout as e:
-    raise Timeout("timeout 2: %s" % str(e))
+    raise Timeout("timeout: %s" % str(e))
   else:
     log.debug('ipecho: "%s"' % str(ip).strip())
     return valid_ip(ip)
@@ -417,22 +419,26 @@ HISTORY:
 
 CHANGE LOG:
 
+  v2.1 MINOR CHANGE                                              August 16, 2022
+    Added exception to catch socket timeout in hostip, and added comments to
+    better explain main func.
+    
+
   v2.0 MAJOR CHANGE                                             January 20, 2022
     I noticed this does NOT import my pytis library like MOST of my programs
     do, so I wanted to keep it this way (so it can be exported as a stand alone
-      program easily) however, I also wanted to have the "-h" and "--help"
-      function as it does with my PyTis.MyParser (custom optparse.OptionParser)
-      where --help will work similarly to a manpage, allowing the user to
-      search, almost as if it were piped to MORE.  Also, the user doesn't have
-      to scroll.  This would be about the same as NOT having a custom parser,
-      but running "getip.py --help | more"  I have just the simple help
-      displayed when the user uses "-h" and the full help with examples,
-      docstrings, etc. being displayed when the user inputs "--help."  Since
-      the output IS longer than my window (it doesn't all fit), and I wish not
-      only to be able to easily PAGEUP/PAGEDOWN but also search the help (JUST
-      like a manpage) I simply created a custom parser class here, copying the
-      2 methods from the pytis parser, that perform this task for me, keeping
-      the pytis library separate.
+    program easily) however, I also wanted to have the "-h" and "--help"
+    function as it does with my PyTis.MyParser (custom optparse.OptionParser)
+    where --help will work similarly to a manpage, allowing the user to search,
+    almost as if it were piped to MORE.  Also, the user doesn't have to scroll.
+    This would be about the same as NOT having a custom parser, but running
+    "getip.py --help | more"  I have just the simple help displayed when the
+    user uses "-h" and the full help with examples, docstrings, etc. being
+    displayed when the user inputs "--help."  Since the output IS longer than
+    my window (it doesn't all fit), and I wish not only to be able to easily
+    PAGEUP/PAGEDOWN but also search the help (JUST like a manpage) I simply
+    created a custom parser class here, copying the 2 methods from the pytis
+    parser, that perform this task for me, keeping the pytis library separate.
   
   v1.2 MINOR CHANGE                                                 May 29, 2020
     Updated urllib2 import to support both Python2 and Python3
@@ -523,6 +529,7 @@ VERSION:
       log.error('Please only choose one method.')
       return 1
     elif len(args) == 1:
+      # user specifically selected just one type to run
       possible = args[0]
 
       try:
@@ -532,6 +539,7 @@ VERSION:
       else:
         possible-=1
 
+      # try to get the method to run
       try:
         if type(possible) is type(1):
           if possible < 0 or possible > len(funcs):
@@ -546,6 +554,7 @@ VERSION:
         if opts.verbose > 0:
           print('%s:' % func.__name__)
         try:
+          # try to run the one method the user selected
           print(func(log, opts.timeout))
         except Timeout as e:
           if opts.verbose > 1:
@@ -555,11 +564,16 @@ VERSION:
         return 0
 
 
+    # user wants to list all methods available.
     if opts.list:
       st = '%' + str(len(str(len(funcs)))+1) + 'd. %s'
       for i, func in enumerate(funcs):
         print(st % (i+1, func.__name__))
     else:
+      # user hasn't given any input, just print the first IP we find.
+      # the second argument (True) is passed in to make the run_funcs print
+      # the IP found, this way this can also be imported as a module and just
+      # return the IP if a coder wants, without printing to screen.
       ip = run_funcs(log, True, opts.verbose, opts.all, opts.timeout, funcs)
       if ip:
         return 0
