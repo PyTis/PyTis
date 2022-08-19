@@ -1,0 +1,282 @@
+# Bookmark shortcuts ##
+############################################################################
+##  XXX-TODO (next version)
+##
+############################################################################
+## This now keeps up to 20 lines in the file.
+## Without giving a number, bm just loads the top line. setbm shifts all
+## lines down one, and adds a new top line, bm again would load the top line, 
+## but bm 1 or bm 2 would go back one or 2 lines down and read those instead
+## (basically allowing you to keep history).  You can manage how many lines it
+## keeps track of by editing the "total_bms=20" variable below
+
+let total_bms=20 # How many bookmarks to track
+
+############################################################################
+# This version explained:  This is for bookmarking a single bookmark direcotry.
+# Many times when working on a server, the user must change directories many
+# times, however, your purpose for being on said server, is to work on a
+# specific bookmark.  Perhaps you'll end up in /etc/apache2/sites-available/
+# for editing the sites http conf, and then in /var/bind9/xyz, then perhaps in
+# /var/lib/mysql.  Eventually however, you will always be circling back to your
+# primary bookmark.  To save the time of typing out the path with "cd" (change
+# direcory you now have the follwoing commands available:
+# Author: Josh Lee
+# Copyright: PyTis.com
+# Created: June 1st, 2016
+# Modified: August 19, 2022
+# License: GPL
+# Version: 2
+#
+# *** The only 2 commands you will want to memorize are: "setBm" and "bm" ***
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 
+# setBm/setBookmark, setbm/setbookmark; 
+#
+# setBm is simply an alias of setBookmark, these are case insensative;
+# These commands are for settting the current bookmark.  Look at is as
+# bookmarking your bookmark.  You can call it one of 2 ways, by passing the
+# current path in with '.' as the input argument, or by passing a specific path
+# in, regardless of your current path (expressed with `pwd`).  The path will be
+# stored in your home directory in a file named .bookmark.set 
+# i.e.: ~/.bookmark.set
+#
+#   examples:
+#     > setBm
+#     > setBm .
+#     > setBm /some/path/to/a/bookmark
+#
+# Actual Use Example:
+# [ CURRENT PROJECT: ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:19:33 PM Thu Jul 28)
+# (~/bitbucket/src_igb has 41 files, 46Kb) --> setBm
+# PROJECT WAS:
+# PROJECT IS NOW: '/home/jlee38/bitbucket/src_igb'
+# 
+# Actual Use Example:
+# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:17:16 PM Thu Jul 28)
+# (~/bitbucket/src_igb has 41 files, 46Kb) --> setBm
+# NO CHANGE, PROJECT ALREADY SET TO: /home/jlee38/bitbucket/src_igb
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# showBm/showBookmark, showbm/showbookmark; 
+#
+# showBm is simply an alias of showBookmark, these are case insensative;
+# This command reads the current bookmark path from your user's environmental
+# varialbe $PROJECT and prints it to screen; WITHOUT reading it from the user's
+# ~/.bookmark.set file.
+#
+# Actual Use Example:
+# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:19:52 PM Thu Jul 28)
+# (~/bitbucket/src_igb has 41 files, 46Kb) --> showBm
+# /home/jlee38/bitbucket/src_igb
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# listBms/listBookmarks, listbms/listbookmarks, bms
+# showBms/showBookmarks, showbms/showbookmarks; these are case insensative 
+#
+# This command will print out all bookmarks stored in te ~/.bookmark.set file.
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# loadBm/loadBookmark, loadbm/loadbookmark these are case insensative
+# You can enter a number, to choose a stored bookmark
+#
+# This command will first read the path stored in your ~/.bookmark.set file,
+# load it into the environmental variable $PROJECT, then reset the bookmark in
+# your current prompt, by calling _setPrompt.
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# getBm/getBookmark, getbm/getbookmark:
+#
+# getBm is simply an alias of getBookmark, these are case insensative;
+# This command will first read the path stored in your ~/.bookmark.set file,
+# load it into the environmental variable $PROJECT, then reset the bookmark in
+# your current prompt, then print it to screen.
+# Same as calling loadBm, _setPrompt, then this prints the bookmark to the
+# screen.
+#
+# Actual Use Example:
+# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:29:19 PM Thu Jul 28)
+# (~/bitbucket/src_igb has 41 files, 46Kb) --> getBm
+# PROJECT IS:
+# /home/jlee38/bitbucket/src_igb
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# bm
+#
+# This command is used to jump (change directories) to the current bookmark.
+# 
+# Actual Use Example:
+# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:37:39 PM Thu Jul 28)
+# (~ has 35 files, 5.8Mb) --> bm
+#
+# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
+# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:37:44 PM Thu Jul 28)
+# (~/bitbucket/src_igb has 41 files, 46Kb) -->
+#
+############################################################################
+############################################################################
+
+function _setPrompt() {
+	PS1="\n[CURRENT PROJECT: $PROJECT ]\n\[\e[30;1m\](\[\e[1;32m\]\u\[\e[1;30m\]@IP:$IP)-[last command: \${timer_show} seconds]-(\[\e[0;32m\]\D{%H:%M:%S %p} \d\[\e[30;1m\])->\[\e[30;1m\]\n(\[\e[1;33m\]\w\[\e[30;1m\] has \[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\]) --> \[\e[0m\]"
+	# ^^^ I AM LOVING THIS! ^^^^^
+}
+function _setBookmark() {
+	old="$PROJECT";
+	if [ "$*" == '' ]; then
+		input=`pwd`;
+		input=`realpath $input`;
+	else
+		input=`realpath $*`;
+	fi 
+
+	if [[ "$input" == "$PROJECT" ]]; then
+		echo "NO CHANGE, PROJECT ALREADY SET TO: $PROJECT";
+	elif [[ "$input" != "" ]]; then
+		export PROJECT=$input;
+		echo "PROJECT WAS: $old";
+		echo "PROJECT IS NOW: '$PROJECT' ";
+	else
+		noinput=`pwd`;
+		if [[ "$noinput" == "$PROJECT" ]]; then
+      echo "NO CHANGE, PROJECT ALREADY SET TO: $PROJECT";
+		else
+      export PROJECT="$noinput";
+      echo "PROJECT WAS: $old";
+      echo "PROJECT IS NOW: '$PROJECT' ";
+		fi
+	fi
+
+  # remove it from the nth place it is in (if it is there)
+  cat ~/.bookmark.set | egrep -v "$PROJECT" > ~/.bookmark.set.tmp
+  
+  # now put it at the top of the file
+  (echo "$PROJECT"; cat ~/.bookmark.set.tmp) | head -n${total_bms} > ~/.bookmark.set
+
+  /bin/rm ~/.bookmark.set.tmp; # >&2;
+
+	_setPrompt;
+}
+function _loadBookmark() {
+
+	if [ -f	~/.bookmark.set ]; then
+    # is $i already set? did it pass through?
+    re='^[0-9]+$'
+    if [[ $i =~ $re ]]; then
+      # use i, i is already set
+      :
+    elif [ "$*" == '' ]; then
+      # if I isn't already set, maybe loadBookmark was called directly, we can
+      # set it now, and if there was no input, use default of 1
+      let  i=1;
+    else
+      # there was input, let's use the input
+      let i=$*;
+    fi 
+
+		export PROJECT=`sed "${i}q;d" ~/.bookmark.set `;
+	else
+
+    touch ~/.bookmark.set;
+
+		export PROJECT="~/";
+	fi
+  unset i;
+	_setPrompt;
+}
+function _showBookmark() {
+	echo "$PROJECT";
+}
+function _bm() {
+  if [ "$*" == '' ]; then
+    let  i=1;
+  else
+    let i=$*;
+  fi 
+
+	_loadBookmark;
+
+  echo "PROJECT IS NOW: $PROJECT";
+
+	if [ $PROJECT == "~/" ]; then
+		cd
+	else
+		cd $PROJECT;
+	fi
+#	_setPrompt;
+
+}
+function _getBookmark() {
+
+  re='^[0-9]+$'
+  if [[ $i =~ $re ]]; then
+    # use i, i is already set
+    :
+  elif [ "$*" == '' ]; then
+    # if I isn't already set, maybe loadBookmark was called directly, we can
+    # set it now, and if there was no input, use default of 1
+    let  i=1;
+  else
+    let i=$*;
+  fi 
+
+	_loadBookmark;
+	echo -n "PROJECT IS: ";
+	_showBookmark;
+}
+function _listBookmarks() {
+  total_lines=`wc -l ~/.bookmark.set | cut -d' ' -f1 `;
+  current_line=1;
+  for (( c=$current_line; c<=$total_lines; c++ ))
+  do
+    lin=`sed "${c}q;d"  ~/.bookmark.set`;
+    echo "$c: $lin";
+  done
+}
+alias setbookmark='_setBookmark';
+alias setBookmark='_setBookmark';
+alias setbm='_setBookmark';
+alias setBm='_setBookmark';
+
+alias showBookmark='_showBookmark';
+alias showbookmark='_showBookmark';
+alias showbm='_showBookmark';
+alias showBm='_showBookmark';
+
+alias listBookmarks='_listBookmarks';
+alias listbookmarks='_listBookmarks';
+alias listBms='_listBookmarks';
+alias listbms='_listBookmarks';
+
+alias showBookmarks='_listBookmarks';
+alias showbookmarks='_listBookmarks';
+alias showbms='_listBookmarks';
+alias showBms='_listBookmarks';
+
+alias loadBookmark='_loadBookmark';
+alias loadbookmark='_loadBookmark';
+alias loadbm='_loadBookmark';
+alias loadBm='_loadBookmark';
+
+alias getBookmark='_getBookmark';
+alias getbookmark='_getBookmark';
+alias getBm='_getBookmark';
+alias getbm='_getBookmark';
+
+alias bms='_listBookmarks';
+alias bm='_bm'; # bm [optional NUMBER] ie: >> bm 3
+
+#
+# -----------------------------------------------------------------------------
+
+_loadBookmark;
