@@ -5,7 +5,7 @@ export PATH="~/.local/bin/:~/bin/:$PATH"
 export PATH="/usr/sbin/:/bin/:/usr/bin/:$PATH"
 export PGPASSFILE='~/.pgpass'
 export MYSQL_HOME='~/' #'~/my.cnf'
-export SESSION_DIR="~/.sessions"
+export SESSION_DIR="~/.sessions/"
 
 export PAGER="/usr/bin/less"
 export EDITOR="vim"
@@ -15,6 +15,8 @@ alias cp='cp -i'
 alias mv='mv -i'
 alias vi='vim'
 alias v='vi'
+alias vu='vulture'
+alias pf='pyflakes'
 
 if [[ "$OSTYPE" == "cygwin" ]]; then
 	alias ping='ping -n 4'
@@ -24,8 +26,8 @@ fi
 
 alias dc='cd ..'
 
-alias x='screen -x'
 alias screen='screen -U'
+alias x='screen -x'
 
 alias cls='/usr/bin/clear'
 alias c='/usr/bin/clear'
@@ -36,7 +38,7 @@ alias p='pwd'
 alias more='less -R'
 alias less='less -R'
 
-alias grep="grep --exclude='*.swp' --exclude='*.swo' --exclude='*.swc' --exclude='*.pyc' "
+alias grep="grep --color=auto --exclude='*.swp' --exclude='*.swo' --exclude='*.swc' --exclude='*.pyc' "
 alias diff="diff --exclude='*.swp' --exclude='*.swo' --exclude='*.swc' --exclude='*.pyc' "
 
 alias notes='vi ~/notes.txt'
@@ -53,14 +55,14 @@ alias ulist='uniquelist'
 # -----------------------------------------------------------------------------
 # important, this allows colors from ls to pull through whne piping to more or less
 if [ -x /usr/bin/dircolors ]; then
-    test -r /usr/bin/dircolors && eval "$(/usr/bin/dircolors -b)" || eval "$(/usr/bin/dircolors -b)"
-    alias ls='ls --color=always'
-    alias dir='ls --color=always --format=vertical'
-    alias vdir='ls --color=always --format=long'
+	test -r /usr/bin/dircolors && eval "$(/usr/bin/dircolors -b)" || eval "$(/usr/bin/dircolors -b)"
+	alias ls='ls --color=always'
+	alias dir='ls --color=always --format=vertical'
+	alias vdir='ls --color=always --format=long'
 
-    alias grep="grep --color=auto --exclude='*.swp' --exclude='*.swo' --exclude='*.swc' --exclude='*.pyc' "
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
+	alias grep="grep --color=auto --exclude='*.swp' --exclude='*.swo' --exclude='*.swc' --exclude='*.pyc' "
+	alias fgrep='fgrep --color=auto'
+	alias egrep='egrep --color=auto'
 fi
 # enable color support of ls and also add handy aliases
 
@@ -69,231 +71,29 @@ alias la='ls -A'
 
 # BOOM!!!!
 function _bestLS() {
-  echo '';
-  echo 'MODE|Dir Size|Perms|Link Count|Owner|Group|Size|Mod.  Time|Name';
-  echo '';
-  alias _awk4ls="awk '{k=0;s=0;for(i=0;i<=8;i++){;k+=((substr(\$2,i+2,1)~/[rwxst]/)*2^(8-i));};j=4;for(i=4;i<=10;i+=3){;s+=((substr(\$1,i,1)~/[stST]/)*j);j/=2;};if(k){;printf(\"%0o%0o \",s,k);};print;}'";
+	echo '';
+	echo 'MODE|Dir Size|Perms|Link Count|Owner|Group|Size|Mod.  Time|Name';
+	echo '';
+	alias _awk4ls="awk '{k=0;s=0;for(i=0;i<=8;i++){;k+=((substr(\$2,i+2,1)~/[rwxst]/)*2^(8-i));};j=4;for(i=4;i<=10;i+=3){;s+=((substr(\$1,i,1)~/[stST]/)*j);j/=2;};if(k){;printf(\"%0o%0o \",s,k);};print;}";
 
-  if [ "$*" == '' ]; then
-    ls_output=`ls -shaFl --time-style=long-iso --color=always -F --group-directories-first --format=long | _awk4ls`;
-  else
-    ls_output=`ls -shaFl --time-style=long-iso --color=always -F --group-directories-first --format=long $* | _awk4ls`;
-  fi
-  echo "$ls_output" | grep -v '^total';
-  #echo ''; # I don't need this, now that: export PS4="\n"
+	if [ "$*" == '' ]; then
+		ls_output=`ls -shaFl --time-style=long-iso --color=always -F --group-directories-first --format=long | _awk4ls`;
+	else
+		ls_output=`ls -shaFl --time-style=long-iso --color=always -F --group-directories-first --format=long $* | _awk4ls`;
+	fi
+	echo "$ls_output" | grep -v '^total';
+	#echo ''; # I don't need this, now that: export PS4="\n"
 }
 alias l="_bestLS"
 
-
-# Project shortcuts ##
-############################################################################
-##  XXX-TODO (next version)
-## In the next version, I would like to keep up to 20 lines in the file.
-## Without giving a number, prj would just load the top line. setprj would
-## shift all lines down one, and add a new top line, prj again would load the
-## top line, but prj 1 or prj 2 would go back one or 2 lines down and read
-## those instead (basically allowing you to keep history).  I think the
-## trickiest part would be to keep it from growing too much, and keeping it to
-## 20 lines only.
-##
-############################################################################
-# This version explained:  This is for bookmarking a single project direcotry.
-# Many times when working on a server, the user must change directories many
-# times, however, your purpose for being on said server, is to work on a
-# specific project.  Perhaps you'll end up in /etc/apache2/sites-available/
-# for editing the sites http conf, and then in /var/bind9/xyz, then perhaps in
-# /var/lib/mysql.  Eventually however, you will always be circling back to your
-# primary project.  To save the time of typing out the path with "cd" (change
-# direcory you now have the follwoing commands available:
-# Author: Josh Lee
-# Copyright: PyTis.com
-# License: GPL
-# Created: June 1st, 2016
-#
-# *** The only 2 commands you will want to memorize are: "setPrj" and "prj" ***
-#
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# 
-# setPrj/setProject, setprj/setproject; 
-#
-# setPrj is simply an alias of setProject, these are case insensative;
-# These commands are for settting the current project.  Look at is as
-# bookmarking your project.  You can call it one of 2 ways, by passing the
-# current path in with '.' as the input argument, or by passing a specific path
-# in, regardless of your current path (expressed with `pwd`).  The path will be
-# stored in your home directory in a file named .project.set 
-# i.e.: ~/.project.set
-#
-#   examples:
-#     > setPrj
-#     > setPrj .
-#     > setPrj /some/path/to/a/project
-#
-# Actual Use Example:
-# [ CURRENT PROJECT: ]
-# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:19:33 PM Thu Jul 28)
-# (~/bitbucket/src_igb has 41 files, 46Kb) --> setPrj
-# PROJECT WAS:
-# PROJECT IS NOW: '/home/jlee38/bitbucket/src_igb'
-# 
-# Actual Use Example:
-# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
-# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:17:16 PM Thu Jul 28)
-# (~/bitbucket/src_igb has 41 files, 46Kb) --> setPrj
-# NO CHANGE, PROJECT ALREADY SET TO: /home/jlee38/bitbucket/src_igb
-#
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#
-# showPrj/showProject, showprj/showproject; 
-#
-# showPrj is simply an alias of showProject, these are case insensative;
-# This command reads the current project path from your user's environmental
-# varialbe $PROJECT and prints it to screen; WITHOUT reading it from the user's
-# ~/.project.set file.
-#
-# Actual Use Example:
-# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
-# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:19:52 PM Thu Jul 28)
-# (~/bitbucket/src_igb has 41 files, 46Kb) --> showPrj
-# /home/jlee38/bitbucket/src_igb
-#
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#
-# loadPrj/loadProject, loadprj/loadproject these are case insensative
-#
-# This command will first read the path stored in your ~/.project.set file,
-# load it into the environmental variable $PROJECT, then reset the project in
-# your current prompt, by calling _setPrompt.
-#
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# getPrj/getProject, getprj/getproject:
-#
-# getPrj is simply an alias of getProject, these are case insensative;
-# This command will first read the path stored in your ~/.project.set file,
-# load it into the environmental variable $PROJECT, then reset the project in
-# your current prompt, then print it to screen.
-# Same as calling loadPrj, _setPrompt, then this prints the project to the
-# screen.
-#
-# Actual Use Example:
-# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
-# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:29:19 PM Thu Jul 28)
-# (~/bitbucket/src_igb has 41 files, 46Kb) --> getPrj
-# PROJECT IS:
-# /home/jlee38/bitbucket/src_igb
-#
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#
-# prj
-#
-# This command is used to jump (change directories) to the current project.
-# 
-# Actual Use Example:
-# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
-# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:37:39 PM Thu Jul 28)
-# (~ has 35 files, 5.8Mb) --> prj
-#
-# [ CURRENT PROJECT:/home/jlee38/bitbucket/src_igb ]
-# ( jlee38@IP:208.127.81.217 )-[UNAME: CYGWIN_NT-10.0-19044 ]-(13:37:44 PM Thu Jul 28)
-# (~/bitbucket/src_igb has 41 files, 46Kb) -->
-#
-############################################################################
-############################################################################
-
-
 IP=`LANG=c getip | awk -F: '{print $1}'`
 
- 	PS1="\n\[\e[37;0m\](\[\e[1;32m\]\u\[\e[0;37m\]@IP:$IP)-[last command: \${timer_show} seconds]-(\[\e[0;32m\]\D{%H:%M:%S %p} \d\[\e[37;1m\])->\[\e[37;1m\]\n(\[\e[1;33m\]\w\[\e[35;1m\] has \[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[37;0m\]) ->\n --> \[\e[0m\]"
+if [ -f project-bookmarks.rc ]; then
+	. project-bookmarks.rc
+elif [ -f ~/bashrc/project-bookmarks.rc ]; then
+	. ~/bashrc/project-bookmarks.rc
+else
+	PS1="\n\[\e[37;0m\](\[\e[1;32m\]\u\[\e[0;37m\]@IP:$IP)-[last command: \${timer_show} seconds]-(\[\e[0;32m\]\D{%H:%M:%S %p} \d\[\e[37;1m\])->\[\e[37;1m\]\n(\[\e[1;33m\]\w\[\e[35;1m\] has \[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[37;0m\]) ->\n --> \[\e[0m\]"
+fi
 
- function _setPrompt() {
-	 PS1="\n[CURRENT PROJECT: $PROJECT ]\n\[\e[30;1m\](\[\e[1;32m\]\u\[\e[1;30m\]@IP:$IP)-[last command: \${timer_show} seconds]-(\[\e[0;32m\]\D{%H:%M:%S %p} \d\[\e[30;1m\])->\[\e[30;1m\]\n(\[\e[1;33m\]\w\[\e[30;1m\] has \[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\]) --> \[\e[0m\]"
-	 # ^^^ I AM LOVING THIS! ^^^^^
- }
-   function _setProject() {
-     old="$PROJECT";
-     if [ "$*" == '' ]; then
-       input=`pwd`;
-       input=`realpath $input`;
-     else
-       input=`realpath $*`;
-     fi 
 
-     if [[ "$input" == "$PROJECT" ]]; then
-       echo "NO CHANGE, PROJECT ALREADY SET TO: $PROJECT";
-     elif [[ "$input" != "" ]]; then
-       export PROJECT=$input;
-       echo "PROJECT WAS: $old";
-       echo "PROJECT IS NOW: '$PROJECT' ";
-     else
-       noinput=`pwd`;
-       if [[ "$noinput" == "$PROJECT" ]]; then
-         echo "NO CHANGE, PROJECT ALREADY SET TO: $PROJECT";
-       else
-         export PROJECT="$noinput";
-         echo "PROJECT WAS: $old";
-         echo "PROJECT IS NOW: '$PROJECT' ";
-       fi
-     fi
-
-     echo $PROJECT > ~/.project.set
-
-     _setPrompt;
-   }
-   function _loadProject() {
-     if [ -f  ~/.project.set ]; then
-       export PROJECT=`cat ~/.project.set`
-     else
-       export PROJECT="~/"
-     fi
-     _setPrompt;
-   }
-   function _showProject() {
-     echo "$PROJECT";
-   }
-   function _prj() {
-     _loadProject;
-     if [ $PROJECT == "~/" ]; then
-       cd
-     else
-       cd $PROJECT;
-     fi
-
-     _setPrompt;
-
-   }
-   function _getProject() {
-     _loadProject;
-     echo "PROJECT IS: ";
-     _showProject;
-   }
-
-   alias setproject='_setProject';
-   alias setProject='_setProject';
-
-   alias setprj='_setProject';
-   alias setPrj='_setProject';
-
-   alias showProject='_showProject';
-   alias showproject='_showProject';
-   alias showprj='_showProject';
-   alias showPrj='_showProject';
-   alias getprj='_showProject';
-   alias getPrj='_showProject';
-
-   alias sp='_setProject';
-
-   alias loadProject='_loadProject';
-   alias loadproject='_loadProject';
-   alias loadprj='_loadProject';
-   alias loadPrj='_loadProject';
-
-   alias getProject='_getProject';
-   alias getproject='_getProject';
-   alias getprj='_getProject';
-   alias getPrj='_getProject';
-#   alias prj='cd "$PROJECT"'
-   alias prj='_prj';
-#
-# -----------------------------------------------------------------------------
-
-_loadProject;
