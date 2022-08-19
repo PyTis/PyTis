@@ -186,9 +186,7 @@ function _loadBookmark() {
 
 		export PROJECT=`sed "${i}q;d" ~/.bookmark.set `;
 	else
-
     touch ~/.bookmark.set;
-
 		export PROJECT="~/";
 	fi
   unset i;
@@ -198,9 +196,32 @@ function _showBookmark() {
 	echo "$PROJECT";
 }
 function _bm() {
-  if [ "$*" == '' ]; then
-    let  i=1;
+  # valid input, nothing OR an Integer (or a period (.), but that is a hack)
+  
+  re='^[0-9]+$'
+  if [[ $* =~ $re ]]; then
+    # IF there is input, it IS a number, good
+    :
   else
+    # It is NOT a number, it better be blank then,
+    if [[ $* == '' ]]; then
+      # The input is blank,... good
+      :
+    elif [[ $* == '.' ]]; then
+      # ahh, the user wants to set this as another bookmark
+      _setBookmark;
+      return 0;
+    else
+      echo "ERROR: This command takes NO INPUT or INTEGERS only.";
+      return;
+    fi
+  fi
+
+  if [ "$*" == '' ]; then
+    # it is blank, let's just set it to 1
+    let i=1;
+  else
+    # lets use the input the user gave us
     let i=$*;
   fi 
 
