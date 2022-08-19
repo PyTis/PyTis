@@ -1,0 +1,103 @@
+# When naming an alias, please follow these steps and thus, this naming
+# convention.  First, pick/guess a name, for git-status I'll try gsta Second,
+# attempt the which command: which gsta If neither of these show a conflict
+# (the name already taken), then thrid locate the command: locate gsta / locate
+# gsta | more These results will need reviewed manually, but there usually
+# aren't many that could be programs.  Lastly, check with aptitude /
+# yum-search.  If you have indeed confirmed that there is not and will no be a
+# conflict, not only now, but in the future with any program that could be
+# installed, then it is a good name to pick.
+
+alias git-rm='git rm'
+
+alias gbra='git branch '
+alias gitb='git branch'
+alias gitbranch='git branch '
+alias git-branch='git branch '
+
+alias gch='git checkout '
+alias gitch='git checkout'
+alias gitcheckout='git checkout'
+alias git-checkout='git checkout '
+
+alias gclo='git clone '
+alias gitcl='git clone '
+alias gitclone='git clone '
+alias git-clone='git clone '
+
+alias gco='git commit '
+alias gitc='git commit'
+alias gitcommit='git commit '
+alias git-commit='git commit '
+
+alias gdif='git diff '
+alias gitd='git diff'
+alias gitdiff='git diff '
+alias git-diff='git diff '
+
+alias gf='git fetch'
+alias gitf='git fetch'
+alias gitfetch='git fetch'
+alias git-fetch='git fetch'
+
+alias gp='git pull'
+#alias gitp='git pull'
+alias gitpull='git pull'
+alias git-pull='git pull'
+
+#alias gp='git push'
+alias gitp='git push'
+alias gitpush='git push'
+alias git-push='git push'
+
+alias gsta='git status '
+alias gits='git status'
+alias gitstatus='git status '
+alias git-status='git status '
+
+function git_origin() {
+ v=`git config --get remote.origin.url`
+ if [ "$v" ]; then
+	 echo $v
+ fi
+}
+
+alias git-origin=git_origin
+#alias git-origin='git config --get remote.origin.url'
+
+# followed by a filename will show import notes for file
+alias git-log='git log @{u} '
+
+# MOST IMPORTANT IMOHaHO (In my own honest and humble opinion) git-shortcuts,
+# period.
+# JUST LIST ALL COMMITS NOT PUSHED, only listing each file once
+function git_ready() {
+  b=`git rev-parse --abbrev-ref HEAD`
+  git diff --stat --cached origin/$b
+}
+#alias git-ready='git diff --stat --cached origin/master'
+alias git-ready=git_ready
+alias git-ready-master='git diff --stat --cached origin/master'
+
+
+# LIST ALL COMMITS NOT PUSHED, listing each and every commit, sometimes showing
+# files many times if the file has many commits ready to be pushed.
+function git_all_ready() {
+  b=`git rev-parse --abbrev-ref HEAD`
+  git show --no-notes origin/$b HEAD
+}
+#alias git-all-ready='git show origin/master..HEAD -q'
+alias git-all-ready=git_all_ready
+alias git-all-ready-master='git show origin/master..HEAD'
+
+
+# FULL BLOWN DIFF OF ALL COMMITS NOT PUSHED
+function git_repo_dif() {
+  b=`git rev-parse --abbrev-ref HEAD`
+  git show origin/$b HEAD
+}
+#alias git-repo-diff='git show origin/master..HEAD'
+alias git-repo-diff=git_repo_dif
+alias git-repo-diff-master='git show origin/master..HEAD'
+# -q no longer seems to work, therefore making git-repo-diff and git-all-ready
+# synonamis
