@@ -127,6 +127,11 @@ let total_bms=20 # How many bookmarks to track
 ############################################################################
 ############################################################################
 
+# You will likely need to figure out which command grab's your IP, 
+# IP=`LANG=c ifconfig en1 | egrep -v 'inet6' | grep 'inet' | awk -F' ' '{print $2}' | awk -F' ' '{print $1}'`
+# IP=`LANG=c ifconfig eth0 | grep 'inet' | awk -F' ' '{print $2}' | awk '{print $1}'`
+IP=`LANG=c getip | awk -F: '{print $1}'`
+
 function _setPrompt() {
 	PS1="\n[CURRENT PROJECT: $PROJECT ]\n\[\e[30;1m\](\[\e[1;32m\]\u\[\e[1;30m\]@IP:$IP)-[last command: \${timer_show} seconds]-(\[\e[0;32m\]\D{%H:%M:%S %p} \d\[\e[30;1m\])->\[\e[30;1m\]\n(\[\e[1;33m\]\w\[\e[30;1m\] has \[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\]) --> \[\e[0m\]"
 	# ^^^ I AM LOVING THIS! ^^^^^
