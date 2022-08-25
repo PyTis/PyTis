@@ -272,6 +272,7 @@ alias setbookmark='_setBookmark';
 alias setBookmark='_setBookmark';
 alias setbm='_setBookmark';
 alias setBm='_setBookmark';
+alias bookmark='_setBookmark';
 
 alias showBookmark='_showBookmark';
 alias showbookmark='_showBookmark';
@@ -298,9 +299,10 @@ alias getbookmark='_getBookmark';
 alias getBm='_getBookmark';
 alias getbm='_getBookmark';
 
+alias setPrompt=_setPrompt;
 alias bms='_listBookmarks';
 alias bm='_bm'; # bm [optional NUMBER] ie: >> bm 3
-alias setPrompt=_setPrompt;
+
 
 #
 # -----------------------------------------------------------------------------
