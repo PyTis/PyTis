@@ -1,4 +1,4 @@
-# ~/.bashrc: executed by bash(1) for non-login shells.
+# ~/.bashrc: executed by bash(1) written by Josh Lee.
 # Bookmark shortcuts ##
 ############################################################################
 ##  XXX-TODO (next version)
@@ -11,6 +11,7 @@
 ## (basically allowing you to keep history).  You can manage how many lines it
 ## keeps track of by editing the "total_bms=20" variable below
 
+export BOOKMARKS='~/.bookmarks.set' # Where are the bookmarks stored
 let total_bms=20 # How many bookmarks to track
 
 ############################################################################
