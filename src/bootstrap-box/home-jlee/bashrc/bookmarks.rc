@@ -12,6 +12,7 @@
 ## keeps track of by editing the "total_bms=20" variable below
 
 export BOOKMARKS='~/.bookmarks.set' # Where are the bookmarks stored
+# I just asked for help with the above being referenced here: https://stackoverflow.com/questions/74554436/properly-reference-exported-variable-within-bash-code
 let total_bms=20 # How many bookmarks to track
 
 ############################################################################
