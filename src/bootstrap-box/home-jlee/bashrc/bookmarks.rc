@@ -5,14 +5,11 @@
 ##
 ############################################################################
 ## This now keeps up to 20 lines in the file.
-## Without giving a number, bm just loads the top line. setbm shifts all
-## lines down one, and adds a new top line, bm again would load the top line, 
-## but bm 1 or bm 2 would go back one or 2 lines down and read those instead
-## (basically allowing you to keep history).  You can manage how many lines it
-## keeps track of by editing the "total_bms=20" variable below
+## You can manage how many lines it keeps track of by editing the 
+## "total_bms=20" variable below
 
-export BOOKMARKS='~/.bookmarks.set' # Where are the bookmarks stored
-# I just asked for help with the above being referenced here: https://stackoverflow.com/questions/74554436/properly-reference-exported-variable-within-bash-code
+export BOOKMARKS="$HOME/.bookmark.set"
+
 let total_bms=20 # How many bookmarks to track
 
 ############################################################################
@@ -31,7 +28,7 @@ let total_bms=20 # How many bookmarks to track
 # License: GPL
 # Version: 2
 #
-# *** The only 2 commands you will want to memorize are: "setBm" and "bm" ***
+# *** The only 2 commands you will want to memorize are: "bms" and "bm" ***
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # 
@@ -43,7 +40,7 @@ let total_bms=20 # How many bookmarks to track
 # current path in with '.' as the input argument, or by passing a specific path
 # in, regardless of your current path (expressed with `pwd`).  The path will be
 # stored in your home directory in a file named .bookmark.set 
-# i.e.: ~/.bookmark.set
+# i.e.: $BOOKMARKS
 #
 #   examples:
 #     > setBm
@@ -129,13 +126,15 @@ let total_bms=20 # How many bookmarks to track
 #
 ############################################################################
 ############################################################################
+
+# You will likely need to figure out which command grab's your IP, 
+# IP=`LANG=c ifconfig en1 | egrep -v 'inet6' | grep 'inet' | awk -F' ' '{print $2}' | awk -F' ' '{print $1}'`
+# IP=`LANG=c ifconfig eth0 | grep 'inet' | awk -F' ' '{print $2}' | awk '{print $1}'`
 IP=`LANG=c getip | awk -F: '{print $1}'`
 
 function _setPrompt() {
-   export PS1="\n[ CURRENT PROJECT:\[\e[37;1m\]$PROJECT \[\e[30;1m\]]\n\[\e[30;1m\]( \[\e[1;32m\]\u\[\e[1;30m\]@IP:\[\e[0;31m\]$IP \[\e[1;30m\])-[UNAME: \[\e[2;30m\]\$(uname) \[\e[0;37m\]\[\e[1;30m\]HOST: \[\e[2;30m\]\h\[\e[0;37m\]\[\e[1;30m\] ]-(\[\e[0;32m\]\D{%H:%M:%S %p} \d\[\e[30;1m\])\[\e[30;1m\]\n(\[\e[1;33m\]\w \[\e[1;35m\]has \[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\]) --> \[\e[0m\]"
+	PS1="\n[CURRENT PROJECT: $PROJECT ]\n\[\e[30;1m\](\[\e[1;32m\]\u\[\e[1;30m\]@IP:$IP)-[last command: \${timer_show} seconds]-(\[\e[0;32m\]\D{%H:%M:%S %p} \d\[\e[30;1m\])->\[\e[30;1m\]\n(\[\e[1;33m\]\w\[\e[30;1m\] has \[\e[37;1m\]\$(/bin/ls -1 | /usr/bin/wc -l | /bin/sed 's: ::g') files, \$(/bin/ls -lah | /bin/grep -m 1 total | /bin/sed 's/total //')b\[\e[30;1m\]) --> \[\e[0m\]"
 	# ^^^ I AM LOVING THIS! ^^^^^
-  export PS2='-> '
-  export PS4="\n"
 }
 function _setBookmark() {
 	old="$PROJECT";
@@ -164,18 +163,18 @@ function _setBookmark() {
 	fi
 
   # remove it from the nth place it is in (if it is there)
-  cat ~/.bookmark.set | egrep -v "$PROJECT" > ~/.bookmark.set.tmp
+  cat $BOOKMARKS | egrep -v "$PROJECT" > ${BOOKMARKS}.tmp
   
   # now put it at the top of the file
-  (echo "$PROJECT"; cat ~/.bookmark.set.tmp) | head -n${total_bms} > ~/.bookmark.set
+  (echo "$PROJECT"; cat ${BOOKMARKS}.tmp) | head -n${total_bms} > $BOOKMARKS
 
-  /bin/rm ~/.bookmark.set.tmp; # >&2;
+  /bin/rm ${BOOKMARKS}.tmp; # >&2;
 
 	_setPrompt;
 }
 function _loadBookmark() {
 
-	if [ -f	~/.bookmark.set ]; then
+	if [ -f	$BOOKMARKS ]; then
     # is $i already set? did it pass through?
     re='^[0-9]+$'
     if [[ $i =~ $re ]]; then
@@ -190,9 +189,9 @@ function _loadBookmark() {
       let i=$*;
     fi 
 
-		export PROJECT=`sed "${i}q;d" ~/.bookmark.set `;
+		export PROJECT=`sed "${i}q;d" $BOOKMARKS `;
 	else
-    touch ~/.bookmark.set;
+    touch $BOOKMARKS;
 		export PROJECT="~/";
 	fi
   unset i;
@@ -262,11 +261,11 @@ function _getBookmark() {
 	_showBookmark;
 }
 function _listBookmarks() {
-  total_lines=`wc -l ~/.bookmark.set | cut -d' ' -f1 `;
+  total_lines=`wc -l $BOOKMARKS | cut -d' ' -f1 `;
   current_line=1;
   for (( c=$current_line; c<=$total_lines; c++ ))
   do
-    lin=`sed "${c}q;d"  ~/.bookmark.set`;
+    lin=`sed "${c}q;d"  $BOOKMARKS`;
     echo "$c: $lin";
   done
 }
@@ -305,14 +304,11 @@ alias setPrompt='_setPrompt';
 alias bms='_listBookmarks';
 alias bm='_bm'; # bm [optional NUMBER] ie: >> bm 3
 
-
 #
 # -----------------------------------------------------------------------------
-
 
 _loadBookmark;
 _setPrompt;
 
 # -----------------------------------------------------------------------------
-
 
