@@ -18,7 +18,7 @@ unset BRACKET_COLOR; unset DEFAULT_COLOR; unset DCOLOR;
 
 BLACK_ON_BLACK="\e[0;30m\]"; # SAME AS \e[0m
 
-RESETCOLOR="\e[0m\]";
+RESETCOLOR="\[\e[0m\]";
 
 DARK_RED="\[\e[0;31m\]";
 UNDERLINE_DARK_RED="\[\e[4;37m\]\[\e[4;31m\]";
