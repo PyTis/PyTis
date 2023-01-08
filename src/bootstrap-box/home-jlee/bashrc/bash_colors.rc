@@ -20,52 +20,52 @@ BLACK_ON_BLACK="\e[0;30m\]"; # SAME AS \e[0m
 
 RESETCOLOR="\e[0m\]";
 
-DARK_RED="\e[0m\]\e[0;31m\]";
-UNDERLINE_DARK_RED="\e[4;37m\]\e[4;31m\]";
+DARK_RED="${RESETCOLOR}\[\e[0;31m\]";
+UNDERLINE_DARK_RED="\[\e[4;37m\]\[\e[4;31m\]";
 
-RED="\e[0m\]\e[1;31m\]";
-UNDERLINE_RED="\e[4m\]\e[1;31m\]";
+RED="${RESETCOLOR}\[\e[1;31m\]";
+UNDERLINE_RED="\[\e[4m\]\[\e[1;31m\]";
 
-DARK_GREEN="\e[0m\]\e[0;32m\]";
-UNDERLINE_DARK_GREEN="\e[4;37m\]\e[4;32m\]";
-GREEN="\e[0m\]\e[1;32m\]";
-UNDERLINE_GREEN="\e[4;32m\]";
+DARK_GREEN="${RESETCOLOR}\[\e[0;32m\]";
+UNDERLINE_DARK_GREEN="\[\e[4;37m\]\[\e[4;32m\]";
+GREEN="${RESETCOLOR}\[\e[1;32m\]";
+UNDERLINE_GREEN="\[\e[4;32m\]";
 
-DARK_YELLOW="\e[0m\]\e[0;33m\]";
-UNDERLINE_DARK_YELLOW="\e[4;37m\]\e[4;33m\]";
+DARK_YELLOW="${RESETCOLOR}\[\e[0;33m\]";
+UNDERLINE_DARK_YELLOW="\[\e[4;37m\]\[\e[4;33m\]";
 
-YELLOW="\e[0m\]\e[1;33m\]";
-UNDERLINE_YELLOW="\e[4;33m\]";
+YELLOW="${RESETCOLOR}\[\e[1;33m\]";
+UNDERLINE_YELLOW="\[\e[4;33m\]";
 
-DARK_BLUE="\e[0m\]\e[0;34m\]";
-UNDERLINE_DARK_BLUE="\e[4;37m\]\e[4;34m\]";
+DARK_BLUE="${RESETCOLOR}\[\e[0;34m\]";
+UNDERLINE_DARK_BLUE="\[\e[4;37m\]\[\e[4;34m\]";
 
-BLUE="\e[0m\]\e[1;34m\]";
-UNDERLINE_BLUE="\e[4m\]\e[1;34m\]";
+BLUE="${RESETCOLOR}\[\e[1;34m\]";
+UNDERLINE_BLUE="\[\e[4m\]\[\e[1;34m\]";
 
-PURPLE="\e[0m\]\e[0;35m\]";
-UNDERLINE_PURPLE="\e[4;37m\]\e[4;35m\]";
+PURPLE="${RESETCOLOR}\[\e[0;35m\]";
+UNDERLINE_PURPLE="\[\e[4;37m\]\[\e[4;35m\]";
 
-PINK="\e[0m\]\e[1;35m\]";
-UNDERLINE_PINK="\e[4m\]\e[1;35m\]";
+PINK="${RESETCOLOR}\e[1;35m\]";
+UNDERLINE_PINK="\[\e[4m\]\[\e[1;35m\]";
 
-DARK_SKY="\e[0m\]\e[0;36m\]";
-UNDERLINE_DARK_SKY="\e[4;37m\]\e[4;36m\]";
+DARK_SKY="${RESETCOLOR}\e[0;36m\]";
+UNDERLINE_DARK_SKY="\[\e[4;37m\]\[\e[4;36m\]";
 
-SKY="\e[0m\]\e[1;36m\]";
-UNDERLINE_SKY="\e[4m\]\e[1;36m\]";
+SKY="${RESETCOLOR}\[\e[1;36m\]";
+UNDERLINE_SKY="\[\e[4m\]\[\e[1;36m\]";
 
-DARK_GRAY="\e[0m\]\e[30;1m\]"; DARK_GREY="\e[0m\]\e[30;1m\]";
-UNDERLINE_DARK_GRAY="\e[4;37m\]\e[30;1m\]"; UNDERLINE_DARK_GREY="\e[4;37m\]\e[30;1m\]";
+DARK_GRAY="${RESETCOLOR}\[\e[30;1m\]"; DARK_GREY="${RESETCOLOR}\[\e[30;1m\]";
+UNDERLINE_DARK_GRAY="\[\e[4;37m\]\[\e[30;1m\]"; UNDERLINE_DARK_GREY="\[\e[4;37m\]\[\e[30;1m\]";
 
-GRAY="\e[0m\]\e[37m\]"; GREY="\e[0m\]\e[37m\]";
-UNDERLINE_GRAY="\e[4;37m\]"; UNDERLINE_GREY="\e[4m\]\e[37m\]";
+GRAY="${RESETCOLOR}\[\e[37m\]"; GREY="${RESETCOLOR}\[\e[37m\]";
+UNDERLINE_GRAY="\[\e[4;37m\]"; UNDERLINE_GREY="\[\e[4m\]\[\e[37m\]";
 
-VERYDARK_GREY="\e[1m\]\e[2;30m\]";
-UNDERLINE_VERYDARK_GREY="\e[4m\]\e[1m\]\e[2;30m\]";
+VERYDARK_GREY="\[\e[1m\]\[\e[2;30m\]";
+UNDERLINE_VERYDARK_GREY="\[\e[4m\]\[\e[1m\]\[\e[2;30m\]";
 
-WHITE="\e[0m\]\e[1;37m\]";
-UNDERLINE_WHITE="\e[4m\]\e[37;1m\]";
+WHITE="${RESETCOLOR}\[\e[1;37m\]";
+UNDERLINE_WHITE="\[\e[4m\]\[\e[37;1m\]";
 
 
 # BRACKET_COLOR=$DARK_GREY
