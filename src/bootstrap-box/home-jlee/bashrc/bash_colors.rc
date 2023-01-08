@@ -16,43 +16,43 @@ unset VERYDARK_GREY; unset UNDERLINE_VERYDARK_GREY; unset WHITE; unset UNDERLINE
 unset BRACKET_COLOR; unset DEFAULT_COLOR; unset DCOLOR;
 
 
-BLACK_ON_BLACK="\[\e[0;30m\]"; # SAME AS \e[0m
+BLACK_ON_BLACK="\[\e[0;30m\]"; # SAME AS \[\e[0m\]
 
 RESETCOLOR="\[\e[0m\]";
 
 DARK_RED="\[\e[0;31m\]";
 UNDERLINE_DARK_RED="\[\e[4;37m\]\[\e[4;31m\]";
 
-RED="\[\e[1;31m\]";
+RED="${RESETCOLOR}\[\e[1;31m\]";
 UNDERLINE_RED="\[\e[4m\]\[\e[1;31m\]";
 
 DARK_GREEN="\[\e[0;32m\]";
 UNDERLINE_DARK_GREEN="\[\e[4;37m\]\[\e[4;32m\]";
-GREEN="\[\e[1;32m\]";
+GREEN="${RESETCOLOR}\[\e[1;32m\]";
 UNDERLINE_GREEN="\[\e[4;32m\]";
 
 DARK_YELLOW="\[\e[0;33m\]";
 UNDERLINE_DARK_YELLOW="\[\e[4;37m\]\[\e[4;33m\]";
 
-YELLOW="\[\e[1;33m\]";
+YELLOW="${RESETCOLOR}\[\e[1;33m\]";
 UNDERLINE_YELLOW="\[\e[4;33m\]";
 
 DARK_BLUE="\[\e[0;34m\]";
 UNDERLINE_DARK_BLUE="\[\e[4;37m\]\[\e[4;34m\]";
 
-BLUE="\[\e[1;34m\]";
+BLUE="${RESETCOLOR}\[\e[1;34m\]";
 UNDERLINE_BLUE="\[\e[4m\]\[\e[1;34m\]";
 
 PURPLE="\[\e[0;35m\]";
 UNDERLINE_PURPLE="\[\e[4;37m\]\[\e[4;35m\]";
 
-PINK="\e[1;35m\]";
+PINK="${RESETCOLOR}\[\e[1;35m\]";
 UNDERLINE_PINK="\[\e[4m\]\[\e[1;35m\]";
 
 DARK_SKY="\e[0;36m\]";
 UNDERLINE_DARK_SKY="\[\e[4;37m\]\[\e[4;36m\]";
 
-SKY="\[\e[1;36m\]";
+SKY="${RESETCOLOR}\[\e[1;36m\]";
 UNDERLINE_SKY="\[\e[4m\]\[\e[1;36m\]";
 
 DARK_GRAY="\[\e[30;1m\]"; DARK_GREY="\[\e[30;1m\]";
@@ -90,7 +90,7 @@ else
 fi
 
 
-# TO SEE THESE, type "export PS1=$ALLCOLORS" then close the window when done.
+# TO SEE THESE, type "PS1=$ALLCOLORS" then close the window when done.
 export ALLCOLORS="${RESETCOLOR} ${UNDERLINE_DARK_RED}UNDERLINE_DARK_RED, ${DARK_RED}DARK_RED, 
 ${RESETCOLOR} ${UNDERLINE_RED}UNDERLINE_RED, ${RED}RED,
 ${RESETCOLOR} ${UNDERLINE_DARK_GREEN}UNDERLINE_DARK_GREEN, ${DARK_GREEN}DARK_GREEN,
