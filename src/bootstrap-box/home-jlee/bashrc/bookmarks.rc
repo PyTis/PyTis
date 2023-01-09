@@ -195,7 +195,13 @@ function _loadBookmark() {
 		export PROJECT="~/";
 	fi
   unset i;
-	_setPrompt;
+
+  if [[ $* =~ $re ]]; then
+    _setPrompt;
+  else
+    :
+  fi
+
 }
 function _showBookmark() {
 	echo "$PROJECT";
