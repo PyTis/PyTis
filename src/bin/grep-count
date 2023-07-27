@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Pattern you want to search for
+pattern="$1"
+shift
+
+# Flag to track if any occurrences were found
+found=false
+
+# Loop through each text file given as arguments
+for file in "$@"; do
+    # Use grep with -c option to count occurrences of the pattern in each file
+    count=$(grep -c "$pattern" "$file")
+
+    if [ "$count" -gt 0 ]; then
+        echo -e "$file\t$count"
+        found=true
+    fi
+done
+
+# If no occurrences were found in any file, print "none found"
+if ! $found; then
+    echo "none found"
+fi
